@@ -80,7 +80,6 @@ const Usuarios = () => {
         (user) =>
           user.displayName.toLowerCase().includes(term) ||
           user.email.toLowerCase().includes(term) ||
-          (user.department && user.department.toLowerCase().includes(term)) ||
           user.role.toLowerCase().includes(term)
       );
       
@@ -203,6 +202,11 @@ const Usuarios = () => {
     return lastActive.toLocaleDateString('pt-BR');
   };
 
+  // Check if user should have actions button visible
+  const showActionsButton = (user: User): boolean => {
+    return user.role !== "superadmin";
+  };
+
   return (
     <AppLayout>
       <motion.div
@@ -245,7 +249,6 @@ const Usuarios = () => {
                     <TableRow>
                       <TableHead className="w-[250px]">Nome</TableHead>
                       <TableHead>Email</TableHead>
-                      <TableHead>Departamento</TableHead>
                       <TableHead>Função</TableHead>
                       <TableHead>Último Acesso</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
@@ -273,84 +276,85 @@ const Usuarios = () => {
                           </div>
                         </TableCell>
                         <TableCell>{user.email}</TableCell>
-                        <TableCell>{user.department || "Não definido"}</TableCell>
                         <TableCell>{getRoleBadge(user)}</TableCell>
                         <TableCell>{getLastActive(user.lastActive)}</TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                {canEditRole(user) && (
-                                  <DropdownMenuItem 
-                                    onClick={() => handleRoleChangeClick(user)}
-                                  >
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    {user.role === "admin" ? "Remover Admin" : "Tornar Admin"}
-                                  </DropdownMenuItem>
-                                )}
-                                
-                                {/* If there's a pending role change and current user is not the requester */}
-                                {user.pendingRoleChange && 
-                                 user.pendingRoleChange.requestedBy !== currentUser?.uid && 
-                                 currentUser?.role === "admin" && 
-                                 !user.pendingRoleChange.approvals.includes(currentUser?.uid) && (
-                                  <DropdownMenuItem 
-                                    onClick={() => handleRoleChangeClick(user)}
-                                    className="text-blue-600"
-                                  >
-                                    <ShieldCheck className="mr-2 h-4 w-4" />
-                                    Aprovar alteração
-                                  </DropdownMenuItem>
-                                )}
-                                
-                                {/* If this user has requested a role change */}
-                                {user.pendingRoleChange && 
-                                 user.pendingRoleChange.requestedBy === currentUser?.uid && (
-                                  <DropdownMenuItem 
-                                    onClick={() => handleRoleChangeClick(user)}
-                                    className="text-yellow-600"
-                                  >
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    Cancelar solicitação
-                                  </DropdownMenuItem>
-                                )}
-                                
-                                {canBlock(user) && (
-                                  <>
-                                    {canEditRole(user) && <DropdownMenuSeparator />}
+                          {showActionsButton(user) && (
+                            <div className="flex justify-end">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  {canEditRole(user) && (
                                     <DropdownMenuItem 
-                                      onClick={() => handleBlockClick(user)}
-                                      className={user.blocked ? "text-green-600" : "text-red-600"}
+                                      onClick={() => handleRoleChangeClick(user)}
                                     >
-                                      {user.blocked ? (
-                                        <>
-                                          <Unlock className="mr-2 h-4 w-4" />
-                                          Desbloquear
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Lock className="mr-2 h-4 w-4" />
-                                          Bloquear
-                                        </>
-                                      )}
+                                      <Edit className="mr-2 h-4 w-4" />
+                                      {user.role === "admin" ? "Remover Admin" : "Tornar Admin"}
                                     </DropdownMenuItem>
-                                  </>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
+                                  )}
+                                  
+                                  {/* If there's a pending role change and current user is not the requester */}
+                                  {user.pendingRoleChange && 
+                                   user.pendingRoleChange.requestedBy !== currentUser?.uid && 
+                                   currentUser?.role === "admin" && 
+                                   !user.pendingRoleChange.approvals.includes(currentUser?.uid) && (
+                                    <DropdownMenuItem 
+                                      onClick={() => handleRoleChangeClick(user)}
+                                      className="text-blue-600"
+                                    >
+                                      <ShieldCheck className="mr-2 h-4 w-4" />
+                                      Aprovar alteração
+                                    </DropdownMenuItem>
+                                  )}
+                                  
+                                  {/* If this user has requested a role change */}
+                                  {user.pendingRoleChange && 
+                                   user.pendingRoleChange.requestedBy === currentUser?.uid && (
+                                    <DropdownMenuItem 
+                                      onClick={() => handleRoleChangeClick(user)}
+                                      className="text-yellow-600"
+                                    >
+                                      <Edit className="mr-2 h-4 w-4" />
+                                      Cancelar solicitação
+                                    </DropdownMenuItem>
+                                  )}
+                                  
+                                  {canBlock(user) && (
+                                    <>
+                                      {canEditRole(user) && <DropdownMenuSeparator />}
+                                      <DropdownMenuItem 
+                                        onClick={() => handleBlockClick(user)}
+                                        className={user.blocked ? "text-green-600" : "text-red-600"}
+                                      >
+                                        {user.blocked ? (
+                                          <>
+                                            <Unlock className="mr-2 h-4 w-4" />
+                                            Desbloquear
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Lock className="mr-2 h-4 w-4" />
+                                            Bloquear
+                                          </>
+                                        )}
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
                     
                     {filteredUsers.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={6} className="h-24 text-center">
+                        <TableCell colSpan={5} className="h-24 text-center">
                           Nenhum usuário encontrado.
                         </TableCell>
                       </TableRow>

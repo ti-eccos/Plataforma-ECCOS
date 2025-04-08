@@ -12,6 +12,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toggleBlockUser, User } from "@/services/userService";
+import { cn } from "@/lib/utils";
 
 interface BlockUserDialogProps {
   open: boolean;
@@ -78,7 +79,11 @@ export function BlockUserDialog({
           <AlertDialogCancel>Cancelar</AlertDialogCancel>
           <AlertDialogAction 
             onClick={handleToggleBlock}
-            className={isCurrentlyBlocked ? "bg-green-600 hover:bg-green-700" : "bg-destructive hover:bg-destructive/90"}
+            className={cn(
+              isCurrentlyBlocked 
+                ? "bg-green-600 hover:bg-green-700" 
+                : "bg-destructive hover:bg-destructive/90"
+            )}
           >
             {isCurrentlyBlocked ? "Desbloquear" : "Bloquear"}
           </AlertDialogAction>
