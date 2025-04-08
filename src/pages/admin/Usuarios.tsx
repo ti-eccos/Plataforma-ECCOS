@@ -1,4 +1,7 @@
 
+import React, { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,94 +20,112 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Search, ShieldCheck, UserPlus, Edit, Trash2 } from "lucide-react";
+import { Search, ShieldCheck, Edit, Lock, Unlock } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { motion } from "framer-motion";
-
-// Mock data for users
-const MOCK_USERS = [
-  { 
-    id: 1, 
-    name: "Ana Silva", 
-    email: "ana.silva@colegioeccos.com.br", 
-    role: "admin", 
-    department: "TI", 
-    lastActive: "Hoje, 10:25", 
-    avatar: null
-  },
-  { 
-    id: 2, 
-    name: "João Oliveira", 
-    email: "joao.oliveira@colegioeccos.com.br", 
-    role: "user", 
-    department: "Matemática", 
-    lastActive: "Hoje, 09:15", 
-    avatar: null
-  },
-  { 
-    id: 3, 
-    name: "Mariana Costa", 
-    email: "mariana.costa@colegioeccos.com.br", 
-    role: "user", 
-    department: "História", 
-    lastActive: "Ontem", 
-    avatar: null
-  },
-  { 
-    id: 4, 
-    name: "Carlos Reis", 
-    email: "carlos.reis@colegioeccos.com.br", 
-    role: "user", 
-    department: "Ciências", 
-    lastActive: "Há 3 dias", 
-    avatar: null
-  },
-  { 
-    id: 5, 
-    name: "Suporte ECCOS", 
-    email: "suporte@colegioeccos.com.br", 
-    role: "superadmin", 
-    department: "TI", 
-    lastActive: "Agora", 
-    avatar: null
-  },
-  { 
-    id: 6, 
-    name: "Paula Mendes", 
-    email: "paula.mendes@colegioeccos.com.br", 
-    role: "admin", 
-    department: "Direção", 
-    lastActive: "Há 1 hora", 
-    avatar: null
-  },
-];
+import { getAllUsers, User } from "@/services/userService";
+import { RoleChangeDialog } from "@/components/admin/RoleChangeDialog";
+import { BlockUserDialog } from "@/components/admin/BlockUserDialog";
+import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 const Usuarios = () => {
+  const { currentUser, isSuperAdmin } = useAuth();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
-  const [filteredUsers, setFilteredUsers] = useState(MOCK_USERS);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [roleDialogOpen, setRoleDialogOpen] = useState(false);
+  const [blockDialogOpen, setBlockDialogOpen] = useState(false);
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const term = e.target.value.toLowerCase();
-    setSearchTerm(term);
+  // Fetch users with React Query
+  const { data: users = [], refetch } = useQuery({
+    queryKey: ["users"],
+    queryFn: getAllUsers
+  });
+
+  // Handle search
+  useEffect(() => {
+    const term = searchTerm.toLowerCase();
     
     if (term === "") {
-      setFilteredUsers(MOCK_USERS);
+      // Sort users: admins first, then users, all in alphabetical order
+      const sortedUsers = [...users].sort((a, b) => {
+        // Role priority order (superadmin > admin > user)
+        const rolePriority = { 
+          "superadmin": 0, 
+          "admin": 1, 
+          "user": 2 
+        };
+        
+        // First sort by role priority
+        const roleDiff = (rolePriority[a.role] ?? 3) - (rolePriority[b.role] ?? 3);
+        if (roleDiff !== 0) return roleDiff;
+        
+        // Then sort alphabetically
+        return a.displayName.localeCompare(b.displayName);
+      });
+      
+      setFilteredUsers(sortedUsers);
     } else {
-      const filtered = MOCK_USERS.filter(
+      // Filter and then sort
+      const filtered = users.filter(
         (user) =>
-          user.name.toLowerCase().includes(term) ||
+          user.displayName.toLowerCase().includes(term) ||
           user.email.toLowerCase().includes(term) ||
-          user.department.toLowerCase().includes(term) ||
+          (user.department && user.department.toLowerCase().includes(term)) ||
           user.role.toLowerCase().includes(term)
       );
-      setFilteredUsers(filtered);
+      
+      const sortedFiltered = [...filtered].sort((a, b) => {
+        const rolePriority = { 
+          "superadmin": 0, 
+          "admin": 1, 
+          "user": 2 
+        };
+        
+        const roleDiff = (rolePriority[a.role] ?? 3) - (rolePriority[b.role] ?? 3);
+        if (roleDiff !== 0) return roleDiff;
+        
+        return a.displayName.localeCompare(b.displayName);
+      });
+      
+      setFilteredUsers(sortedFiltered);
     }
+  }, [users, searchTerm]);
+
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
   };
 
-  const getRoleBadge = (role: string) => {
-    switch (role) {
+  const handleRoleChangeClick = (user: User) => {
+    setSelectedUser(user);
+    setRoleDialogOpen(true);
+  };
+
+  const handleBlockClick = (user: User) => {
+    setSelectedUser(user);
+    setBlockDialogOpen(true);
+  };
+
+  const getRoleBadge = (user: User) => {
+    // Check if there's a pending role change request
+    if (user.pendingRoleChange) {
+      return (
+        <Badge variant="outline" className="bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30">
+          <span className="animate-pulse">Pendente</span>
+        </Badge>
+      );
+    }
+
+    switch (user.role) {
       case "superadmin":
         return (
           <Badge variant="outline" className="bg-purple-500/20 text-purple-500 hover:bg-purple-500/30">
@@ -127,6 +148,61 @@ const Usuarios = () => {
     }
   };
 
+  // Can edit role if:
+  // 1. Current user is superadmin (can edit anyone except other superadmins)
+  // 2. Current user is admin and target is not admin or superadmin
+  const canEditRole = (user: User): boolean => {
+    // Can't edit self
+    if (currentUser?.uid === user.uid) return false;
+    
+    // Superadmin can edit anyone except other superadmins
+    if (isSuperAdmin && user.role !== "superadmin") return true;
+    
+    // Admin can promote regular users to admin
+    if (currentUser?.role === "admin" && user.role === "user") return true;
+    
+    // Admin can request to demote other admins
+    if (currentUser?.role === "admin" && user.role === "admin") return true;
+    
+    return false;
+  };
+  
+  // Can block if:
+  // 1. Current user is superadmin (can block anyone except other superadmins)
+  // 2. Current user is admin and target is a regular user
+  const canBlock = (user: User): boolean => {
+    // Can't block self
+    if (currentUser?.uid === user.uid) return false;
+    
+    // Superadmin can block anyone except other superadmins
+    if (isSuperAdmin && user.role !== "superadmin") return true;
+    
+    // Admin can block regular users
+    if (currentUser?.role === "admin" && user.role === "user") return true;
+    
+    return false;
+  };
+  
+  const getLastActive = (lastActiveStr?: string) => {
+    if (!lastActiveStr) return "Nunca";
+    
+    const lastActive = new Date(lastActiveStr);
+    const now = new Date();
+    
+    const diffMs = now.getTime() - lastActive.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return "Agora";
+    if (diffMins < 60) return `Há ${diffMins} ${diffMins === 1 ? 'minuto' : 'minutos'}`;
+    if (diffHours < 24) return `Há ${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`;
+    if (diffDays < 30) return `Há ${diffDays} ${diffDays === 1 ? 'dia' : 'dias'}`;
+    
+    // For older dates, return formatted date
+    return lastActive.toLocaleDateString('pt-BR');
+  };
+
   return (
     <AppLayout>
       <motion.div
@@ -142,9 +218,6 @@ const Usuarios = () => {
                 Gerencie os usuários da plataforma ECCOS.
               </p>
             </div>
-            <Button className="bg-eccos-purple hover:bg-eccos-purple/80">
-              <UserPlus className="mr-2 h-4 w-4" /> Adicionar Usuário
-            </Button>
           </div>
 
           <Card>
@@ -152,6 +225,7 @@ const Usuarios = () => {
               <CardTitle>Lista de Usuários</CardTitle>
               <CardDescription>
                 Todos os usuários cadastrados na plataforma ECCOS.
+                {users.length > 0 ? ` (${users.length} usuários)` : ''}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -179,39 +253,108 @@ const Usuarios = () => {
                   </TableHeader>
                   <TableBody>
                     {filteredUsers.map((user) => (
-                      <TableRow key={user.id} className="hover:bg-secondary/30">
+                      <TableRow key={user.uid} className={`hover:bg-secondary/30 ${user.blocked ? "bg-red-50 dark:bg-red-950/20" : ""}`}>
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar>
-                              <AvatarImage src={user.avatar || ""} />
+                              <AvatarImage src={user.photoURL || ""} />
                               <AvatarFallback className="bg-gradient-to-br from-eccos-blue to-eccos-purple text-white">
-                                {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                {user.displayName.split(' ').map(n => n[0]).join('').toUpperCase()}
                               </AvatarFallback>
                             </Avatar>
-                            <span className="font-medium">{user.name}</span>
+                            <div>
+                              <span className="font-medium">{user.displayName}</span>
+                              {user.blocked && (
+                                <Badge variant="outline" className="ml-2 bg-red-500/20 text-red-500">
+                                  Bloqueado
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>{user.email}</TableCell>
-                        <TableCell>{user.department}</TableCell>
-                        <TableCell>{getRoleBadge(user.role)}</TableCell>
-                        <TableCell>{user.lastActive}</TableCell>
+                        <TableCell>{user.department || "Não definido"}</TableCell>
+                        <TableCell>{getRoleBadge(user)}</TableCell>
+                        <TableCell>{getLastActive(user.lastActive)}</TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 text-destructive hover:text-destructive"
-                              disabled={user.role === "superadmin"}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                          <div className="flex justify-end">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {canEditRole(user) && (
+                                  <DropdownMenuItem 
+                                    onClick={() => handleRoleChangeClick(user)}
+                                  >
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    {user.role === "admin" ? "Remover Admin" : "Tornar Admin"}
+                                  </DropdownMenuItem>
+                                )}
+                                
+                                {/* If there's a pending role change and current user is not the requester */}
+                                {user.pendingRoleChange && 
+                                 user.pendingRoleChange.requestedBy !== currentUser?.uid && 
+                                 currentUser?.role === "admin" && 
+                                 !user.pendingRoleChange.approvals.includes(currentUser?.uid) && (
+                                  <DropdownMenuItem 
+                                    onClick={() => handleRoleChangeClick(user)}
+                                    className="text-blue-600"
+                                  >
+                                    <ShieldCheck className="mr-2 h-4 w-4" />
+                                    Aprovar alteração
+                                  </DropdownMenuItem>
+                                )}
+                                
+                                {/* If this user has requested a role change */}
+                                {user.pendingRoleChange && 
+                                 user.pendingRoleChange.requestedBy === currentUser?.uid && (
+                                  <DropdownMenuItem 
+                                    onClick={() => handleRoleChangeClick(user)}
+                                    className="text-yellow-600"
+                                  >
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Cancelar solicitação
+                                  </DropdownMenuItem>
+                                )}
+                                
+                                {canBlock(user) && (
+                                  <>
+                                    {canEditRole(user) && <DropdownMenuSeparator />}
+                                    <DropdownMenuItem 
+                                      onClick={() => handleBlockClick(user)}
+                                      className={user.blocked ? "text-green-600" : "text-red-600"}
+                                    >
+                                      {user.blocked ? (
+                                        <>
+                                          <Unlock className="mr-2 h-4 w-4" />
+                                          Desbloquear
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Lock className="mr-2 h-4 w-4" />
+                                          Bloquear
+                                        </>
+                                      )}
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </TableCell>
                       </TableRow>
                     ))}
+                    
+                    {filteredUsers.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="h-24 text-center">
+                          Nenhum usuário encontrado.
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -219,6 +362,22 @@ const Usuarios = () => {
           </Card>
         </div>
       </motion.div>
+      
+      {/* Role change dialog */}
+      <RoleChangeDialog 
+        open={roleDialogOpen}
+        onOpenChange={setRoleDialogOpen}
+        user={selectedUser}
+        onSuccess={refetch}
+      />
+      
+      {/* Block user dialog */}
+      <BlockUserDialog 
+        open={blockDialogOpen}
+        onOpenChange={setBlockDialogOpen}
+        user={selectedUser}
+        onSuccess={refetch}
+      />
     </AppLayout>
   );
 };

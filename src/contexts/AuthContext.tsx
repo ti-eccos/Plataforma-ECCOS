@@ -19,6 +19,7 @@ interface AuthUser {
   displayName: string;
   photoURL: string | null;
   role: UserRole;
+  blocked?: boolean;
 }
 
 interface AuthContextType {
@@ -65,6 +66,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           if (docSnap.exists()) {
             userData = docSnap.data();
+            
+            // Check if user is blocked
+            if (userData.blocked) {
+              await firebaseSignOut(auth);
+              toast({
+                title: "Acesso bloqueado",
+                description: "Sua conta foi bloqueada. Entre em contato com um administrador.",
+                variant: "destructive"
+              });
+              setCurrentUser(null);
+              setLoading(false);
+              return;
+            }
+            
+            // Update last active
+            await setDoc(userRef, {
+              ...userData,
+              lastActive: new Date().toISOString()
+            }, { merge: true });
           } else {
             // Initialize new user
             let role: UserRole = "user";
@@ -78,7 +98,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               displayName: user.displayName || "",
               photoURL: user.photoURL,
               role: role,
-              createdAt: new Date().toISOString()
+              blocked: false,
+              lastActive: new Date().toISOString(),
+              createdAt: new Date().toISOString(),
+              department: "Não definido"
             };
             
             await setDoc(userRef, userData);
@@ -89,7 +112,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             email: user.email,
             displayName: user.displayName || "",
             photoURL: user.photoURL,
-            role: userData.role
+            role: userData.role,
+            blocked: userData.blocked
           });
         } catch (error) {
           console.error("Error fetching user data:", error);
