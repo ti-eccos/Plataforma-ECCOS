@@ -63,7 +63,15 @@ const AddEquipmentDialog = ({ open, onOpenChange, onEquipmentAdded }: AddEquipme
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
     try {
-      await addEquipment(values);
+      // Fix: Explicitly cast the values to the required type to ensure all properties are present
+      await addEquipment({
+        name: values.name,
+        type: values.type,
+        status: values.status,
+        location: values.location,
+        serialNumber: values.serialNumber
+      });
+      
       toast({
         title: "Equipamento adicionado",
         description: "O equipamento foi adicionado com sucesso.",

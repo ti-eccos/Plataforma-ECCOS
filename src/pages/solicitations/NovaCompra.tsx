@@ -31,6 +31,11 @@ const formSchema = z.object({
   additionalInfo: z.string().optional(),
 });
 
+// Define the correct output type to include transformed values
+type FormValues = Omit<z.infer<typeof formSchema>, 'quantity'> & {
+  quantity: number;
+};
+
 const NovaCompra = () => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,12 +56,15 @@ const NovaCompra = () => {
   function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     
+    // The values.quantity is now correctly transformed to a number thanks to the schema
+    const formValues: FormValues = values;
+    
     // Simulate API call
     setTimeout(() => {
-      console.log(values);
+      console.log(formValues);
       toast({
         title: "Solicitação enviada!",
-        description: `Sua solicitação de compra para ${values.quantity}x ${values.itemName} foi enviada com sucesso.`,
+        description: `Sua solicitação de compra para ${formValues.quantity}x ${formValues.itemName} foi enviada com sucesso.`,
       });
       form.reset();
       setIsSubmitting(false);
