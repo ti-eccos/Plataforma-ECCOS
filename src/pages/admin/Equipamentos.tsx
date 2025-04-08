@@ -37,10 +37,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FilePlus, Search, Edit, Trash2, Loader2 } from "lucide-react";
+import { FilePlus, Search, Trash2, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import AddEquipmentDialog from "@/components/AddEquipmentDialog";
-import { getAllEquipment, deleteEquipment, Equipment, EquipmentType, filterEquipmentByType } from "@/services/equipmentService";
+import { getAllEquipment, deleteEquipment, Equipment, EquipmentType } from "@/services/equipmentService";
 
 const Equipamentos = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -98,9 +98,7 @@ const Equipamentos = () => {
       filtered = filtered.filter(
         (item) =>
           item.name.toLowerCase().includes(term) ||
-          item.type.toLowerCase().includes(term) ||
-          item.location.toLowerCase().includes(term) ||
-          item.serialNumber.toLowerCase().includes(term)
+          item.type.toLowerCase().includes(term)
       );
     }
     
@@ -139,19 +137,6 @@ const Equipamentos = () => {
     } finally {
       setDeleteDialogOpen(false);
       setEquipmentToDelete(null);
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "disponível":
-        return "bg-green-500/20 text-green-500 hover:bg-green-500/30";
-      case "em uso":
-        return "bg-blue-500/20 text-blue-500 hover:bg-blue-500/30";
-      case "em manutenção":
-        return "bg-orange-500/20 text-orange-500 hover:bg-orange-500/30";
-      default:
-        return "bg-gray-500/20 text-gray-500 hover:bg-gray-500/30";
     }
   };
 
@@ -220,16 +205,13 @@ const Equipamentos = () => {
                       <TableHead className="w-[100px]">ID</TableHead>
                       <TableHead>Nome</TableHead>
                       <TableHead>Tipo</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Localização</TableHead>
-                      <TableHead>Serial</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isLoading ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="h-24 text-center">
+                        <TableCell colSpan={4} className="h-24 text-center">
                           <div className="flex justify-center items-center">
                             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mr-2" />
                             <span>Carregando equipamentos...</span>
@@ -238,7 +220,7 @@ const Equipamentos = () => {
                       </TableRow>
                     ) : filteredEquipment.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                        <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                           Nenhum equipamento encontrado.
                         </TableCell>
                       </TableRow>
@@ -248,13 +230,6 @@ const Equipamentos = () => {
                           <TableCell className="font-medium">{equipment.id?.substring(0, 8)}...</TableCell>
                           <TableCell>{equipment.name}</TableCell>
                           <TableCell>{equipment.type}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={getStatusColor(equipment.status)}>
-                              {equipment.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{equipment.location}</TableCell>
-                          <TableCell className="font-mono text-xs">{equipment.serialNumber}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">

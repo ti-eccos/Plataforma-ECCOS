@@ -16,18 +16,21 @@ export interface Equipment {
   id?: string;
   name: string;
   type: EquipmentType;
-  status: "disponível" | "em uso" | "em manutenção";
-  location: string;
-  serialNumber: string;
+  status?: "disponível" | "em uso" | "em manutenção";
+  location?: string;
+  serialNumber?: string;
 }
 
 // Collection reference
 const equipmentCollectionRef = collection(db, "equipment");
 
 // Add new equipment
-export const addEquipment = async (equipment: Omit<Equipment, "id">) => {
+export const addEquipment = async (equipment: Pick<Equipment, "name" | "type">) => {
   try {
-    const docRef = await addDoc(equipmentCollectionRef, equipment);
+    const docRef = await addDoc(equipmentCollectionRef, {
+      ...equipment,
+      status: "disponível", // Default status
+    });
     return { id: docRef.id, ...equipment };
   } catch (error) {
     console.error("Error adding equipment:", error);

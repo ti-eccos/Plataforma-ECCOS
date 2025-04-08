@@ -33,10 +33,7 @@ import { addEquipment, EquipmentType } from "@/services/equipmentService";
 
 const formSchema = z.object({
   name: z.string().min(3, { message: "O nome deve ter pelo menos 3 caracteres" }),
-  type: z.enum(["Chromebook", "iPad"]),
-  status: z.enum(["disponível", "em uso", "em manutenção"]).default("disponível"),
-  location: z.string().min(2, { message: "A localização deve ser informada" }),
-  serialNumber: z.string().min(4, { message: "O número de série deve ser informado" })
+  type: z.enum(["Chromebook", "iPad"])
 });
 
 interface AddEquipmentDialogProps {
@@ -53,23 +50,16 @@ const AddEquipmentDialog = ({ open, onOpenChange, onEquipmentAdded }: AddEquipme
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      type: "Chromebook",
-      status: "disponível",
-      location: "",
-      serialNumber: ""
+      type: "Chromebook"
     },
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
     try {
-      // Fix: Explicitly cast the values to the required type to ensure all properties are present
       await addEquipment({
         name: values.name,
-        type: values.type,
-        status: values.status,
-        location: values.location,
-        serialNumber: values.serialNumber
+        type: values.type
       });
       
       toast({
@@ -133,57 +123,6 @@ const AddEquipmentDialog = ({ open, onOpenChange, onEquipmentAdded }: AddEquipme
                       <SelectItem value="iPad">iPad</SelectItem>
                     </SelectContent>
                   </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o status" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="disponível">Disponível</SelectItem>
-                      <SelectItem value="em uso">Em Uso</SelectItem>
-                      <SelectItem value="em manutenção">Em Manutenção</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="location"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Localização</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Localização atual" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="serialNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Número de Série</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Número de série" {...field} />
-                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
