@@ -1,4 +1,6 @@
 
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,42 +19,126 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { FilePlus, Search, Edit, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { FilePlus, Search, Edit, Trash2, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
-
-// Mock data for equipment
-const MOCK_EQUIPMENT = [
-  { id: 1, name: "Notebook Dell Latitude", type: "Notebook", status: "disponível", location: "Sala de TI", serialNumber: "ND-5678-AB" },
-  { id: 2, name: "Projetor Epson X41", type: "Projetor", status: "em uso", location: "Sala 202", serialNumber: "EP-8765-CD" },
-  { id: 3, name: "iPad Air", type: "Tablet", status: "em manutenção", location: "Laboratório", serialNumber: "AP-1234-XZ" },
-  { id: 4, name: "Lousa Digital", type: "Lousa", status: "disponível", location: "Sala 105", serialNumber: "LD-9876-EF" },
-  { id: 5, name: "Notebook Lenovo ThinkPad", type: "Notebook", status: "disponível", location: "Laboratório", serialNumber: "LN-4321-GH" },
-  { id: 6, name: "Microfone sem fio", type: "Áudio", status: "em uso", location: "Auditório", serialNumber: "MS-6543-IJ" },
-  { id: 7, name: "Caixa de Som JBL", type: "Áudio", status: "disponível", location: "Depósito", serialNumber: "CS-7890-KL" },
-  { id: 8, name: "Projetor BenQ", type: "Projetor", status: "em manutenção", location: "Manutenção", serialNumber: "BQ-3456-MN" },
-];
+import AddEquipmentDialog from "@/components/AddEquipmentDialog";
+import { getAllEquipment, deleteEquipment, Equipment, EquipmentType, filterEquipmentByType } from "@/services/equipmentService";
 
 const Equipamentos = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [filteredEquipment, setFilteredEquipment] = useState(MOCK_EQUIPMENT);
+  const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
+  const [filteredEquipment, setFilteredEquipment] = useState<Equipment[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>("");
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [equipmentToDelete, setEquipmentToDelete] = useState<string | null>(null);
+  const { toast } = useToast();
 
+  // Load equipment data
+  const loadEquipmentData = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getAllEquipment();
+      setEquipmentList(data);
+      setFilteredEquipment(data);
+    } catch (error) {
+      toast({
+        title: "Erro ao carregar dados",
+        description: "Não foi possível carregar a lista de equipamentos.",
+        variant: "destructive",
+      });
+      console.error("Failed to load equipment:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadEquipmentData();
+  }, []);
+
+  // Handle search
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value.toLowerCase();
     setSearchTerm(term);
+    applyFilters(term, selectedTypeFilter);
+  };
+
+  // Handle type filter
+  const handleTypeFilter = (type: string) => {
+    setSelectedTypeFilter(type);
+    applyFilters(searchTerm, type);
+  };
+
+  // Apply both filters
+  const applyFilters = (term: string, typeFilter: string) => {
+    let filtered = [...equipmentList];
     
-    if (term === "") {
-      setFilteredEquipment(MOCK_EQUIPMENT);
-    } else {
-      const filtered = MOCK_EQUIPMENT.filter(
+    // Apply search term filter
+    if (term) {
+      filtered = filtered.filter(
         (item) =>
           item.name.toLowerCase().includes(term) ||
           item.type.toLowerCase().includes(term) ||
           item.location.toLowerCase().includes(term) ||
           item.serialNumber.toLowerCase().includes(term)
       );
-      setFilteredEquipment(filtered);
+    }
+    
+    // Apply type filter
+    if (typeFilter && typeFilter !== "all") {
+      filtered = filtered.filter(
+        (item) => item.type === typeFilter
+      );
+    }
+    
+    setFilteredEquipment(filtered);
+  };
+
+  // Handle equipment deletion
+  const confirmDelete = (id: string) => {
+    setEquipmentToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!equipmentToDelete) return;
+    
+    try {
+      await deleteEquipment(equipmentToDelete);
+      toast({
+        title: "Equipamento excluído",
+        description: "O equipamento foi removido com sucesso.",
+      });
+      loadEquipmentData();
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao excluir o equipamento.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setEquipmentToDelete(null);
     }
   };
 
@@ -84,7 +170,10 @@ const Equipamentos = () => {
                 Gerencie todos os equipamentos tecnológicos da instituição.
               </p>
             </div>
-            <Button className="bg-eccos-blue hover:bg-eccos-blue/80">
+            <Button 
+              className="bg-eccos-blue hover:bg-eccos-blue/80"
+              onClick={() => setAddDialogOpen(true)}
+            >
               <FilePlus className="mr-2 h-4 w-4" /> Adicionar Equipamento
             </Button>
           </div>
@@ -97,14 +186,31 @@ const Equipamentos = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center mb-6">
-                <Search className="mr-2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar equipamentos..."
-                  value={searchTerm}
-                  onChange={handleSearch}
-                  className="max-w-md"
-                />
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+                <div className="flex items-center w-full md:w-auto">
+                  <Search className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar equipamentos..."
+                    value={searchTerm}
+                    onChange={handleSearch}
+                    className="max-w-md"
+                  />
+                </div>
+                <div className="w-full md:w-auto">
+                  <Select 
+                    value={selectedTypeFilter} 
+                    onValueChange={handleTypeFilter}
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Filtrar por tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="Chromebook">Chromebook</SelectItem>
+                      <SelectItem value="iPad">iPad</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="rounded-md border overflow-hidden">
@@ -121,36 +227,82 @@ const Equipamentos = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredEquipment.map((equipment) => (
-                      <TableRow key={equipment.id} className="hover:bg-secondary/30">
-                        <TableCell className="font-medium">{equipment.id}</TableCell>
-                        <TableCell>{equipment.name}</TableCell>
-                        <TableCell>{equipment.type}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={getStatusColor(equipment.status)}>
-                            {equipment.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{equipment.location}</TableCell>
-                        <TableCell className="font-mono text-xs">{equipment.serialNumber}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="h-24 text-center">
+                          <div className="flex justify-center items-center">
+                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mr-2" />
+                            <span>Carregando equipamentos...</span>
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : filteredEquipment.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                          Nenhum equipamento encontrado.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredEquipment.map((equipment) => (
+                        <TableRow key={equipment.id} className="hover:bg-secondary/30">
+                          <TableCell className="font-medium">{equipment.id?.substring(0, 8)}...</TableCell>
+                          <TableCell>{equipment.name}</TableCell>
+                          <TableCell>{equipment.type}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={getStatusColor(equipment.status)}>
+                              {equipment.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{equipment.location}</TableCell>
+                          <TableCell className="font-mono text-xs">{equipment.serialNumber}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                                <Trash2 
+                                  className="h-4 w-4" 
+                                  onClick={() => equipment.id && confirmDelete(equipment.id)}
+                                />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Add Equipment Dialog */}
+        <AddEquipmentDialog 
+          open={addDialogOpen}
+          onOpenChange={setAddDialogOpen}
+          onEquipmentAdded={loadEquipmentData}
+        />
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir este equipamento? 
+                Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDelete}
+                className="bg-destructive hover:bg-destructive/90"
+              >
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </motion.div>
     </AppLayout>
   );
