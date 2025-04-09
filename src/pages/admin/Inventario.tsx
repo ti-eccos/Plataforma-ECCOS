@@ -1,4 +1,6 @@
 
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,61 +10,113 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { TabsContent, Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState } from "react";
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Search, Plus, FileText, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { getAllEquipment, Equipment, EquipmentType } from "@/services/equipmentService";
+import EquipmentDetailsDialog from "@/components/admin/EquipmentDetailsDialog";
+import AddEquipmentFormDialog from "@/components/admin/AddEquipmentFormDialog";
 
 const Inventario = () => {
-  const [reportType, setReportType] = useState("current");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
+  const [filteredEquipment, setFilteredEquipment] = useState<Equipment[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const { toast } = useToast();
 
-  // Mock data for inventory overview
-  const inventoryOverview = [
-    { name: "Em uso", value: 42, color: "#0074E0" },
-    { name: "Disponível", value: 28, color: "#00E676" },
-    { name: "Em manutenção", value: 8, color: "#F97316" },
-    { name: "Obsoleto", value: 12, color: "#8B5CF6" },
+  // Available equipment types
+  const equipmentTypes: EquipmentType[] = [
+    "Chromebook",
+    "iPad",
+    "Projetor",
+    "Cabo",
+    "Desktop",
+    "Periférico",
+    "Áudio",
+    "Rede",
+    "Outro",
   ];
 
-  // Mock data for equipment distribution
-  const equipmentDistribution = [
-    { name: "Notebooks", quantity: 25, color: "#0074E0" },
-    { name: "Projetores", quantity: 15, color: "#F472B6" },
-    { name: "Tablets", quantity: 20, color: "#8B5CF6" },
-    { name: "Periféricos", quantity: 40, color: "#F97316" },
-    { name: "Áudio", quantity: 10, color: "#FACC15" },
-    { name: "Outros", quantity: 8, color: "#00E676" },
-  ];
+  // Load equipment data
+  const loadEquipmentData = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getAllEquipment();
+      setEquipmentList(data);
+      setFilteredEquipment(data);
+    } catch (error) {
+      toast({
+        title: "Erro ao carregar dados",
+        description: "Não foi possível carregar a lista de equipamentos.",
+        variant: "destructive",
+      });
+      console.error("Failed to load equipment:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  // Mock data for acquisition history
-  const acquisitionHistory = [
-    { year: "2020", quantity: 15 },
-    { year: "2021", quantity: 22 },
-    { year: "2022", quantity: 30 },
-    { year: "2023", quantity: 28 },
-    { year: "2024", quantity: 18 },
-  ];
+  useEffect(() => {
+    loadEquipmentData();
+  }, []);
 
-  // Mock data for recent acquisitions
-  const recentAcquisitions = [
-    { id: 1, name: "Notebooks Dell Latitude", date: "15/03/2024", quantity: 5, value: "R$ 25.000,00" },
-    { id: 2, name: "iPads Air", date: "10/02/2024", quantity: 10, value: "R$ 35.000,00" },
-    { id: 3, name: "Projetores Epson", date: "25/01/2024", quantity: 3, value: "R$ 12.000,00" },
-    { id: 4, name: "Caixas de Som JBL", date: "15/01/2024", quantity: 4, value: "R$ 8.000,00" },
-  ];
+  // Filter equipment when search term changes
+  useEffect(() => {
+    if (searchTerm) {
+      const filtered = equipmentList.filter((item) =>
+        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.serialNumber && item.serialNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (item.brand && item.brand.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+      setFilteredEquipment(filtered);
+    } else {
+      setFilteredEquipment(equipmentList);
+    }
+  }, [searchTerm, equipmentList]);
 
-  const RADIAN = Math.PI / 180;
-  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }: any) => {
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  // Handle search
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
 
-    return (
-      <text x={x} y={y} fill="#fff" textAnchor="middle" dominantBaseline="central">
-        {`${(percent * 100).toFixed(0)}%`}
-      </text>
-    );
+  // View equipment details
+  const viewEquipmentDetails = (equipment: Equipment) => {
+    setSelectedEquipment(equipment);
+    setDetailsDialogOpen(true);
+  };
+
+  // Get status badge color
+  const getStatusBadgeColor = (status: string) => {
+    switch(status) {
+      case "disponível": return "bg-green-500 hover:bg-green-600";
+      case "em uso": return "bg-blue-500 hover:bg-blue-600";
+      case "em manutenção": return "bg-orange-500 hover:bg-orange-600";
+      case "obsoleto": return "bg-gray-500 hover:bg-gray-600";
+      default: return "bg-slate-500";
+    }
+  };
+
+  // Group equipment by type
+  const getEquipmentByType = (type: EquipmentType) => {
+    return filteredEquipment.filter(item => item.type === type);
   };
 
   return (
@@ -77,172 +131,167 @@ const Inventario = () => {
             <div>
               <h2 className="text-3xl font-bold tracking-tight text-gradient">Inventário</h2>
               <p className="text-muted-foreground mt-1">
-                Visão geral dos ativos tecnológicos da instituição.
+                Gerencie todos os equipamentos tecnológicos da instituição.
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              <Select
-                value={reportType}
-                onValueChange={setReportType}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Tipo de relatório" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="current">Atual</SelectItem>
-                  <SelectItem value="historical">Histórico</SelectItem>
-                  <SelectItem value="detailed">Detalhado</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button>Exportar</Button>
+            <Button
+              onClick={() => setAddDialogOpen(true)}
+              className="bg-eccos-blue hover:bg-eccos-blue/80"
+            >
+              <Plus className="mr-2 h-4 w-4" /> Adicionar Equipamento
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-4 mb-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar equipamentos por nome, número de série, marca..."
+                value={searchTerm}
+                onChange={handleSearch}
+                className="pl-8"
+              />
             </div>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Visão Geral</CardTitle>
-                <CardDescription>
-                  Distribuição de equipamentos por status
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={inventoryOverview}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={renderCustomizedLabel}
-                        outerRadius={120}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {inventoryOverview.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Legend />
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
+          {isLoading ? (
+            <div className="flex justify-center items-center h-40">
+              <Loader2 className="h-8 w-8 animate-spin text-eccos-blue" />
+            </div>
+          ) : (
+            <Tabs defaultValue="all" className="space-y-4">
+              <TabsList className="flex h-auto flex-wrap">
+                <TabsTrigger value="all">Todos</TabsTrigger>
+                {equipmentTypes.map((type) => (
+                  <TabsTrigger key={type} value={type}>
+                    {type}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              
+              {/* All Equipment Tab */}
+              <TabsContent value="all">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle>Todos os Equipamentos</CardTitle>
+                    <CardDescription>
+                      Lista completa de todos os equipamentos cadastrados
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead className="w-[300px]">Nome</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredEquipment.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">
+                              Nenhum equipamento encontrado
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          filteredEquipment.map((item) => (
+                            <TableRow key={item.id}>
+                              <TableCell>{item.type}</TableCell>
+                              <TableCell>{item.name}</TableCell>
+                              <TableCell>
+                                <Badge className={getStatusBadgeColor(item.status)}>{item.status}</Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => viewEquipmentDetails(item)}
+                                >
+                                  <FileText className="mr-2 h-4 w-4" />
+                                  Detalhes
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Tipos de Equipamentos</CardTitle>
-                <CardDescription>
-                  Distribuição por categoria
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={equipmentDistribution}
-                      margin={{
-                        top: 5,
-                        right: 30,
-                        left: 20,
-                        bottom: 5,
-                      }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="quantity" name="Quantidade">
-                        {equipmentDistribution.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Tabs defaultValue="history">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="history">Histórico de Aquisição</TabsTrigger>
-              <TabsTrigger value="recent">Aquisições Recentes</TabsTrigger>
-            </TabsList>
-            <TabsContent value="history">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Histórico de Aquisições por Ano</CardTitle>
-                  <CardDescription>
-                    Total de equipamentos adquiridos anualmente
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={acquisitionHistory}
-                        margin={{
-                          top: 5,
-                          right: 30,
-                          left: 20,
-                          bottom: 5,
-                        }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="year" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="quantity" name="Quantidade" fill="#0074E0" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="recent">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Aquisições Recentes</CardTitle>
-                  <CardDescription>
-                    Últimos equipamentos adquiridos
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="rounded-md border overflow-hidden">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="bg-muted/50">
-                          <th className="px-4 py-3 text-left">ID</th>
-                          <th className="px-4 py-3 text-left">Nome</th>
-                          <th className="px-4 py-3 text-left">Data</th>
-                          <th className="px-4 py-3 text-left">Quantidade</th>
-                          <th className="px-4 py-3 text-left">Valor</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y">
-                        {recentAcquisitions.map((item) => (
-                          <tr key={item.id} className="hover:bg-muted/30">
-                            <td className="px-4 py-3">{item.id}</td>
-                            <td className="px-4 py-3">{item.name}</td>
-                            <td className="px-4 py-3">{item.date}</td>
-                            <td className="px-4 py-3">{item.quantity}</td>
-                            <td className="px-4 py-3">{item.value}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+              {/* Equipment By Type Tabs */}
+              {equipmentTypes.map((type) => (
+                <TabsContent key={type} value={type}>
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle>Equipamentos: {type}</CardTitle>
+                      <CardDescription>
+                        Lista de equipamentos do tipo {type}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[300px]">Nome</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Ações</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {getEquipmentByType(type).length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={3} className="text-center py-10 text-muted-foreground">
+                                Nenhum equipamento do tipo {type} encontrado
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            getEquipmentByType(type).map((item) => (
+                              <TableRow key={item.id}>
+                                <TableCell>{item.name}</TableCell>
+                                <TableCell>
+                                  <Badge className={getStatusBadgeColor(item.status)}>{item.status}</Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={() => viewEquipmentDetails(item)}
+                                  >
+                                    <FileText className="mr-2 h-4 w-4" />
+                                    Detalhes
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              ))}
+            </Tabs>
+          )}
         </div>
+
+        {/* Equipment Details Dialog */}
+        <EquipmentDetailsDialog
+          equipment={selectedEquipment}
+          open={detailsDialogOpen}
+          onOpenChange={setDetailsDialogOpen}
+          onEquipmentUpdated={loadEquipmentData}
+        />
+
+        {/* Add Equipment Dialog */}
+        <AddEquipmentFormDialog
+          open={addDialogOpen}
+          onOpenChange={setAddDialogOpen}
+          onEquipmentAdded={loadEquipmentData}
+        />
       </motion.div>
     </AppLayout>
   );

@@ -87,14 +87,16 @@ export const checkConflicts = async (
     // Check for time overlap with each equipment
     for (const equipmentId of reservation.equipmentIds) {
       for (const existingReservation of reservations) {
+        const existingData = existingReservation as any; // Type assertion to avoid TS errors
+        
         // Skip if this reservation doesn't include the current equipment
-        if (!existingReservation.equipmentIds.includes(equipmentId)) {
+        if (!existingData.equipmentIds || !existingData.equipmentIds.includes(equipmentId)) {
           continue;
         }
         
         // Check if time periods overlap
-        const existingStart = existingReservation.startTime;
-        const existingEnd = existingReservation.endTime;
+        const existingStart = existingData.startTime;
+        const existingEnd = existingData.endTime;
         
         // Time periods overlap if:
         // - New start time is before existing end time AND

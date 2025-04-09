@@ -7,29 +7,47 @@ import {
   deleteDoc, 
   doc, 
   query, 
-  where 
+  where,
+  updateDoc,
+  getDoc
 } from "firebase/firestore";
 
-export type EquipmentType = "Chromebook" | "iPad";
+export type EquipmentType = 
+  | "Chromebook" 
+  | "iPad" 
+  | "Projetor" 
+  | "Cabo" 
+  | "Desktop" 
+  | "Periférico"
+  | "Áudio"
+  | "Rede"
+  | "Outro";
 
 export interface Equipment {
   id?: string;
   name: string;
   type: EquipmentType;
-  status?: "disponível" | "em uso" | "em manutenção";
+  status: "disponível" | "em uso" | "em manutenção" | "obsoleto";
   location?: string;
   serialNumber?: string;
+  model?: string;
+  brand?: string;
+  purchaseDate?: string;
+  warrantyUntil?: string;
+  notes?: string;
+  lastMaintenance?: string;
+  properties?: Record<string, string>; // For type-specific properties
 }
 
 // Collection reference
 const equipmentCollectionRef = collection(db, "equipment");
 
 // Add new equipment
-export const addEquipment = async (equipment: Pick<Equipment, "name" | "type">) => {
+export const addEquipment = async (equipment: Omit<Equipment, "id">) => {
   try {
     const docRef = await addDoc(equipmentCollectionRef, {
       ...equipment,
-      status: "disponível", // Default status
+      status: equipment.status || "disponível", // Default status
     });
     return { id: docRef.id, ...equipment };
   } catch (error) {
@@ -48,6 +66,35 @@ export const getAllEquipment = async (): Promise<Equipment[]> => {
     })) as Equipment[];
   } catch (error) {
     console.error("Error getting equipment:", error);
+    throw error;
+  }
+};
+
+// Get a single equipment by ID
+export const getEquipmentById = async (id: string): Promise<Equipment | null> => {
+  try {
+    const docRef = doc(db, "equipment", id);
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+      return { id: docSnap.id, ...docSnap.data() } as Equipment;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error("Error getting equipment by ID:", error);
+    throw error;
+  }
+};
+
+// Update equipment
+export const updateEquipment = async (id: string, updates: Partial<Equipment>) => {
+  try {
+    const equipmentRef = doc(db, "equipment", id);
+    await updateDoc(equipmentRef, updates);
+    return true;
+  } catch (error) {
+    console.error("Error updating equipment:", error);
     throw error;
   }
 };

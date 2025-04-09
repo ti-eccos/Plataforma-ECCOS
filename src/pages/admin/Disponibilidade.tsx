@@ -1,155 +1,121 @@
-
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Calendar } from "@/components/ui/calendar";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
 import AppLayout from "@/components/AppLayout";
-import { toast } from "sonner";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Calendar as CalendarIcon, Plus, Trash2 } from "lucide-react";
-import { getAvailableDates, addAvailableDates, removeAvailableDates, isDateInPastOrToday } from "@/services/availabilityService";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Search, Plus, FileText, Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
+import { getAllEquipment, Equipment, EquipmentType } from "@/services/equipmentService";
+import EquipmentDetailsDialog from "@/components/admin/EquipmentDetailsDialog";
+import AddEquipmentFormDialog from "@/components/admin/AddEquipmentFormDialog";
 
-const Disponibilidade = () => {
-  // State for selected dates by the user
-  const [selectedDates, setSelectedDates] = useState<Date[]>([]);
-  
-  // QueryClient for refetching data
-  const queryClient = useQueryClient();
+const Inventario = () => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
+  const [filteredEquipment, setFilteredEquipment] = useState<Equipment[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const { toast } = useToast();
 
-  // Fetch available dates from Firebase
-  const { data: availableDates = [], isLoading } = useQuery({
-    queryKey: ['availableDates'],
-    queryFn: getAvailableDates
-  });
+  // Available equipment types
+  const equipmentTypes: EquipmentType[] = [
+    "Chromebook",
+    "iPad",
+    "Projetor",
+    "Cabo",
+    "Desktop",
+    "Periférico",
+    "Áudio",
+    "Rede",
+    "Outro",
+  ];
 
-  // Add dates mutation
-  const addDatesMutation = useMutation({
-    mutationFn: addAvailableDates,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['availableDates'] });
-      toast.success("Datas adicionadas com sucesso!");
-      setSelectedDates([]);
-    },
-    onError: (error) => {
-      toast.error("Erro ao adicionar datas: " + (error as Error).message);
-    }
-  });
-
-  // Remove dates mutation
-  const removeDatesMutation = useMutation({
-    mutationFn: removeAvailableDates,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['availableDates'] });
-      toast.success("Datas removidas com sucesso!");
-      setSelectedDates([]);
-    },
-    onError: (error) => {
-      toast.error("Erro ao remover datas: " + (error as Error).message);
-    }
-  });
-
-  // Handle date selection
-  const handleDateSelect = (date: Date | undefined) => {
-    if (!date) return;
-    
-    // Normalize the date by setting time to 00:00:00
-    const normalizedDate = new Date(date);
-    normalizedDate.setHours(0, 0, 0, 0);
-    
-    // Check if the date is in the past or today
-    if (isDateInPastOrToday(new Date(normalizedDate))) {
-      toast.error("Não é possível selecionar datas passadas ou o dia atual");
-      return;
-    }
-    
-    setSelectedDates(prevDates => {
-      // Check if date is already selected
-      const dateExists = prevDates.some(d => {
-        const normalizedD = new Date(d);
-        normalizedD.setHours(0, 0, 0, 0);
-        return normalizedD.getTime() === normalizedDate.getTime();
+  // Load equipment data
+  const loadEquipmentData = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getAllEquipment();
+      setEquipmentList(data);
+      setFilteredEquipment(data);
+    } catch (error) {
+      toast({
+        title: "Erro ao carregar dados",
+        description: "Não foi possível carregar a lista de equipamentos.",
+        variant: "destructive",
       });
-      
-      // If date exists in array, remove it, otherwise add it
-      if (dateExists) {
-        return prevDates.filter(d => {
-          const normalizedD = new Date(d);
-          normalizedD.setHours(0, 0, 0, 0);
-          return normalizedD.getTime() !== normalizedDate.getTime();
-        });
-      } else {
-        return [...prevDates, normalizedDate];
-      }
-    });
+      console.error("Failed to load equipment:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // Add available dates
-  const handleAddDates = () => {
-    if (selectedDates.length === 0) {
-      toast.error("Selecione pelo menos uma data para adicionar");
-      return;
+  useEffect(() => {
+    loadEquipmentData();
+  }, []);
+
+  // Filter equipment when search term changes
+  useEffect(() => {
+    if (searchTerm) {
+      const filtered = equipmentList.filter((item) =>
+        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.serialNumber && item.serialNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (item.brand && item.brand.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+      setFilteredEquipment(filtered);
+    } else {
+      setFilteredEquipment(equipmentList);
     }
-    
-    // Filter out dates that are already available to avoid duplicates
-    const newDates = selectedDates.filter(selectedDate => 
-      !availableDates.some(availableDate => {
-        const normalizedAvailable = new Date(availableDate);
-        const normalizedSelected = new Date(selectedDate);
-        normalizedAvailable.setHours(0, 0, 0, 0);
-        normalizedSelected.setHours(0, 0, 0, 0);
-        return normalizedAvailable.getTime() === normalizedSelected.getTime();
-      })
-    );
-    
-    if (newDates.length === 0) {
-      toast.error("As datas selecionadas já estão disponíveis");
-      return;
-    }
-    
-    addDatesMutation.mutate(newDates);
+  }, [searchTerm, equipmentList]);
+
+  // Handle search
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
   };
 
-  // Remove available dates
-  const handleRemoveDates = () => {
-    if (selectedDates.length === 0) {
-      toast.error("Selecione pelo menos uma data para remover");
-      return;
-    }
-    
-    // Filter only dates that are actually available
-    const datesToRemove = selectedDates.filter(selectedDate => 
-      availableDates.some(availableDate => {
-        const normalizedAvailable = new Date(availableDate);
-        const normalizedSelected = new Date(selectedDate);
-        normalizedAvailable.setHours(0, 0, 0, 0);
-        normalizedSelected.setHours(0, 0, 0, 0);
-        return normalizedAvailable.getTime() === normalizedSelected.getTime();
-      })
-    );
-    
-    if (datesToRemove.length === 0) {
-      toast.error("Nenhuma das datas selecionadas está disponível");
-      return;
-    }
-    
-    removeDatesMutation.mutate(datesToRemove);
+  // View equipment details
+  const viewEquipmentDetails = (equipment: Equipment) => {
+    setSelectedEquipment(equipment);
+    setDetailsDialogOpen(true);
   };
 
-  // Custom modifiers for the calendar
-  const modifiers = {
-    available: availableDates.map(date => {
-      const d = new Date(date);
-      d.setHours(0, 0, 0, 0);
-      return d;
-    }),
-    selected: selectedDates,
+  // Get status badge color
+  const getStatusBadgeColor = (status: string) => {
+    switch(status) {
+      case "disponível": return "bg-green-500 hover:bg-green-600";
+      case "em uso": return "bg-blue-500 hover:bg-blue-600";
+      case "em manutenção": return "bg-orange-500 hover:bg-orange-600";
+      case "obsoleto": return "bg-gray-500 hover:bg-gray-600";
+      default: return "bg-slate-500";
+    }
   };
 
-  // Custom modifiers styles
-  const modifiersStyles = {
-    available: { border: "2px solid #00e676", borderRadius: "50%" },
-    selected: { border: "2px solid #1EAEDB", borderRadius: "50%" }
+  // Group equipment by type
+  const getEquipmentByType = (type: EquipmentType) => {
+    return filteredEquipment.filter(item => item.type === type);
   };
 
   return (
@@ -158,78 +124,176 @@ const Disponibilidade = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="space-y-6"
       >
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight text-gradient">Disponibilidade</h2>
-          <p className="text-muted-foreground mt-1">
-            Gerencie as datas disponíveis para reservas.
-          </p>
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h2 className="text-3xl font-bold tracking-tight text-gradient">Inventário</h2>
+              <p className="text-muted-foreground mt-1">
+                Gerencie todos os equipamentos tecnológicos da instituição.
+              </p>
+            </div>
+            <Button
+              onClick={() => setAddDialogOpen(true)}
+              className="bg-eccos-blue hover:bg-eccos-blue/80"
+            >
+              <Plus className="mr-2 h-4 w-4" /> Adicionar Equipamento
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-4 mb-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar equipamentos por nome, número de série, marca..."
+                value={searchTerm}
+                onChange={handleSearch}
+                className="pl-8"
+              />
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="flex justify-center items-center h-40">
+              <Loader2 className="h-8 w-8 animate-spin text-eccos-blue" />
+            </div>
+          ) : (
+            <Tabs defaultValue="all" className="space-y-4">
+              <TabsList className="flex h-auto flex-wrap">
+                <TabsTrigger value="all">Todos</TabsTrigger>
+                {equipmentTypes.map((type) => (
+                  <TabsTrigger key={type} value={type}>
+                    {type}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              
+              {/* All Equipment Tab */}
+              <TabsContent value="all">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle>Todos os Equipamentos</CardTitle>
+                    <CardDescription>
+                      Lista completa de todos os equipamentos cadastrados
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead className="w-[300px]">Nome</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredEquipment.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">
+                              Nenhum equipamento encontrado
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          filteredEquipment.map((item) => (
+                            <TableRow key={item.id}>
+                              <TableCell>{item.type}</TableCell>
+                              <TableCell>{item.name}</TableCell>
+                              <TableCell>
+                                <Badge className={getStatusBadgeColor(item.status)}>{item.status}</Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => viewEquipmentDetails(item)}
+                                >
+                                  <FileText className="mr-2 h-4 w-4" />
+                                  Detalhes
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Equipment By Type Tabs */}
+              {equipmentTypes.map((type) => (
+                <TabsContent key={type} value={type}>
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle>Equipamentos: {type}</CardTitle>
+                      <CardDescription>
+                        Lista de equipamentos do tipo {type}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[300px]">Nome</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Ações</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {getEquipmentByType(type).length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={3} className="text-center py-10 text-muted-foreground">
+                                Nenhum equipamento do tipo {type} encontrado
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            getEquipmentByType(type).map((item) => (
+                              <TableRow key={item.id}>
+                                <TableCell>{item.name}</TableCell>
+                                <TableCell>
+                                  <Badge className={getStatusBadgeColor(item.status)}>{item.status}</Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={() => viewEquipmentDetails(item)}
+                                  >
+                                    <FileText className="mr-2 h-4 w-4" />
+                                    Detalhes
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              ))}
+            </Tabs>
+          )}
         </div>
 
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CalendarIcon className="h-5 w-5" />
-              Calendário de Disponibilidade
-            </CardTitle>
-            <CardDescription>
-              Selecione datas para torná-las disponíveis ou remover disponibilidade.
-              <br />
-              <span className="flex items-center gap-2 mt-2">
-                <span className="inline-block h-3 w-3 bg-[#222222] rounded-sm"></span>
-                <span>Hoje</span>
-              </span>
-              <span className="flex items-center gap-2">
-                <span className="inline-block h-3 w-3 border-2 border-[#00e676] rounded-sm"></span>
-                <span>Data disponível</span>
-              </span>
-              <span className="flex items-center gap-2">
-                <span className="inline-block h-3 w-3 border-2 border-[#1EAEDB] rounded-sm"></span>
-                <span>Data selecionada</span>
-              </span>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pb-6">
-            <div className="flex flex-col items-center">
-              <div className="mb-6 border border-border rounded-lg p-4">
-                <Calendar
-                  mode="multiple"
-                  onSelect={(date) => handleDateSelect(date as Date)}
-                  selected={selectedDates}
-                  className="rounded-md border text-white"
-                  modifiers={modifiers}
-                  modifiersStyles={modifiersStyles}
-                  fromDate={new Date()}
-                  disabled={date => isDateInPastOrToday(date)}
-                />
-              </div>
-              
-              <div className="flex gap-4 w-full justify-center mt-4">
-                <Button 
-                  onClick={handleAddDates} 
-                  disabled={selectedDates.length === 0 || addDatesMutation.isPending}
-                  className="gap-1"
-                >
-                  <Plus className="h-4 w-4" />
-                  Adicionar disponibilidade
-                </Button>
-                <Button 
-                  onClick={handleRemoveDates} 
-                  variant="destructive" 
-                  disabled={selectedDates.length === 0 || removeDatesMutation.isPending}
-                  className="gap-1"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Remover disponibilidade
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Equipment Details Dialog */}
+        <EquipmentDetailsDialog
+          equipment={selectedEquipment}
+          open={detailsDialogOpen}
+          onOpenChange={setDetailsDialogOpen}
+          onEquipmentUpdated={loadEquipmentData}
+        />
+
+        {/* Add Equipment Dialog */}
+        <AddEquipmentFormDialog
+          open={addDialogOpen}
+          onOpenChange={setAddDialogOpen}
+          onEquipmentAdded={loadEquipmentData}
+        />
       </motion.div>
     </AppLayout>
   );
 };
 
-export default Disponibilidade;
+export default Inventario;
