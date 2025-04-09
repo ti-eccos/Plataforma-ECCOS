@@ -9,12 +9,26 @@ import {
   Timestamp,
   serverTimestamp,
   getDoc,
-  doc
+  doc,
+  updateDoc,
+  orderBy
 } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { formatDateToYYYYMMDD } from "./availabilityService";
 
 const COLLECTION_NAME = "reservations";
+const PURCHASE_COLLECTION = "purchases";
+const SUPPORT_COLLECTION = "support";
+
+export type RequestStatus = 
+  | "pending" 
+  | "approved" 
+  | "rejected" 
+  | "in-progress" 
+  | "completed" 
+  | "canceled";
+
+export type RequestType = "reservation" | "purchase" | "support";
 
 export interface ReservationData {
   date: Date;
@@ -30,6 +44,14 @@ export interface Conflict {
   equipmentName: string;
   startTime: string;
   endTime: string;
+}
+
+export interface MessageData {
+  userId: string;
+  userName: string;
+  message: string;
+  timestamp: any;
+  isAdmin: boolean;
 }
 
 // Add a new reservation
@@ -50,6 +72,8 @@ export const addReservation = async (reservation: ReservationData): Promise<void
       userName: user.displayName,
       status: "pending", // pending, approved, rejected
       createdAt: serverTimestamp(),
+      type: "reservation",
+      messages: []
     };
 
     await addDoc(collection(db, COLLECTION_NAME), reservationData);
@@ -155,15 +179,138 @@ export const getUserReservations = async (): Promise<any[]> => {
 };
 
 // For admin: Get all reservations
-export const getAllReservations = async (): Promise<any[]> => {
+export const getAllRequests = async (showHidden: boolean = false): Promise<any[]> => {
   try {
-    const reservationsSnapshot = await getDocs(collection(db, COLLECTION_NAME));
-    return reservationsSnapshot.docs.map(doc => ({
+    // Get reservations
+    const reservationsQuery = query(
+      collection(db, COLLECTION_NAME),
+      orderBy("createdAt", "desc")
+    );
+    const reservationsSnapshot = await getDocs(reservationsQuery);
+    const reservations = reservationsSnapshot.docs.map(doc => ({
       id: doc.id,
-      ...doc.data()
+      ...doc.data(),
+      collectionName: COLLECTION_NAME
     }));
+    
+    // Get purchases
+    const purchasesQuery = query(
+      collection(db, PURCHASE_COLLECTION),
+      orderBy("createdAt", "desc")
+    );
+    const purchasesSnapshot = await getDocs(purchasesQuery);
+    const purchases = purchasesSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      collectionName: PURCHASE_COLLECTION
+    }));
+    
+    // Get support requests
+    const supportQuery = query(
+      collection(db, SUPPORT_COLLECTION),
+      orderBy("createdAt", "desc")
+    );
+    const supportSnapshot = await getDocs(supportQuery);
+    const support = supportSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      collectionName: SUPPORT_COLLECTION
+    }));
+    
+    // Combine all requests
+    let allRequests = [...reservations, ...purchases, ...support];
+    
+    // Filter out hidden statuses if needed
+    if (!showHidden) {
+      allRequests = allRequests.filter(
+        req => !["canceled", "completed", "rejected"].includes(req.status)
+      );
+    }
+    
+    return allRequests;
   } catch (error) {
-    console.error("Error getting all reservations:", error);
+    console.error("Error getting all requests:", error);
+    throw error;
+  }
+};
+
+// Update request status
+export const updateRequestStatus = async (
+  requestId: string, 
+  status: RequestStatus,
+  collectionName: string
+): Promise<void> => {
+  try {
+    const requestRef = doc(db, collectionName, requestId);
+    await updateDoc(requestRef, { status });
+  } catch (error) {
+    console.error("Error updating request status:", error);
+    throw error;
+  }
+};
+
+// Add message to request
+export const addMessageToRequest = async (
+  requestId: string, 
+  message: string,
+  isAdmin: boolean,
+  collectionName: string
+): Promise<void> => {
+  try {
+    const auth = getAuth();
+    const user = auth.currentUser;
+    
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+    
+    const requestRef = doc(db, collectionName, requestId);
+    const requestDoc = await getDoc(requestRef);
+    
+    if (!requestDoc.exists()) {
+      throw new Error("Request not found");
+    }
+    
+    const requestData = requestDoc.data();
+    const messages = requestData.messages || [];
+    
+    const newMessage = {
+      userId: user.uid,
+      userName: user.displayName || user.email,
+      message,
+      timestamp: serverTimestamp(),
+      isAdmin
+    };
+    
+    await updateDoc(requestRef, {
+      messages: [...messages, newMessage]
+    });
+  } catch (error) {
+    console.error("Error adding message to request:", error);
+    throw error;
+  }
+};
+
+// Get request by ID
+export const getRequestById = async (
+  requestId: string,
+  collectionName: string
+): Promise<any> => {
+  try {
+    const requestRef = doc(db, collectionName, requestId);
+    const requestDoc = await getDoc(requestRef);
+    
+    if (!requestDoc.exists()) {
+      throw new Error("Request not found");
+    }
+    
+    return {
+      id: requestDoc.id,
+      ...requestDoc.data(),
+      collectionName
+    };
+  } catch (error) {
+    console.error("Error getting request by ID:", error);
     throw error;
   }
 };
