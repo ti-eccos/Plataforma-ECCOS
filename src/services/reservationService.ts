@@ -11,7 +11,8 @@ import {
   getDoc,
   doc,
   updateDoc,
-  orderBy
+  orderBy,
+  deleteDoc
 } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { formatDateToYYYYMMDD } from "./availabilityService";
@@ -245,6 +246,20 @@ export const updateRequestStatus = async (
     await updateDoc(requestRef, { status });
   } catch (error) {
     console.error("Error updating request status:", error);
+    throw error;
+  }
+};
+
+// Delete request
+export const deleteRequest = async (
+  requestId: string,
+  collectionName: string
+): Promise<void> => {
+  try {
+    const requestRef = doc(db, collectionName, requestId);
+    await deleteDoc(requestRef);
+  } catch (error) {
+    console.error("Error deleting request:", error);
     throw error;
   }
 };
