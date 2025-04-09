@@ -1,80 +1,155 @@
 
-import AppLayout from "@/components/AppLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar } from "@/components/ui/calendar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { Calendar } from "@/components/ui/calendar";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import AppLayout from "@/components/AppLayout";
+import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Calendar as CalendarIcon, Plus, Trash2 } from "lucide-react";
+import { getAvailableDates, addAvailableDates, removeAvailableDates, isDateInPastOrToday } from "@/services/availabilityService";
 
 const Disponibilidade = () => {
-  const [date, setDate] = useState<Date | undefined>(new Date());
-  const [equipmentType, setEquipmentType] = useState("all");
+  // State for selected dates by the user
+  const [selectedDates, setSelectedDates] = useState<Date[]>([]);
+  
+  // QueryClient for refetching data
+  const queryClient = useQueryClient();
 
-  // Mock data for equipment availability
-  const availabilityData: Record<string, any[]> = {
-    notebooks: [
-      { id: 1, name: "Notebook Dell #1", periods: ["morning", "afternoon"] },
-      { id: 2, name: "Notebook Dell #2", periods: ["morning"] },
-      { id: 3, name: "Notebook HP #1", periods: ["afternoon", "night"] },
-      { id: 4, name: "Notebook HP #2", periods: [] },
-    ],
-    projectors: [
-      { id: 1, name: "Projetor Epson #1", periods: ["morning", "night"] },
-      { id: 2, name: "Projetor BenQ #1", periods: ["afternoon"] },
-    ],
-    tablets: [
-      { id: 1, name: "iPad Air #1", periods: ["morning", "afternoon", "night"] },
-      { id: 2, name: "iPad Air #2", periods: ["afternoon"] },
-      { id: 3, name: "Samsung Tablet #1", periods: [] },
-    ],
-  };
+  // Fetch available dates from Firebase
+  const { data: availableDates = [], isLoading } = useQuery({
+    queryKey: ['availableDates'],
+    queryFn: getAvailableDates
+  });
 
-  const allEquipment: { type: string; items: any[] }[] = [
-    { type: "notebooks", items: availabilityData.notebooks },
-    { type: "projectors", items: availabilityData.projectors },
-    { type: "tablets", items: availabilityData.tablets },
-  ];
-
-  // Function to get equipment data based on selected type
-  const getEquipmentData = () => {
-    if (equipmentType === "all") {
-      return allEquipment;
-    } else {
-      return [
-        {
-          type: equipmentType,
-          items: availabilityData[equipmentType] || [],
-        },
-      ];
+  // Add dates mutation
+  const addDatesMutation = useMutation({
+    mutationFn: addAvailableDates,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['availableDates'] });
+      toast.success("Datas adicionadas com sucesso!");
+      setSelectedDates([]);
+    },
+    onError: (error) => {
+      toast.error("Erro ao adicionar datas: " + (error as Error).message);
     }
+  });
+
+  // Remove dates mutation
+  const removeDatesMutation = useMutation({
+    mutationFn: removeAvailableDates,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['availableDates'] });
+      toast.success("Datas removidas com sucesso!");
+      setSelectedDates([]);
+    },
+    onError: (error) => {
+      toast.error("Erro ao remover datas: " + (error as Error).message);
+    }
+  });
+
+  // Handle date selection
+  const handleDateSelect = (date: Date | undefined) => {
+    if (!date) return;
+    
+    // Normalize the date by setting time to 00:00:00
+    const normalizedDate = new Date(date);
+    normalizedDate.setHours(0, 0, 0, 0);
+    
+    // Check if the date is in the past or today
+    if (isDateInPastOrToday(new Date(normalizedDate))) {
+      toast.error("Não é possível selecionar datas passadas ou o dia atual");
+      return;
+    }
+    
+    setSelectedDates(prevDates => {
+      // Check if date is already selected
+      const dateExists = prevDates.some(d => {
+        const normalizedD = new Date(d);
+        normalizedD.setHours(0, 0, 0, 0);
+        return normalizedD.getTime() === normalizedDate.getTime();
+      });
+      
+      // If date exists in array, remove it, otherwise add it
+      if (dateExists) {
+        return prevDates.filter(d => {
+          const normalizedD = new Date(d);
+          normalizedD.setHours(0, 0, 0, 0);
+          return normalizedD.getTime() !== normalizedDate.getTime();
+        });
+      } else {
+        return [...prevDates, normalizedDate];
+      }
+    });
   };
 
-  // Function to render availability status
-  const renderAvailability = (periods: string[]) => {
-    const timeBlocks = [
-      { id: "morning", label: "Manhã", time: "7h às 12h" },
-      { id: "afternoon", label: "Tarde", time: "13h às 18h" },
-      { id: "night", label: "Noite", time: "19h às 22h" },
-    ];
-
-    return (
-      <div className="flex gap-2">
-        {timeBlocks.map((block) => (
-          <Badge
-            key={block.id}
-            variant="outline"
-            className={
-              periods.includes(block.id)
-                ? "bg-red-500/20 text-red-500 hover:bg-red-500/30"
-                : "bg-green-500/20 text-green-500 hover:bg-green-500/30"
-            }
-          >
-            {block.label}: {periods.includes(block.id) ? "Reservado" : "Disponível"}
-          </Badge>
-        ))}
-      </div>
+  // Add available dates
+  const handleAddDates = () => {
+    if (selectedDates.length === 0) {
+      toast.error("Selecione pelo menos uma data para adicionar");
+      return;
+    }
+    
+    // Filter out dates that are already available to avoid duplicates
+    const newDates = selectedDates.filter(selectedDate => 
+      !availableDates.some(availableDate => {
+        const normalizedAvailable = new Date(availableDate);
+        const normalizedSelected = new Date(selectedDate);
+        normalizedAvailable.setHours(0, 0, 0, 0);
+        normalizedSelected.setHours(0, 0, 0, 0);
+        return normalizedAvailable.getTime() === normalizedSelected.getTime();
+      })
     );
+    
+    if (newDates.length === 0) {
+      toast.error("As datas selecionadas já estão disponíveis");
+      return;
+    }
+    
+    addDatesMutation.mutate(newDates);
+  };
+
+  // Remove available dates
+  const handleRemoveDates = () => {
+    if (selectedDates.length === 0) {
+      toast.error("Selecione pelo menos uma data para remover");
+      return;
+    }
+    
+    // Filter only dates that are actually available
+    const datesToRemove = selectedDates.filter(selectedDate => 
+      availableDates.some(availableDate => {
+        const normalizedAvailable = new Date(availableDate);
+        const normalizedSelected = new Date(selectedDate);
+        normalizedAvailable.setHours(0, 0, 0, 0);
+        normalizedSelected.setHours(0, 0, 0, 0);
+        return normalizedAvailable.getTime() === normalizedSelected.getTime();
+      })
+    );
+    
+    if (datesToRemove.length === 0) {
+      toast.error("Nenhuma das datas selecionadas está disponível");
+      return;
+    }
+    
+    removeDatesMutation.mutate(datesToRemove);
+  };
+
+  // Custom modifiers for the calendar
+  const modifiers = {
+    available: availableDates.map(date => {
+      const d = new Date(date);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }),
+    selected: selectedDates,
+  };
+
+  // Custom modifiers styles
+  const modifiersStyles = {
+    available: { border: "2px solid #00e676", borderRadius: "50%" },
+    selected: { border: "2px solid #1EAEDB", borderRadius: "50%" }
   };
 
   return (
@@ -83,105 +158,75 @@ const Disponibilidade = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
+        className="space-y-6"
       >
-        <div className="space-y-6">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight text-gradient">Disponibilidade</h2>
-            <p className="text-muted-foreground mt-1">
-              Verifique a disponibilidade de equipamentos por data e período.
-            </p>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-[300px_1fr]">
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Calendário</CardTitle>
-                  <CardDescription>Selecione uma data</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={setDate}
-                    className="border rounded-md p-3"
-                  />
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Filtros</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Tipo de Equipamento</label>
-                    <Select
-                      value={equipmentType}
-                      onValueChange={setEquipmentType}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o tipo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos</SelectItem>
-                        <SelectItem value="notebooks">Notebooks</SelectItem>
-                        <SelectItem value="projectors">Projetores</SelectItem>
-                        <SelectItem value="tablets">Tablets</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  Disponibilidade para {date?.toLocaleDateString('pt-BR')}
-                </CardTitle>
-                <CardDescription>
-                  Visualize quais equipamentos estão disponíveis em cada período do dia.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {getEquipmentData().map((group) => (
-                  <div key={group.type} className="space-y-3">
-                    <h3 className="text-lg font-semibold capitalize">
-                      {group.type === "notebooks"
-                        ? "Notebooks"
-                        : group.type === "projectors"
-                        ? "Projetores"
-                        : group.type === "tablets"
-                        ? "Tablets"
-                        : group.type}
-                    </h3>
-                    <div className="rounded-md border overflow-hidden">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="bg-muted/50">
-                            <th className="px-4 py-3 text-left">Equipamento</th>
-                            <th className="px-4 py-3 text-left">Disponibilidade</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y">
-                          {group.items.map((item) => (
-                            <tr key={item.id} className="hover:bg-muted/30">
-                              <td className="px-4 py-3">{item.name}</td>
-                              <td className="px-4 py-3">
-                                {renderAvailability(item.periods)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight text-gradient">Disponibilidade</h2>
+          <p className="text-muted-foreground mt-1">
+            Gerencie as datas disponíveis para reservas.
+          </p>
         </div>
+
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarIcon className="h-5 w-5" />
+              Calendário de Disponibilidade
+            </CardTitle>
+            <CardDescription>
+              Selecione datas para torná-las disponíveis ou remover disponibilidade.
+              <br />
+              <span className="flex items-center gap-2 mt-2">
+                <span className="inline-block h-3 w-3 bg-[#222222] rounded-sm"></span>
+                <span>Hoje</span>
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="inline-block h-3 w-3 border-2 border-[#00e676] rounded-sm"></span>
+                <span>Data disponível</span>
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="inline-block h-3 w-3 border-2 border-[#1EAEDB] rounded-sm"></span>
+                <span>Data selecionada</span>
+              </span>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pb-6">
+            <div className="flex flex-col items-center">
+              <div className="mb-6 border border-border rounded-lg p-4">
+                <Calendar
+                  mode="multiple"
+                  onSelect={(date) => handleDateSelect(date as Date)}
+                  selected={selectedDates}
+                  className="rounded-md border text-white"
+                  modifiers={modifiers}
+                  modifiersStyles={modifiersStyles}
+                  fromDate={new Date()}
+                  disabled={date => isDateInPastOrToday(date)}
+                />
+              </div>
+              
+              <div className="flex gap-4 w-full justify-center mt-4">
+                <Button 
+                  onClick={handleAddDates} 
+                  disabled={selectedDates.length === 0 || addDatesMutation.isPending}
+                  className="gap-1"
+                >
+                  <Plus className="h-4 w-4" />
+                  Adicionar disponibilidade
+                </Button>
+                <Button 
+                  onClick={handleRemoveDates} 
+                  variant="destructive" 
+                  disabled={selectedDates.length === 0 || removeDatesMutation.isPending}
+                  className="gap-1"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Remover disponibilidade
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </motion.div>
     </AppLayout>
   );

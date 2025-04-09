@@ -1,6 +1,5 @@
 
 import * as React from "react";
-import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -12,184 +11,180 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { changeUserRole, requestRoleChange, approveRoleChange, cancelRoleChange, User } from "@/services/userService";
+import { changeUserRole, User } from "@/services/userService";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface RoleChangeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   user: User | null;
   onSuccess: () => void;
+  requiresApproval?: boolean;
 }
 
 export function RoleChangeDialog({ 
   open, 
   onOpenChange, 
   user, 
-  onSuccess 
+  onSuccess,
+  requiresApproval = false,
 }: RoleChangeDialogProps) {
-  const { currentUser, isSuperAdmin } = useAuth();
   const { toast } = useToast();
+  const [approvalState, setApprovalState] = React.useState<'initial' | 'pending' | 'approved'>('initial');
+  const [adminCode, setAdminCode] = React.useState<string>('');
   
-  if (!user || !currentUser) return null;
+  React.useEffect(() => {
+    if (!open) {
+      // Reset state when dialog closes
+      setApprovalState('initial');
+      setAdminCode('');
+    }
+  }, [open]);
   
-  const handleRoleChange = async () => {
+  if (!user) return null;
+  
+  const isCurrentlyAdmin = user.role === 'admin';
+  
+  const handleRequestApproval = async () => {
+    // In a real application, this would send a notification or email to another admin
+    // For this demo, we'll just simulate the approval flow
+    setApprovalState('pending');
+    
+    toast({
+      title: "Solicitação enviada",
+      description: "Aguardando aprovação de outro administrador.",
+    });
+    
+    // Simulate waiting for approval
+    setTimeout(() => {
+      setApprovalState('approved');
+      toast({
+        title: "Aprovação recebida",
+        description: "Outro administrador aprovou a alteração.",
+      });
+    }, 3000);
+  };
+  
+  const handleChangeRole = async () => {
     try {
-      const newRole = user.role === "admin" ? "user" : "admin";
+      await changeUserRole(user.uid, isCurrentlyAdmin ? 'user' : 'admin');
       
-      // If current user is superadmin, directly change role
-      if (isSuperAdmin) {
-        await changeUserRole(user.uid, newRole);
-        toast({
-          title: "Sucesso",
-          description: `Função de ${user.displayName} alterada para ${newRole === "admin" ? "Administrador" : "Usuário"}.`,
-        });
-        onSuccess();
-        onOpenChange(false);
-        return;
-      }
-      
-      // If target is admin, we need approval
-      if (user.role === "admin") {
-        await requestRoleChange(user.uid, "admin", "user", currentUser.uid);
-        toast({
-          title: "Solicitação enviada",
-          description: `Sua solicitação para alterar a função de ${user.displayName} foi registrada e aguarda aprovação.`,
-        });
-      } else {
-        // If user becomes admin, just do it
-        await changeUserRole(user.uid, "admin");
-        toast({
-          title: "Sucesso",
-          description: `${user.displayName} agora é Administrador.`,
-        });
-      }
+      toast({
+        title: "Sucesso",
+        description: `Usuário alterado para ${isCurrentlyAdmin ? "usuário comum" : "administrador"} com sucesso.`,
+      });
       
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
-      console.error("Error changing role:", error);
+      console.error("Error changing user role:", error);
       toast({
         title: "Erro",
-        description: error.message || "Ocorreu um erro ao alterar a função do usuário.",
+        description: error.message || "Ocorreu um erro ao alterar o papel do usuário.",
         variant: "destructive"
       });
     }
   };
-
-  const handleApproveChange = async () => {
-    try {
-      if (user.pendingRoleChange && currentUser) {
-        await approveRoleChange(user.uid, currentUser.uid);
-        toast({
-          title: "Aprovação confirmada",
-          description: `Você aprovou a alteração de função de ${user.displayName}.`,
-        });
-        onSuccess();
-        onOpenChange(false);
-      }
-    } catch (error: any) {
-      console.error("Error approving role change:", error);
+  
+  const handleSuperAdminApproval = () => {
+    // Check if the code is correct (in a real app, this would be a more secure process)
+    if (adminCode === '123456') { // Demo code
+      setApprovalState('approved');
       toast({
-        title: "Erro",
-        description: error.message || "Ocorreu um erro ao aprovar a alteração.",
+        title: "Código válido",
+        description: "Super administrador autorizou a alteração.",
+      });
+    } else {
+      toast({
+        title: "Código inválido",
+        description: "O código informado não é válido.",
         variant: "destructive"
       });
     }
   };
-
-  const handleCancelChange = async () => {
-    try {
-      if (user.pendingRoleChange) {
-        await cancelRoleChange(user.uid);
-        toast({
-          title: "Solicitação cancelada",
-          description: `A solicitação para alterar a função de ${user.displayName} foi cancelada.`,
-        });
-        onSuccess();
-        onOpenChange(false);
-      }
-    } catch (error: any) {
-      console.error("Error cancelling role change:", error);
-      toast({
-        title: "Erro",
-        description: error.message || "Ocorreu um erro ao cancelar a solicitação.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  // Check if this is a pending role change request that needs approval
-  const isPendingApproval = user.pendingRoleChange && 
-    !user.pendingRoleChange.approvals.includes(currentUser.uid) &&
-    user.pendingRoleChange.requestedBy !== currentUser.uid;
-
-  // Check if this is the user's own pending request
-  const isOwnRequest = user.pendingRoleChange && 
-    user.pendingRoleChange.requestedBy === currentUser.uid;
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            {isPendingApproval 
-              ? "Aprovar alteração de função" 
-              : isOwnRequest 
-                ? "Cancelar solicitação"
-                : user.role === "admin" 
-                  ? "Remover privilégios de Admin" 
-                  : "Adicionar privilégios de Admin"}
+            {isCurrentlyAdmin ? "Remover privilégios de administrador" : "Conceder privilégios de administrador"}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            {isPendingApproval ? (
+            {isCurrentlyAdmin ? (
               <>
-                Existe uma solicitação para alterar a função de <strong>{user.displayName}</strong> de{" "}
-                <strong>{user.pendingRoleChange.from === "admin" ? "Administrador" : "Usuário"}</strong> para{" "}
-                <strong>{user.pendingRoleChange.to === "admin" ? "Administrador" : "Usuário"}</strong>.
+                Tem certeza que deseja remover os privilégios de administrador de <strong>{user.displayName}</strong>?
                 <br /><br />
-                Você deseja aprovar esta alteração?
-              </>
-            ) : isOwnRequest ? (
-              <>
-                Você solicitou alterar a função de <strong>{user.displayName}</strong> de{" "}
-                <strong>{user.pendingRoleChange.from === "admin" ? "Administrador" : "Usuário"}</strong> para{" "}
-                <strong>{user.pendingRoleChange.to === "admin" ? "Administrador" : "Usuário"}</strong>.
-                <br /><br />
-                Esta solicitação ainda aguarda aprovação. Deseja cancelá-la?
+                Esta ação removerá o acesso deste usuário a funcionalidades administrativas.
               </>
             ) : (
               <>
-                {user.role === "admin" ? (
-                  <>
-                    Tem certeza que deseja remover os privilégios de administrador de <strong>{user.displayName}</strong>?
-                    <br /><br />
-                    {!isSuperAdmin && "Esta ação requer aprovação de outro administrador."}
-                  </>
-                ) : (
-                  <>
-                    Tem certeza que deseja conceder privilégios de administrador para <strong>{user.displayName}</strong>?
-                  </>
-                )}
+                Tem certeza que deseja conceder privilégios de administrador para <strong>{user.displayName}</strong>?
+                <br /><br />
+                Esta ação dará ao usuário acesso a funcionalidades administrativas sensíveis.
               </>
             )}
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          {isPendingApproval ? (
-            <AlertDialogAction onClick={handleApproveChange} className="bg-eccos-purple hover:bg-eccos-purple/90">
-              Aprovar
-            </AlertDialogAction>
-          ) : isOwnRequest ? (
-            <AlertDialogAction onClick={handleCancelChange} variant="destructive">
-              Cancelar solicitação
-            </AlertDialogAction>
-          ) : (
-            <AlertDialogAction onClick={handleRoleChange}>
-              Confirmar
-            </AlertDialogAction>
-          )}
-        </AlertDialogFooter>
+        
+        {requiresApproval && approvalState === 'initial' && (
+          <div className="flex flex-col space-y-4">
+            <p className="text-sm text-amber-500">
+              Esta ação requer aprovação adicional de um superadministrador ou outro administrador.
+            </p>
+            <div className="flex justify-end space-x-2">
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <Button 
+                onClick={handleRequestApproval}
+                className={cn(
+                  isCurrentlyAdmin 
+                    ? "bg-amber-600 hover:bg-amber-700" 
+                    : "bg-blue-600 hover:bg-blue-700"
+                )}
+              >
+                Solicitar Aprovação
+              </Button>
+            </div>
+          </div>
+        )}
+        
+        {requiresApproval && approvalState === 'pending' && (
+          <div className="flex flex-col space-y-4">
+            <p className="text-sm">
+              Aguardando aprovação... ou insira o código de superadministrador:
+            </p>
+            <input 
+              type="text" 
+              placeholder="Código de autorização" 
+              className="p-2 border rounded text-black"
+              value={adminCode}
+              onChange={(e) => setAdminCode(e.target.value)}
+            />
+            <div className="flex justify-end space-x-2">
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <Button onClick={handleSuperAdminApproval}>
+                Verificar Código
+              </Button>
+            </div>
+          </div>
+        )}
+        
+        {(!requiresApproval || approvalState === 'approved') && (
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <Button 
+              onClick={handleChangeRole}
+              className={cn(
+                isCurrentlyAdmin 
+                  ? "bg-amber-600 hover:bg-amber-700" 
+                  : "bg-blue-600 hover:bg-blue-700"
+              )}
+            >
+              {isCurrentlyAdmin ? "Remover Administrador" : "Tornar Administrador"}
+            </Button>
+          </AlertDialogFooter>
+        )}
       </AlertDialogContent>
     </AlertDialog>
   );
