@@ -1,10 +1,9 @@
-
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
   Home, Menu, X, Laptop, Calendar, Users, 
   PlusCircle, ShoppingCart, Wrench, PackageOpen, 
-  LogOut, ChevronDown, ChevronUp
+  LogOut, ChevronDown, ChevronUp, FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -119,6 +118,7 @@ export const AppSidebar = () => {
     { icon: Calendar, label: "Disponibilidade", href: "/disponibilidade" },
     { icon: Users, label: "Usuários", href: "/usuarios" },
     { icon: PackageOpen, label: "Inventário", href: "/inventario" },
+    { icon: FileText, label: "Solicitações", href: "/solicitacoes" }
   ];
 
   return (
@@ -130,15 +130,9 @@ export const AppSidebar = () => {
     >
       <div className="flex items-center justify-between p-4 h-16">
         <div className="flex items-center gap-3 overflow-hidden">
-          <img
-            src="/logo.png" 
-            alt="ECCOS"
-            className="h-8 w-8"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.src = "https://via.placeholder.com/40/0074E0/FFFFFF?text=E";
-            }}
-          />
+          <div className="h-8 w-8 bg-eccos-blue rounded-md flex items-center justify-center text-white font-bold">
+            E
+          </div>
           <span 
             className={cn(
               "text-xl font-bold text-white transition-all duration-300",

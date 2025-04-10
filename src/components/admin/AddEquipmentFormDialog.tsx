@@ -72,6 +72,7 @@ const AddEquipmentFormDialog = ({
       warrantyUntil: "",
       location: "",
       notes: "",
+      lastMaintenance: "",
     },
   });
 
@@ -85,10 +86,23 @@ const AddEquipmentFormDialog = ({
   const onSubmit = async (values: FormValues) => {
     setLoading(true);
     try {
+      // Make sure name is required
+      if (!values.name) {
+        throw new Error("Nome é obrigatório");
+      }
+      
       await addEquipment({
-        ...values,
+        name: values.name, // Explicitly include required field
         type: values.type as EquipmentType,
         status: values.status as "disponível" | "em uso" | "em manutenção" | "obsoleto",
+        serialNumber: values.serialNumber,
+        model: values.model,
+        brand: values.brand,
+        purchaseDate: values.purchaseDate,
+        warrantyUntil: values.warrantyUntil,
+        location: values.location,
+        notes: values.notes,
+        lastMaintenance: values.lastMaintenance,
       });
       toast({
         title: "Equipamento adicionado",
