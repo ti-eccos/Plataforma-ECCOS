@@ -14,7 +14,19 @@ export interface AvailabilityDate {
 export const getAvailableDates = async (): Promise<Date[]> => {
   try {
     const datesSnapshot = await getDocs(collection(db, COLLECTION_NAME));
-    return datesSnapshot.docs.map(doc => doc.data().date.toDate());
+    // Convert Firestore timestamps to Date objects and ensure they're valid
+    return datesSnapshot.docs
+      .map(doc => {
+        const data = doc.data();
+        // Handle case where date might be a Timestamp or might already be a Date
+        if (data.date instanceof Timestamp) {
+          return data.date.toDate();
+        } else if (data.date instanceof Date) {
+          return data.date;
+        }
+        return null;
+      })
+      .filter((date): date is Date => date !== null && !isNaN(date.getTime()));
   } catch (error) {
     console.error("Error fetching availability dates:", error);
     throw error;
@@ -24,7 +36,10 @@ export const getAvailableDates = async (): Promise<Date[]> => {
 // Add multiple dates as available
 export const addAvailableDates = async (dates: Date[]): Promise<void> => {
   try {
-    const batch = dates.map(async (date) => {
+    // Filter out invalid dates
+    const validDates = dates.filter(date => date instanceof Date && !isNaN(date.getTime()));
+    
+    const batch = validDates.map(async (date) => {
       // Create a date string in YYYY-MM-DD format for the document ID
       const dateStr = formatDateToYYYYMMDD(date);
       const dateDoc = doc(db, COLLECTION_NAME, dateStr);
@@ -44,7 +59,10 @@ export const addAvailableDates = async (dates: Date[]): Promise<void> => {
 // Remove dates from available
 export const removeAvailableDates = async (dates: Date[]): Promise<void> => {
   try {
-    const batch = dates.map(async (date) => {
+    // Filter out invalid dates
+    const validDates = dates.filter(date => date instanceof Date && !isNaN(date.getTime()));
+    
+    const batch = validDates.map(async (date) => {
       const dateStr = formatDateToYYYYMMDD(date);
       const dateDoc = doc(db, COLLECTION_NAME, dateStr);
       await deleteDoc(dateDoc);
@@ -59,13 +77,23 @@ export const removeAvailableDates = async (dates: Date[]): Promise<void> => {
 
 // Helper function to format date to YYYY-MM-DD
 export const formatDateToYYYYMMDD = (date: Date): string => {
+  if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+    throw new Error('Invalid date provided to formatDateToYYYYMMDD');
+  }
   return date.toISOString().split('T')[0];
 };
 
 // Check if a date is in the past or today
 export const isDateInPastOrToday = (date: Date): boolean => {
+  if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+    return true; // Consider invalid dates as in the past
+  }
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  date.setHours(0, 0, 0, 0);
-  return date <= today;
+  
+  // Create a new date to avoid modifying the original
+  const compareDateCopy = new Date(date);
+  compareDateCopy.setHours(0, 0, 0, 0);
+  
+  return compareDateCopy <= today;
 };

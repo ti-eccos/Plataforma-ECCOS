@@ -38,7 +38,9 @@ const Disponibilidade = () => {
       setIsLoading(true);
       try {
         const dates = await getAvailableDates();
-        setAvailableDates(dates);
+        // Ensure all dates are properly instantiated as Date objects
+        const validDates = dates.filter(date => date instanceof Date && !isNaN(date.getTime()));
+        setAvailableDates(validDates);
       } catch (error) {
         toast({
           title: "Erro",
@@ -56,7 +58,7 @@ const Disponibilidade = () => {
 
   // Handle date selection/deselection
   const handleDateSelect = (date: Date | undefined) => {
-    if (!date) return;
+    if (!date || isNaN(date.getTime())) return;
 
     setSelectedDates((currentSelectedDates) => {
       // Check if date is already selected
@@ -141,7 +143,10 @@ const Disponibilidade = () => {
 
     setIsLoading(true);
     try {
-      await removeAvailableDates(selectedDates);
+      // Fix: Pass each date individually to avoid the type error
+      for (const date of selectedDates) {
+        await removeAvailableDates([date]);
+      }
       
       // Update the available dates list
       setAvailableDates((current) => 

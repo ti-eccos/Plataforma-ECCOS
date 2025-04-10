@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
@@ -38,7 +37,6 @@ import { getAvailableDates, isDateInPastOrToday } from '@/services/availabilityS
 import { getAllEquipment } from '@/services/equipmentService';
 import { addReservation, checkConflicts } from '@/services/reservationService';
 
-// Define the locations
 const LOCATIONS = [
   'Recepção',
   'Secretaria',
@@ -74,7 +72,6 @@ const LOCATIONS = [
   '9º Ano'
 ];
 
-// Define the time options
 const generateTimeOptions = () => {
   const options = [];
   for (let hour = 7; hour <= 22; hour++) {
@@ -89,7 +86,6 @@ const generateTimeOptions = () => {
 
 const TIME_OPTIONS = generateTimeOptions();
 
-// Define the form schema
 const formSchema = z.object({
   date: z.date({
     required_error: "Data de reserva é obrigatória",
@@ -126,18 +122,19 @@ const NovaReserva = () => {
   });
 
   useEffect(() => {
-    // Load available dates
     const loadAvailableDates = async () => {
       try {
         const dates = await getAvailableDates();
-        setAvailableDates(dates);
+        const validDates = dates.filter(date => 
+          date instanceof Date && !isNaN(date.getTime())
+        );
+        setAvailableDates(validDates);
       } catch (error) {
         console.error("Error loading available dates:", error);
         toast.error("Erro ao carregar datas disponíveis");
       }
     };
 
-    // Load equipment
     const loadEquipment = async () => {
       try {
         const items = await getAllEquipment();
@@ -152,20 +149,27 @@ const NovaReserva = () => {
     loadEquipment();
   }, []);
 
-  // Check if a date is in the available dates
   const isDateAvailable = (date: Date) => {
-    return availableDates.some(availableDate => 
-      availableDate.getFullYear() === date.getFullYear() &&
-      availableDate.getMonth() === date.getMonth() &&
-      availableDate.getDate() === date.getDate()
-    );
+    if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+      return false;
+    }
+    
+    return availableDates.some(availableDate => {
+      if (!availableDate || !(availableDate instanceof Date) || isNaN(availableDate.getTime())) {
+        return false;
+      }
+      
+      return (
+        availableDate.getFullYear() === date.getFullYear() &&
+        availableDate.getMonth() === date.getMonth() &&
+        availableDate.getDate() === date.getDate()
+      );
+    });
   };
 
-  // Form submission handler
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
     try {
-      // Check for conflicts
       const conflicts = await checkConflicts({
         date: values.date,
         startTime: values.startTime,
@@ -174,7 +178,6 @@ const NovaReserva = () => {
       });
 
       if (conflicts.length > 0) {
-        // Format the conflicts message
         const conflictMessages = conflicts.map(conflict => 
           `- ${conflict.equipmentName}: já reservado das ${conflict.startTime} às ${conflict.endTime}`
         ).join('\n');
@@ -190,7 +193,6 @@ const NovaReserva = () => {
         return;
       }
 
-      // Add reservation
       await addReservation({
         date: values.date,
         startTime: values.startTime,
@@ -222,7 +224,6 @@ const NovaReserva = () => {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Date Selector */}
             <FormField
               control={form.control}
               name="date"
@@ -254,7 +255,6 @@ const NovaReserva = () => {
                         selected={field.value}
                         onSelect={field.onChange}
                         disabled={(date) => {
-                          // Disable dates that are not available or in the past/today
                           return isDateInPastOrToday(date) || !isDateAvailable(date);
                         }}
                         modifiers={{
@@ -273,7 +273,6 @@ const NovaReserva = () => {
               )}
             />
 
-            {/* Time Selection */}
             <div className="grid gap-6 md:grid-cols-2">
               <FormField
                 control={form.control}
@@ -322,7 +321,6 @@ const NovaReserva = () => {
               />
             </div>
 
-            {/* Equipment Selection */}
             <FormField
               control={form.control}
               name="selectedEquipment"
@@ -371,7 +369,6 @@ const NovaReserva = () => {
               )}
             />
 
-            {/* Location Selection */}
             <FormField
               control={form.control}
               name="location"
@@ -395,7 +392,6 @@ const NovaReserva = () => {
               )}
             />
 
-            {/* Purpose */}
             <FormField
               control={form.control}
               name="purpose"

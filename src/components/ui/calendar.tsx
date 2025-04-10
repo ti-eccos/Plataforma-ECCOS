@@ -53,8 +53,8 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        IconLeft: ({ ..._props }) => <ChevronLeft className="h-4 w-4 text-white" />,
-        IconRight: ({ ..._props }) => <ChevronRight className="h-4 w-4 text-white" />,
+        IconLeft: () => <ChevronLeft className="h-4 w-4 text-white" />,
+        IconRight: () => <ChevronRight className="h-4 w-4 text-white" />,
       }}
       modifiersClassNames={{
         available: "border-2 border-green-500",
