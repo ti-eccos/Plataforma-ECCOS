@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import AppLayout from "@/components/AppLayout";
@@ -8,114 +9,197 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Search, Plus, FileText, Loader2 } from "lucide-react";
+  Calendar as CalendarComponent,
+  CalendarProps,
+} from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { CalendarDays, Check, Trash2, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
-import { getAllEquipment, Equipment, EquipmentType } from "@/services/equipmentService";
-import EquipmentDetailsDialog from "@/components/admin/EquipmentDetailsDialog";
-import AddEquipmentFormDialog from "@/components/admin/AddEquipmentFormDialog";
+import {
+  getAvailableDates,
+  addAvailableDates,
+  removeAvailableDates,
+  isDateInPastOrToday,
+} from "@/services/availabilityService";
 
-const Inventario = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
-  const [filteredEquipment, setFilteredEquipment] = useState<Equipment[]>([]);
+const Disponibilidade = () => {
+  const [availableDates, setAvailableDates] = useState<Date[]>([]);
+  const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
-  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  // Available equipment types
-  const equipmentTypes: EquipmentType[] = [
-    "Chromebook",
-    "iPad",
-    "Projetor",
-    "Cabo",
-    "Desktop",
-    "Periférico",
-    "Áudio",
-    "Rede",
-    "Outro",
-  ];
+  // Load available dates from Firestore
+  useEffect(() => {
+    const loadAvailableDates = async () => {
+      setIsLoading(true);
+      try {
+        const dates = await getAvailableDates();
+        setAvailableDates(dates);
+      } catch (error) {
+        toast({
+          title: "Erro",
+          description: "Falha ao carregar datas disponíveis",
+          variant: "destructive",
+        });
+        console.error("Failed to load available dates:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  // Load equipment data
-  const loadEquipmentData = async () => {
-    setIsLoading(true);
-    try {
-      const data = await getAllEquipment();
-      setEquipmentList(data);
-      setFilteredEquipment(data);
-    } catch (error) {
+    loadAvailableDates();
+  }, [toast]);
+
+  // Handle date selection/deselection
+  const handleDateSelect = (date: Date | undefined) => {
+    if (!date) return;
+
+    setSelectedDates((currentSelectedDates) => {
+      // Check if date is already selected
+      const dateExists = currentSelectedDates.some(
+        (selectedDate) => format(selectedDate, "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
+      );
+
+      // If date exists, remove it, otherwise add it
+      if (dateExists) {
+        return currentSelectedDates.filter(
+          (selectedDate) =>
+            format(selectedDate, "yyyy-MM-dd") !== format(date, "yyyy-MM-dd")
+        );
+      } else {
+        return [...currentSelectedDates, date];
+      }
+    });
+  };
+
+  // Save selected dates as available
+  const handleSaveAvailableDates = async () => {
+    if (selectedDates.length === 0) {
       toast({
-        title: "Erro ao carregar dados",
-        description: "Não foi possível carregar a lista de equipamentos.",
+        title: "Nenhuma data selecionada",
+        description: "Selecione pelo menos uma data para adicionar",
         variant: "destructive",
       });
-      console.error("Failed to load equipment:", error);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await addAvailableDates(selectedDates);
+      
+      // Update the available dates list
+      setAvailableDates((current) => {
+        // Create a new array with existing dates plus new dates
+        const updatedDates = [...current];
+        
+        // Add each selected date if it doesn't exist already
+        selectedDates.forEach((date) => {
+          const dateExists = updatedDates.some(
+            (existingDate) => 
+              format(existingDate, "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
+          );
+          
+          if (!dateExists) {
+            updatedDates.push(date);
+          }
+        });
+        
+        return updatedDates;
+      });
+
+      setSelectedDates([]);
+      toast({
+        title: "Datas adicionadas",
+        description: `${selectedDates.length} data(s) adicionada(s) com sucesso`,
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Falha ao adicionar datas disponíveis",
+        variant: "destructive",
+      });
+      console.error("Failed to add available dates:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadEquipmentData();
-  }, []);
+  // Remove selected dates from available
+  const handleRemoveAvailableDates = async () => {
+    if (selectedDates.length === 0) {
+      toast({
+        title: "Nenhuma data selecionada",
+        description: "Selecione pelo menos uma data para remover",
+        variant: "destructive",
+      });
+      return;
+    }
 
-  // Filter equipment when search term changes
-  useEffect(() => {
-    if (searchTerm) {
-      const filtered = equipmentList.filter((item) =>
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.serialNumber && item.serialNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (item.brand && item.brand.toLowerCase().includes(searchTerm.toLowerCase()))
+    setIsLoading(true);
+    try {
+      await removeAvailableDates(selectedDates);
+      
+      // Update the available dates list
+      setAvailableDates((current) => 
+        current.filter((existingDate) => 
+          !selectedDates.some((selectedDate) => 
+            format(existingDate, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd")
+          )
+        )
       );
-      setFilteredEquipment(filtered);
-    } else {
-      setFilteredEquipment(equipmentList);
-    }
-  }, [searchTerm, equipmentList]);
 
-  // Handle search
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-  };
-
-  // View equipment details
-  const viewEquipmentDetails = (equipment: Equipment) => {
-    setSelectedEquipment(equipment);
-    setDetailsDialogOpen(true);
-  };
-
-  // Get status badge color
-  const getStatusBadgeColor = (status: string) => {
-    switch(status) {
-      case "disponível": return "bg-green-500 hover:bg-green-600";
-      case "em uso": return "bg-blue-500 hover:bg-blue-600";
-      case "em manutenção": return "bg-orange-500 hover:bg-orange-600";
-      case "obsoleto": return "bg-gray-500 hover:bg-gray-600";
-      default: return "bg-slate-500";
+      setSelectedDates([]);
+      toast({
+        title: "Datas removidas",
+        description: `${selectedDates.length} data(s) removida(s) com sucesso`,
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Falha ao remover datas disponíveis",
+        variant: "destructive",
+      });
+      console.error("Failed to remove available dates:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Group equipment by type
-  const getEquipmentByType = (type: EquipmentType) => {
-    return filteredEquipment.filter(item => item.type === type);
+  // Clear selected dates
+  const handleClearSelection = () => {
+    setSelectedDates([]);
+  };
+
+  // Check if a date is available
+  const isDateAvailable = (date: Date): boolean => {
+    return availableDates.some(
+      (availableDate) =>
+        format(availableDate, "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
+    );
+  };
+
+  // Check if a date is selected
+  const isDateSelected = (date: Date): boolean => {
+    return selectedDates.some(
+      (selectedDate) =>
+        format(selectedDate, "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
+    );
+  };
+
+  // Determine the CSS classes for the date
+  const getDateClassName = (date: Date): string => {
+    if (isDateSelected(date)) return "selected";
+    if (isDateAvailable(date)) return "available";
+    return "";
+  };
+
+  // Disable past dates
+  const disableDate = (date: Date): boolean => {
+    return isDateInPastOrToday(date);
   };
 
   return (
@@ -128,172 +212,95 @@ const Inventario = () => {
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h2 className="text-3xl font-bold tracking-tight text-gradient">Inventário</h2>
+              <h2 className="text-3xl font-bold tracking-tight text-gradient">
+                Disponibilidade
+              </h2>
               <p className="text-muted-foreground mt-1">
-                Gerencie todos os equipamentos tecnológicos da instituição.
+                Gerencie as datas disponíveis para reservas de equipamentos.
               </p>
             </div>
-            <Button
-              onClick={() => setAddDialogOpen(true)}
-              className="bg-eccos-blue hover:bg-eccos-blue/80"
-            >
-              <Plus className="mr-2 h-4 w-4" /> Adicionar Equipamento
-            </Button>
           </div>
 
-          <div className="flex items-center gap-4 mb-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar equipamentos por nome, número de série, marca..."
-                value={searchTerm}
-                onChange={handleSearch}
-                className="pl-8"
-              />
-            </div>
-          </div>
-
-          {isLoading ? (
-            <div className="flex justify-center items-center h-40">
-              <Loader2 className="h-8 w-8 animate-spin text-eccos-blue" />
-            </div>
-          ) : (
-            <Tabs defaultValue="all" className="space-y-4">
-              <TabsList className="flex h-auto flex-wrap">
-                <TabsTrigger value="all">Todos</TabsTrigger>
-                {equipmentTypes.map((type) => (
-                  <TabsTrigger key={type} value={type}>
-                    {type}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              
-              {/* All Equipment Tab */}
-              <TabsContent value="all">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle>Todos os Equipamentos</CardTitle>
-                    <CardDescription>
-                      Lista completa de todos os equipamentos cadastrados
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Tipo</TableHead>
-                          <TableHead className="w-[300px]">Nome</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Ações</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredEquipment.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">
-                              Nenhum equipamento encontrado
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          filteredEquipment.map((item) => (
-                            <TableRow key={item.id}>
-                              <TableCell>{item.type}</TableCell>
-                              <TableCell>{item.name}</TableCell>
-                              <TableCell>
-                                <Badge className={getStatusBadgeColor(item.status)}>{item.status}</Badge>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  onClick={() => viewEquipmentDetails(item)}
-                                >
-                                  <FileText className="mr-2 h-4 w-4" />
-                                  Detalhes
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* Equipment By Type Tabs */}
-              {equipmentTypes.map((type) => (
-                <TabsContent key={type} value={type}>
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle>Equipamentos: {type}</CardTitle>
-                      <CardDescription>
-                        Lista de equipamentos do tipo {type}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="w-[300px]">Nome</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Ações</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {getEquipmentByType(type).length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={3} className="text-center py-10 text-muted-foreground">
-                                Nenhum equipamento do tipo {type} encontrado
-                              </TableCell>
-                            </TableRow>
-                          ) : (
-                            getEquipmentByType(type).map((item) => (
-                              <TableRow key={item.id}>
-                                <TableCell>{item.name}</TableCell>
-                                <TableCell>
-                                  <Badge className={getStatusBadgeColor(item.status)}>{item.status}</Badge>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    onClick={() => viewEquipmentDetails(item)}
-                                  >
-                                    <FileText className="mr-2 h-4 w-4" />
-                                    Detalhes
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            ))
-                          )}
-                        </TableBody>
-                      </Table>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              ))}
-            </Tabs>
-          )}
+          <Card className="bg-black border-gray-800">
+            <CardHeader className="border-b border-gray-800">
+              <CardTitle className="text-white">Calendário de Disponibilidade</CardTitle>
+              <CardDescription className="text-gray-400">
+                Selecione datas para gerenciar a disponibilidade
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              {isLoading ? (
+                <div className="flex justify-center items-center h-80">
+                  <Loader2 className="h-8 w-8 animate-spin text-eccos-blue" />
+                </div>
+              ) : (
+                <div className="flex flex-col items-center">
+                  <div className="calendar-container bg-black text-white border border-gray-800 rounded-lg p-4 mb-4 w-full max-w-lg">
+                    <CalendarComponent
+                      mode="multiple"
+                      selected={selectedDates}
+                      onSelect={(date) => handleDateSelect(date)}
+                      disabled={disableDate}
+                      modifiers={{
+                        available: (date) => isDateAvailable(date),
+                        selected: (date) => isDateSelected(date)
+                      }}
+                      className="text-white border-gray-700"
+                      showOutsideDays={true}
+                      locale={ptBR}
+                    />
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2 mt-4 justify-center text-white">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-transparent border-2 border-green-500 rounded-sm"></div>
+                      <span>Disponível</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-transparent border-2 border-blue-500 rounded-sm"></div>
+                      <span>Selecionado</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+            <CardFooter className="flex flex-col sm:flex-row gap-2 justify-between border-t border-gray-800 pt-4">
+              <div className="text-white">
+                {selectedDates.length} data(s) selecionada(s)
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={handleClearSelection}
+                  disabled={selectedDates.length === 0 || isLoading}
+                  className="border-gray-700 text-white hover:bg-gray-800"
+                >
+                  Limpar seleção
+                </Button>
+                <Button
+                  onClick={handleRemoveAvailableDates}
+                  disabled={selectedDates.length === 0 || isLoading}
+                  variant="destructive"
+                  className="gap-1"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Remover datas
+                </Button>
+                <Button
+                  onClick={handleSaveAvailableDates}
+                  disabled={selectedDates.length === 0 || isLoading}
+                  className="bg-eccos-blue hover:bg-eccos-blue/80 gap-1"
+                >
+                  <Check className="h-4 w-4" />
+                  Adicionar datas
+                </Button>
+              </div>
+            </CardFooter>
+          </Card>
         </div>
-
-        {/* Equipment Details Dialog */}
-        <EquipmentDetailsDialog
-          equipment={selectedEquipment}
-          open={detailsDialogOpen}
-          onOpenChange={setDetailsDialogOpen}
-          onEquipmentUpdated={loadEquipmentData}
-        />
-
-        {/* Add Equipment Dialog */}
-        <AddEquipmentFormDialog
-          open={addDialogOpen}
-          onOpenChange={setAddDialogOpen}
-          onEquipmentAdded={loadEquipmentData}
-        />
       </motion.div>
     </AppLayout>
   );
 };
 
-export default Inventario;
+export default Disponibilidade;
