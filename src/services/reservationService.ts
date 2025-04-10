@@ -1,4 +1,3 @@
-
 import { db } from "@/lib/firebase";
 import { 
   collection, 
@@ -179,55 +178,44 @@ export const getUserReservations = async (): Promise<any[]> => {
   }
 };
 
-// For admin: Get all reservations
-export const getAllRequests = async (showHidden: boolean = false): Promise<any[]> => {
+// For admin: Get all requests (purchases, supports, reservations)
+export const getAllRequests = async (showHidden = false) => {
   try {
-    // Get reservations
-    const reservationsQuery = query(
-      collection(db, COLLECTION_NAME),
-      orderBy("createdAt", "desc")
-    );
-    const reservationsSnapshot = await getDocs(reservationsQuery);
-    const reservations = reservationsSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      collectionName: COLLECTION_NAME
-    }));
+    // Fetch data from all collections
+    const purchasesSnapshot = await getDocs(collection(db, "purchases"));
+    const supportsSnapshot = await getDocs(collection(db, "supports"));
+    const reservationsSnapshot = await getDocs(collection(db, "reservations"));
     
-    // Get purchases
-    const purchasesQuery = query(
-      collection(db, PURCHASE_COLLECTION),
-      orderBy("createdAt", "desc")
-    );
-    const purchasesSnapshot = await getDocs(purchasesQuery);
+    // Process the data from each collection
     const purchases = purchasesSnapshot.docs.map(doc => ({
       id: doc.id,
-      ...doc.data(),
-      collectionName: PURCHASE_COLLECTION
+      collectionName: "purchases",
+      ...doc.data()
     }));
     
-    // Get support requests
-    const supportQuery = query(
-      collection(db, SUPPORT_COLLECTION),
-      orderBy("createdAt", "desc")
-    );
-    const supportSnapshot = await getDocs(supportQuery);
-    const support = supportSnapshot.docs.map(doc => ({
+    const supports = supportsSnapshot.docs.map(doc => ({
       id: doc.id,
-      ...doc.data(),
-      collectionName: SUPPORT_COLLECTION
+      collectionName: "supports",
+      ...doc.data()
     }));
     
-    // Combine all requests
-    let allRequests = [...reservations, ...purchases, ...support];
+    const reservations = reservationsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      collectionName: "reservations",
+      ...doc.data()
+    }));
+    
+    // Combine all request types
+    let allRequests = [...purchases, ...supports, ...reservations];
     
     // Filter out hidden statuses if needed
     if (!showHidden) {
       allRequests = allRequests.filter(
         req => {
-          // Make sure status exists before trying to access it
-          if (!req.status) return true; // Keep items without status
-          return !["canceled", "completed", "rejected"].includes(req.status);
+          // Make sure the status property exists
+          const status = req.status as string | undefined;
+          if (!status) return true; // Keep items without status
+          return !["canceled", "completed", "rejected"].includes(status);
         }
       );
     }
