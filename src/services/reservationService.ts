@@ -224,7 +224,11 @@ export const getAllRequests = async (showHidden: boolean = false): Promise<any[]
     // Filter out hidden statuses if needed
     if (!showHidden) {
       allRequests = allRequests.filter(
-        req => !["canceled", "completed", "rejected"].includes(req.status)
+        req => {
+          // Make sure status exists before trying to access it
+          if (!req.status) return true; // Keep items without status
+          return !["canceled", "completed", "rejected"].includes(req.status);
+        }
       );
     }
     

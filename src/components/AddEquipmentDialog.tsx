@@ -33,7 +33,8 @@ import { addEquipment, EquipmentType } from "@/services/equipmentService";
 
 const formSchema = z.object({
   name: z.string().min(3, { message: "O nome deve ter pelo menos 3 caracteres" }),
-  type: z.enum(["Chromebook", "iPad"])
+  type: z.enum(["Chromebook", "iPad"]),
+  status: z.enum(["disponível", "em uso", "em manutenção", "obsoleto"]).default("disponível")
 });
 
 interface AddEquipmentDialogProps {
@@ -50,7 +51,8 @@ const AddEquipmentDialog = ({ open, onOpenChange, onEquipmentAdded }: AddEquipme
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      type: "Chromebook"
+      type: "Chromebook",
+      status: "disponível"
     },
   });
 
@@ -59,7 +61,8 @@ const AddEquipmentDialog = ({ open, onOpenChange, onEquipmentAdded }: AddEquipme
     try {
       await addEquipment({
         name: values.name,
-        type: values.type
+        type: values.type,
+        status: values.status
       });
       
       toast({
@@ -121,6 +124,30 @@ const AddEquipmentDialog = ({ open, onOpenChange, onEquipmentAdded }: AddEquipme
                     <SelectContent>
                       <SelectItem value="Chromebook">Chromebook</SelectItem>
                       <SelectItem value="iPad">iPad</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="disponível">Disponível</SelectItem>
+                      <SelectItem value="em uso">Em uso</SelectItem>
+                      <SelectItem value="em manutenção">Em manutenção</SelectItem>
+                      <SelectItem value="obsoleto">Obsoleto</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
