@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { 
   User as FirebaseUser, 
@@ -82,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             
             await setDoc(userRef, {
               ...userData,
-              lastActive: new Date().toISOString()
+              lastActive: new Date()
             }, { merge: true });
           } else {
             const role: UserRole = firebaseUser.email === "suporte@colegioeccos.com.br" 
@@ -132,11 +133,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithGoogle = async () => {
     try {
       setLoading(true);
-      const result = await signInWithPopup(auth, googleProvider);
-      toast({
-        title: "Login realizado",
-        description: `Bem-vindo, ${result.user.displayName}!`,
-      });
+      await signInWithPopup(auth, googleProvider);
+      // Toast is moved to Login.tsx to avoid multiple notifications
     } catch (error: any) {
       console.error("Login error:", error);
       toast({

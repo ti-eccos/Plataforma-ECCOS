@@ -2,11 +2,26 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const Login = () => {
   const { signInWithGoogle, currentUser, loading } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (currentUser) {
+      // Ensure navigation happens properly after login
+      navigate("/", { replace: true });
+      toast({
+        title: "Login bem-sucedido",
+        description: `Bem-vindo, ${currentUser.displayName}!`,
+      });
+    }
+  }, [currentUser, navigate, toast]);
 
   if (loading) {
     return (
@@ -16,8 +31,13 @@ const Login = () => {
     );
   }
 
+  // Don't use Navigate component directly, let the useEffect handle it
   if (currentUser) {
-    return <Navigate to="/" replace />;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-pulse text-eccos-blue">Redirecionando...</div>
+      </div>
+    );
   }
 
   return (
