@@ -14,12 +14,15 @@ const ProtectedRoute = ({ children, requiresAdmin = false }: ProtectedRouteProps
   const location = useLocation();
 
   useEffect(() => {
-    if (!loading && !currentUser) {
-      navigate("/login", { replace: true });
-    } else if (!loading && requiresAdmin && !isAdmin) {
-      navigate("/unauthorized", { replace: true });
+    // Only navigate if not loading and conditions aren't met
+    if (!loading) {
+      if (!currentUser) {
+        navigate("/login", { replace: true, state: { from: location } });
+      } else if (requiresAdmin && !isAdmin) {
+        navigate("/unauthorized", { replace: true });
+      }
     }
-  }, [currentUser, loading, isAdmin, requiresAdmin, navigate]);
+  }, [currentUser, loading, isAdmin, requiresAdmin, navigate, location]);
 
   if (loading) {
     return (
@@ -29,12 +32,14 @@ const ProtectedRoute = ({ children, requiresAdmin = false }: ProtectedRouteProps
     );
   }
 
+  // Instead of using Navigate component which might cause issues,
+  // return null while the useEffect handles the navigation
   if (!currentUser) {
-    return <Navigate to="/login" replace />;
+    return null;
   }
 
   if (requiresAdmin && !isAdmin) {
-    return <Navigate to="/unauthorized" replace />;
+    return null;
   }
 
   return <>{children}</>;

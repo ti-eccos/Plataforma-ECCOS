@@ -2,28 +2,38 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 const Login = () => {
   const { signInWithGoogle, currentUser, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
-    if (currentUser) {
-      // Ensure navigation happens properly after login
-      navigate("/", { replace: true });
-      toast({
-        title: "Login bem-sucedido",
-        description: `Bem-vindo, ${currentUser.displayName}!`,
-      });
+    if (currentUser && !isRedirecting) {
+      setIsRedirecting(true);
+      
+      // Use a small timeout to prevent immediate redirection which might cause render issues
+      const timer = setTimeout(() => {
+        const from = location.state?.from?.pathname || "/";
+        navigate(from, { replace: true });
+        
+        toast({
+          title: "Login bem-sucedido",
+          description: `Bem-vindo, ${currentUser.displayName}!`,
+        });
+      }, 100);
+      
+      return () => clearTimeout(timer);
     }
-  }, [currentUser, navigate, toast]);
+  }, [currentUser, navigate, toast, location, isRedirecting]);
 
-  if (loading) {
+  if (loading || isRedirecting) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-eccos-blue"></div>
@@ -31,7 +41,6 @@ const Login = () => {
     );
   }
 
-  // Don't use Navigate component directly, let the useEffect handle it
   if (currentUser) {
     return (
       <div className="flex items-center justify-center min-h-screen">

@@ -34,6 +34,7 @@ const SidebarItem = ({ icon: Icon, label, href, active, expanded }: SidebarItemP
         "flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-300 group hover:bg-white/10",
         active ? "bg-white/10 text-eccos-green" : "text-white"
       )}
+      tabIndex={0}
     >
       <Icon className="h-5 w-5 shrink-0" />
       <span 
@@ -124,7 +125,7 @@ export const AppSidebar = () => {
   return (
     <div
       className={cn(
-        "h-screen bg-background border-r border-border flex flex-col transition-all duration-300",
+        "h-screen bg-background border-r border-border flex flex-col transition-all duration-300 z-10",
         expanded ? "w-64" : "w-16"
       )}
     >
