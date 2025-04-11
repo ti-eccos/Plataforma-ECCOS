@@ -9,7 +9,8 @@ import {
   query, 
   where,
   updateDoc,
-  getDoc
+  getDoc,
+  orderBy
 } from "firebase/firestore";
 
 export type EquipmentType = 
@@ -66,6 +67,35 @@ export const getAllEquipment = async (): Promise<Equipment[]> => {
     })) as Equipment[];
   } catch (error) {
     console.error("Error getting equipment:", error);
+    throw error;
+  }
+};
+
+// Get sorted equipment for lending (Chromebooks first, then iPads, all alphabetically)
+export const getSortedEquipmentForLending = async (): Promise<Equipment[]> => {
+  try {
+    const snapshot = await getDocs(equipmentCollectionRef);
+    const equipment = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Equipment[];
+    
+    // Filter only Chromebooks and iPads
+    const lendingEquipment = equipment.filter(
+      item => item.type === "Chromebook" || item.type === "iPad"
+    );
+    
+    // Sort by type (Chromebooks first) and then by name alphabetically
+    return lendingEquipment.sort((a, b) => {
+      // First sort by type (Chromebook first)
+      if (a.type === "Chromebook" && b.type === "iPad") return -1;
+      if (a.type === "iPad" && b.type === "Chromebook") return 1;
+      
+      // If types are the same, sort alphabetically by name
+      return a.name.localeCompare(b.name);
+    });
+  } catch (error) {
+    console.error("Error getting sorted equipment:", error);
     throw error;
   }
 };
