@@ -1,4 +1,3 @@
-
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,19 +12,83 @@ import { useState } from "react";
 import * as z from "zod";
 import { motion } from "framer-motion";
 
+const locationsByUnit = {
+  'Berçário e Educação Infantil': [
+    'Recepção',
+    'Sala de reuniões',
+    'Cozinha',
+    'Pátio',
+    'Sala de música',
+    'Sala de science',
+    'Berçário 2',
+    'Berçário 3',
+    'Refeitório',
+    'Sala de movimento',
+    'Pátio integral',
+    'Infantil 1',
+    'Infantil 2'
+  ],
+  'Fundamental': [
+    'Recepção',
+    'Secretaria',
+    'Sala de atendimento',
+    'Sala de atendimento (Laranja)',
+    'Sala de auxiliar de coordenação fundamental 1',
+    'Sala de oficinas',
+    'Sala de música',
+    'Sala de science',
+    'Integral',
+    '4º Ano',
+    'Patio (Cantina)',
+    'Refeitório',
+    'Biblioteca (Inferior)',
+    '3º Ano',
+    '2º Ano',
+    '1º Ano',
+    'Sala dos professores',
+    'Sala de Linguas',
+    'Coordenação de linguas/Fundamental 2',
+    'Sala de artes',
+    'Coordenação Fundamental 1 / Coordenação de matemática',
+    '8º ano',
+    '7º Ano',
+    'Apoio pedagógico',
+    'Orientação educacional',
+    'TI',
+    'Sala de oficinas (Piso superior)',
+    '5º Ano',
+    '6º Ano',
+    'Biblioteca (Superior)',
+    'Sala de convivência',
+    '9º Ano'
+  ],
+  'Anexo': [
+    'Sala de manutenção',
+    'Sala de reuniões',
+    'Refeitório',
+    'Cozinha',
+    'Nutrição',
+    'Controladoria',
+    'Financeiro',
+    'Operacional',
+    'Mantenedoria'
+  ]
+};
+
 const formSchema = z.object({
-  problemType: z.string({
-    required_error: "Selecione o tipo de problema",
+  unit: z.string({
+    required_error: "Selecione a unidade",
   }),
-  location: z.string().min(3, {
-    message: "Informe a localização com pelo menos 3 caracteres",
+  location: z.string({
+    required_error: "Selecione a localização",
   }),
-  deviceInfo: z.string().min(3, {
-    message: "Descreva o dispositivo com pelo menos 3 caracteres",
+  category: z.string({
+    required_error: "Selecione a categoria",
   }),
   priority: z.string({
     required_error: "Selecione a prioridade",
   }),
+  deviceInfo: z.string().optional(),
   description: z.string().min(10, {
     message: "A descrição deve ter pelo menos 10 caracteres",
   }),
@@ -34,14 +97,16 @@ const formSchema = z.object({
 const NovaSuporte = () => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedUnit, setSelectedUnit] = useState("");
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      problemType: "",
+      unit: "",
       location: "",
-      deviceInfo: "",
+      category: "",
       priority: "",
+      deviceInfo: "",
       description: "",
     },
   });
@@ -57,6 +122,7 @@ const NovaSuporte = () => {
         description: `Sua solicitação de suporte foi registrada com sucesso. Um técnico irá atendê-la em breve.`,
       });
       form.reset();
+      setSelectedUnit("");
       setIsSubmitting(false);
     }, 1500);
   }
@@ -89,28 +155,83 @@ const NovaSuporte = () => {
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <FormField
                       control={form.control}
-                      name="problemType"
+                      name="unit"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Tipo de Problema</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormLabel>Unidade</FormLabel>
+                          <Select 
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              setSelectedUnit(value);
+                              form.resetField("location");
+                            }} 
+                            defaultValue={field.value}
+                          >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Selecione o tipo de problema" />
+                                <SelectValue placeholder="Selecione a unidade" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="hardware">Problema de Hardware</SelectItem>
-                              <SelectItem value="software">Problema de Software</SelectItem>
-                              <SelectItem value="network">Problema de Rede/Internet</SelectItem>
-                              <SelectItem value="printer">Problema de Impressora</SelectItem>
-                              <SelectItem value="projector">Problema de Projetor</SelectItem>
-                              <SelectItem value="other">Outro</SelectItem>
+                              <SelectItem value="Berçário e Educação Infantil">Berçário e Educação Infantil</SelectItem>
+                              <SelectItem value="Fundamental">Fundamental</SelectItem>
+                              <SelectItem value="Anexo">Anexo</SelectItem>
                             </SelectContent>
                           </Select>
-                          <FormDescription>
-                            Categoria do problema encontrado.
-                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="location"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Localização</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            value={field.value}
+                            disabled={!selectedUnit}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder={selectedUnit ? "Selecione a localização" : "Selecione a unidade primeiro"} />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {selectedUnit && locationsByUnit[selectedUnit as keyof typeof locationsByUnit].map((location) => (
+                                <SelectItem key={location} value={location}>
+                                  {location}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="category"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Categoria</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione a categoria" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Internet">Internet</SelectItem>
+                              <SelectItem value="Notebook">Notebook</SelectItem>
+                              <SelectItem value="Projeção">Projeção</SelectItem>
+                              <SelectItem value="Áudio">Áudio</SelectItem>
+                              <SelectItem value="Outros">Outros</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -135,26 +256,6 @@ const NovaSuporte = () => {
                               <SelectItem value="critical">Crítica - Impede completamente o trabalho</SelectItem>
                             </SelectContent>
                           </Select>
-                          <FormDescription>
-                            Nível de urgência para resolução do problema.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="location"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Localização</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ex: Sala 101, Laboratório de Informática" {...field} />
-                          </FormControl>
-                          <FormDescription>
-                            Local onde o problema está ocorrendo.
-                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -165,12 +266,12 @@ const NovaSuporte = () => {
                       name="deviceInfo"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Informações do Dispositivo</FormLabel>
+                          <FormLabel>Informações do Dispositivo (Opcional)</FormLabel>
                           <FormControl>
                             <Input placeholder="Ex: Notebook Dell, Série X123" {...field} />
                           </FormControl>
-                          <FormDescription>
-                            Marca, modelo ou informações do equipamento com problema.
+                          <FormDescription className="text-muted-foreground">
+                            Marca, modelo ou informações adicionais do equipamento
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -191,15 +292,16 @@ const NovaSuporte = () => {
                             {...field} 
                           />
                         </FormControl>
-                        <FormDescription>
-                          Forneça o máximo de detalhes possível sobre o problema.
-                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
-                  <Button type="submit" disabled={isSubmitting} className="bg-gradient-to-r from-eccos-green to-eccos-blue hover:from-eccos-green/90 hover:to-eccos-blue/90">
+                  <Button 
+                    type="submit" 
+                    disabled={isSubmitting} 
+                    className="bg-gradient-to-r from-eccos-green to-eccos-blue hover:from-eccos-green/90 hover:to-eccos-blue/90"
+                  >
                     {isSubmitting ? "Enviando..." : "Enviar Solicitação"}
                   </Button>
                 </form>

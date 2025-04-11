@@ -1,282 +1,238 @@
-
-// Import only the necessary functions from the file
-import { useState, useEffect, useMemo } from "react";
+// src/pages/Disponibilidade.tsx
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  getAllAvailableDates, 
+  getAvailableDates, 
   addAvailableDates, 
-  removeAvailableDates,
-  AvailabilityDate
+  removeAvailableDates, 
+  isDateInPastOrToday
 } from "@/services/availabilityService";
 import AppLayout from "@/components/AppLayout";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+// Objeto de estilos para o calendário
+const calendarStyles = {
+  availableDate: {
+    border: "2px solid #22c55e",
+    backgroundColor: "transparent"
+  },
+  selectedAdd: {
+    border: "2px solid #3b82f6",
+    backgroundColor: "transparent"
+  },
+  selectedRemove: {
+    border: "2px solid #ef4444",
+    backgroundColor: "transparent"
+  }
+};
+
 export default function Disponibilidade() {
   const [availableDates, setAvailableDates] = useState<Date[]>([]);
   const [selectedAddDates, setSelectedAddDates] = useState<Date[]>([]);
   const [selectedRemoveDates, setSelectedRemoveDates] = useState<Date[]>([]);
-  const [isAddingDates, setIsAddingDates] = useState(false);
-  const [isRemovingDates, setIsRemovingDates] = useState(false);
-  const [tab, setTab] = useState("add");
+  const [isLoading, setIsLoading] = useState({
+    add: false,
+    remove: false,
+    initial: true
+  });
+  const [activeTab, setActiveTab] = useState("add");
   const { toast } = useToast();
 
-  // Fix: Function to convert Firestore timestamp to Date
-  const convertToJsDate = (date: AvailabilityDate): Date => {
-    if (date.date && typeof date.date === 'object' && 'toDate' in date.date) {
-      return date.date.toDate();
-    }
-    // Try to handle string date from Firestore
-    if (typeof date.date === 'string') {
-      return new Date(date.date);
-    }
-    // Fallback
-    return new Date();
-  };
-
-  // Fetch available dates
-  const fetchAvailableDates = async () => {
-    try {
-      const dates = await getAllAvailableDates();
-      // Convert Firestore timestamps to JavaScript Date objects
-      const jsDateObjects = dates.map(convertToJsDate);
-      setAvailableDates(jsDateObjects);
-    } catch (error) {
-      console.error("Error fetching available dates:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar as datas disponíveis.",
-        variant: "destructive",
-      });
-    }
-  };
-
   useEffect(() => {
-    fetchAvailableDates();
+    const loadDates = async () => {
+      try {
+        const dates = await getAvailableDates();
+        setAvailableDates(dates);
+      } catch (error) {
+        showErrorToast("Erro ao carregar datas disponíveis");
+      } finally {
+        setIsLoading(prev => ({ ...prev, initial: false }));
+      }
+    };
+    loadDates();
   }, []);
 
-  // This function will check if a date is in the availableDates array
-  const isDateAvailable = (date: Date): boolean => {
-    return availableDates.some(availableDate => 
-      availableDate.getDate() === date.getDate() &&
-      availableDate.getMonth() === date.getMonth() &&
-      availableDate.getFullYear() === date.getFullYear()
-    );
+  const showErrorToast = (description: string) => {
+    toast({
+      title: "Erro",
+      description,
+      variant: "destructive",
+    });
+  };
+
+  const showSuccessToast = (description: string) => {
+    toast({
+      title: "Sucesso",
+      description,
+      className: "bg-green-500 text-white",
+    });
   };
 
   const handleAddDates = async () => {
-    if (selectedAddDates.length === 0) {
-      toast({
-        title: "Aviso",
-        description: "Selecione pelo menos uma data para adicionar.",
-      });
-      return;
-    }
-
-    setIsAddingDates(true);
+    if (selectedAddDates.length === 0) return;
+    
+    setIsLoading(prev => ({ ...prev, add: true }));
     try {
-      // Fix: Pass each date individually to addAvailableDates
-      for (const date of selectedAddDates) {
-        await addAvailableDates(date);
-      }
-      
-      toast({
-        title: "Sucesso",
-        description: `${selectedAddDates.length} data(s) adicionada(s) como disponível(is).`,
-      });
-      
-      // Clear selection and refresh
+      await addAvailableDates(selectedAddDates);
+      setAvailableDates(prev => [...prev, ...selectedAddDates]);
       setSelectedAddDates([]);
-      fetchAvailableDates();
+      showSuccessToast("Datas adicionadas com sucesso!");
     } catch (error) {
-      console.error("Error adding dates:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível adicionar as datas.",
-        variant: "destructive",
-      });
+      showErrorToast("Erro ao adicionar datas");
     } finally {
-      setIsAddingDates(false);
+      setIsLoading(prev => ({ ...prev, add: false }));
     }
   };
 
   const handleRemoveDates = async () => {
-    if (selectedRemoveDates.length === 0) {
-      toast({
-        title: "Aviso",
-        description: "Selecione pelo menos uma data para remover.",
-      });
-      return;
-    }
-
-    setIsRemovingDates(true);
-    try {
-      // Fix: Pass each date individually to removeAvailableDates
-      for (const date of selectedRemoveDates) {
-        await removeAvailableDates(date);
-      }
-      
-      toast({
-        title: "Sucesso",
-        description: `${selectedRemoveDates.length} data(s) removida(s) da disponibilidade.`,
-      });
-      
-      // Clear selection and refresh
-      setSelectedRemoveDates([]);
-      fetchAvailableDates();
-    } catch (error) {
-      console.error("Error removing dates:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível remover as datas.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsRemovingDates(false);
-    }
-  };
-
-  // Format the date list for display
-  const formatDateList = (dates: Date[]): string => {
-    if (dates.length === 0) return "Nenhuma data selecionada";
+    if (selectedRemoveDates.length === 0) return;
     
-    return dates
-      .map(date => format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }))
-      .join(", ");
+    setIsLoading(prev => ({ ...prev, remove: true }));
+    try {
+      await removeAvailableDates(selectedRemoveDates);
+      setAvailableDates(prev => 
+        prev.filter(date => 
+          !selectedRemoveDates.some(selected => 
+            selected.toISOString() === date.toISOString()
+          )
+        )
+      );
+      setSelectedRemoveDates([]);
+      showSuccessToast("Datas removidas com sucesso!");
+    } catch (error) {
+      showErrorToast("Erro ao remover datas");
+    } finally {
+      setIsLoading(prev => ({ ...prev, remove: false }));
+    }
   };
 
-  // Reset selections when tab changes
-  useEffect(() => {
-    setSelectedAddDates([]);
-    setSelectedRemoveDates([]);
-  }, [tab]);
+  const isDateAvailable = (date: Date) => {
+    return availableDates.some(availableDate => 
+      availableDate.toISOString() === date.toISOString()
+    );
+  };
 
-  // Custom styles for the calendar
-  const calendarClassName = "bg-black rounded-md border-gray-700 text-white";
+  const formatSelectedDates = (dates: Date[]) => {
+    return dates.length > 0 
+      ? dates.map(date => 
+          format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+        ).join(", ")
+      : "Nenhuma data selecionada";
+  };
 
   return (
     <AppLayout>
-      <div className="container mx-auto p-4 max-w-6xl">
-        <h1 className="text-2xl font-bold mb-6">Gerenciar Disponibilidade</h1>
+      <div className="max-w-4xl mx-auto p-4">
+        <h1 className="text-3xl font-bold mb-8">Gerenciamento de Disponibilidade</h1>
         
-        <Tabs value={tab} onValueChange={setTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="add">Adicionar Datas Disponíveis</TabsTrigger>
-            <TabsTrigger value="remove">Remover Datas Disponíveis</TabsTrigger>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid grid-cols-2 w-full mb-6">
+            <TabsTrigger value="add">Adicionar</TabsTrigger>
+            <TabsTrigger value="remove">Remover</TabsTrigger>
           </TabsList>
-          
-          <TabsContent value="add" className="space-y-4">
+
+          <TabsContent value="add">
             <Card>
               <CardHeader>
-                <CardTitle>Adicionar Datas Disponíveis</CardTitle>
+                <CardTitle>Adicionar Disponibilidade</CardTitle>
                 <CardDescription>
-                  Selecione as datas que estarão disponíveis para reserva.
+                  Selecione as datas que deseja liberar para reservas
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-col md:flex-row gap-4">
-                  <div className="flex-1">
-                    <Calendar
-                      mode="multiple"
-                      selected={selectedAddDates}
-                      onSelect={setSelectedAddDates as any}
-                      className={calendarClassName}
-                      classNames={{
-                        day_selected: "bg-blue-600 text-white hover:bg-blue-700",
-                        day_today: "bg-white text-black",
-                        day: "text-white hover:bg-gray-700",
-                        day_outside: "text-gray-500 opacity-50",
-                        head_cell: "text-gray-300",
-                        nav_button: "text-gray-300 hover:bg-gray-700",
-                        table: "border-gray-700",
-                      }}
-                      disabled={(date) => 
-                        date < new Date(new Date().setHours(0, 0, 0, 0)) || 
-                        isDateAvailable(date)
-                      }
-                    />
-                  </div>
-                  <div className="flex-1 space-y-4">
-                    <Card className="h-full bg-gray-50 dark:bg-gray-900">
-                      <CardHeader>
-                        <CardTitle>Datas Selecionadas</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="mb-4">
-                          {formatDateList(selectedAddDates)}
+              <CardContent className="flex flex-col md:flex-row gap-6">
+                <div className="flex-1">
+                  <Calendar
+                    mode="multiple"
+                    selected={selectedAddDates}
+                    onSelect={setSelectedAddDates}
+                    disabled={date => 
+                      isDateInPastOrToday(date) || 
+                      isDateAvailable(date) ||
+                      date < new Date()
+                    }
+                    className="rounded-lg border p-4"
+                    modifiers={{
+                      available: (date) => isDateAvailable(date),
+                    }}
+                    modifiersStyles={{
+                      available: calendarStyles.availableDate,
+                      selected: calendarStyles.selectedAdd
+                    }}
+                  />
+                </div>
+                
+                <div className="flex-1 space-y-4">
+                  <Card>
+                    <CardContent className="p-6 space-y-4">
+                      <div className="space-y-2">
+                        <h3 className="font-medium">Datas Selecionadas:</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {formatSelectedDates(selectedAddDates)}
                         </p>
-                        <Button 
-                          onClick={handleAddDates} 
-                          disabled={isAddingDates || selectedAddDates.length === 0}
-                          className="w-full bg-eccos-blue hover:bg-eccos-blue/80"
-                        >
-                          {isAddingDates ? "Adicionando..." : "Confirmar Adição"}
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </div>
+                      </div>
+                      <Button
+                        onClick={handleAddDates}
+                        disabled={isLoading.add || selectedAddDates.length === 0}
+                        className="w-full"
+                      >
+                        {isLoading.add ? "Salvando..." : "Confirmar Datas"}
+                      </Button>
+                    </CardContent>
+                  </Card>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
-          
-          <TabsContent value="remove" className="space-y-4">
+
+          <TabsContent value="remove">
             <Card>
               <CardHeader>
-                <CardTitle>Remover Datas Disponíveis</CardTitle>
+                <CardTitle>Remover Disponibilidade</CardTitle>
                 <CardDescription>
-                  Selecione as datas que não estarão mais disponíveis para reserva.
+                  Selecione as datas que deseja bloquear para reservas
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-col md:flex-row gap-4">
-                  <div className="flex-1">
-                    <Calendar
-                      mode="multiple"
-                      selected={selectedRemoveDates}
-                      onSelect={setSelectedRemoveDates as any}
-                      className={calendarClassName}
-                      classNames={{
-                        day_selected: "bg-red-600 text-white hover:bg-red-700",
-                        day_today: "bg-white text-black",
-                        day: "text-white hover:bg-gray-700",
-                        day_outside: "text-gray-500 opacity-50",
-                        head_cell: "text-gray-300",
-                        nav_button: "text-gray-300 hover:bg-gray-700",
-                        table: "border-gray-700",
-                      }}
-                      disabled={(date) => !isDateAvailable(date)}
-                    />
-                  </div>
-                  <div className="flex-1 space-y-4">
-                    <Card className="h-full bg-gray-50 dark:bg-gray-900">
-                      <CardHeader>
-                        <CardTitle>Datas Selecionadas para Remoção</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="mb-4">
-                          {formatDateList(selectedRemoveDates)}
+              <CardContent className="flex flex-col md:flex-row gap-6">
+                <div className="flex-1">
+                  <Calendar
+                    mode="multiple"
+                    selected={selectedRemoveDates}
+                    onSelect={setSelectedRemoveDates}
+                    disabled={date => !isDateAvailable(date)}
+                    className="rounded-lg border p-4"
+                    modifiers={{
+                      available: (date) => isDateAvailable(date),
+                    }}
+                    modifiersStyles={{
+                      available: calendarStyles.availableDate,
+                      selected: calendarStyles.selectedRemove
+                    }}
+                  />
+                </div>
+                
+                <div className="flex-1 space-y-4">
+                  <Card>
+                    <CardContent className="p-6 space-y-4">
+                      <div className="space-y-2">
+                        <h3 className="font-medium">Datas Selecionadas:</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {formatSelectedDates(selectedRemoveDates)}
                         </p>
-                        <Button 
-                          onClick={handleRemoveDates} 
-                          disabled={isRemovingDates || selectedRemoveDates.length === 0}
-                          className="w-full bg-red-600 hover:bg-red-700 text-white"
-                        >
-                          {isRemovingDates ? "Removendo..." : "Confirmar Remoção"}
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </div>
+                      </div>
+                      <Button
+                        onClick={handleRemoveDates}
+                        disabled={isLoading.remove || selectedRemoveDates.length === 0}
+                        className="w-full bg-destructive hover:bg-destructive/80"
+                      >
+                        {isLoading.remove ? "Removendo..." : "Confirmar Remoção"}
+                      </Button>
+                    </CardContent>
+                  </Card>
                 </div>
               </CardContent>
             </Card>

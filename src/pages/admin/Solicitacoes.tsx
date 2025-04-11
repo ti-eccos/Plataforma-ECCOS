@@ -432,7 +432,6 @@ const Solicitacoes = () => {
         ) : (
           <div className="rounded-md border overflow-hidden">
             <Table>
-              <TableCaption>Lista de solicitações dos usuários</TableCaption>
               <TableHeader>
                 <TableRow>
                   <TableHead>Tipo</TableHead>
@@ -483,35 +482,36 @@ const Solicitacoes = () => {
       {/* Request Details Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent className="max-w-3xl overflow-y-auto max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {selectedRequest && (
-                <>
-                  {getRequestTypeIcon(selectedRequest.type)}
-                  <span>
-                    {getReadableRequestType(selectedRequest.type)} - {selectedRequest.userName || selectedRequest.userEmail}
-                  </span>
-                </>
-              )}
-            </DialogTitle>
-            <DialogDescription>
-              {selectedRequest && (
-                <div className="flex items-center justify-between">
-                  <div>
-                    {selectedRequest.createdAt ? 
-                      format(
-                        new Date(selectedRequest.createdAt.seconds * 1000),
-                        "dd 'de' MMMM 'de' yyyy 'às' HH:mm",
-                        { locale: ptBR }
-                      ) : 
-                      "Sem data"
-                    }
-                  </div>
-                  <div>{getStatusBadge(selectedRequest?.status)}</div>
-                </div>
-              )}
-            </DialogDescription>
-          </DialogHeader>
+        <DialogHeader>
+  <DialogTitle className="flex items-center gap-2">
+    {selectedRequest && (
+      <>
+        {getRequestTypeIcon(selectedRequest.type)}
+        <span>
+          {getReadableRequestType(selectedRequest.type)} - {selectedRequest.userName || selectedRequest.userEmail}
+        </span>
+      </>
+    )}
+  </DialogTitle>
+  {/* Replace DialogDescription with styled div */}
+  <div className="text-sm text-muted-foreground px-1">
+    {selectedRequest && (
+      <div className="flex items-center justify-between">
+        <div>
+          {selectedRequest.createdAt ? 
+            format(
+              new Date(selectedRequest.createdAt.seconds * 1000),
+              "dd 'de' MMMM 'de' yyyy 'às' HH:mm",
+              { locale: ptBR }
+            ) : 
+            "Sem data"
+          }
+        </div>
+        <div>{getStatusBadge(selectedRequest?.status)}</div>
+      </div>
+    )}
+  </div>
+</DialogHeader>
           
           {selectedRequest && (
             <div className="space-y-6 py-4">

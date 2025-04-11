@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarIcon, Clock } from 'lucide-react';
+import { CalendarIcon } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -21,13 +21,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -72,36 +65,28 @@ const LOCATIONS = [
   '9º Ano'
 ];
 
-const generateTimeOptions = () => {
-  const options = [];
-  for (let hour = 7; hour <= 22; hour++) {
-    for (let minute = 0; minute < 60; minute += 15) {
-      const formattedHour = hour.toString().padStart(2, '0');
-      const formattedMinute = minute.toString().padStart(2, '0');
-      options.push(`${formattedHour}:${formattedMinute}`);
-    }
-  }
-  return options;
-};
-
-const TIME_OPTIONS = generateTimeOptions();
-
 const formSchema = z.object({
   date: z.date({
     required_error: "Data de reserva é obrigatória",
   }),
   startTime: z.string({
     required_error: "Hora inicial é obrigatória",
-  }),
+  }).regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Formato inválido (use HH:mm)"),
   endTime: z.string({
     required_error: "Hora final é obrigatória",
-  }),
+  }).regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Formato inválido (use HH:mm)"),
   selectedEquipment: z.array(z.string()).min(1, "Pelo menos um equipamento deve ser selecionado"),
   location: z.string({
     required_error: "Local de uso é obrigatório",
   }),
   purpose: z.string().min(10, "Finalidade deve ter pelo menos 10 caracteres"),
-}).refine((data) => data.startTime < data.endTime, {
+}).refine((data) => {
+  const [startHours, startMinutes] = data.startTime.split(':').map(Number);
+  const [endHours, endMinutes] = data.endTime.split(':').map(Number);
+  const startTotal = startHours * 60 + startMinutes;
+  const endTotal = endHours * 60 + endMinutes;
+  return startTotal < endTotal;
+}, {
   message: "A hora final deve ser depois da hora inicial",
   path: ["endTime"],
 });
@@ -150,21 +135,12 @@ const NovaReserva = () => {
   }, []);
 
   const isDateAvailable = (date: Date) => {
-    if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
-      return false;
-    }
-    
-    return availableDates.some(availableDate => {
-      if (!availableDate || !(availableDate instanceof Date) || isNaN(availableDate.getTime())) {
-        return false;
-      }
-      
-      return (
-        availableDate.getFullYear() === date.getFullYear() &&
-        availableDate.getMonth() === date.getMonth() &&
-        availableDate.getDate() === date.getDate()
-      );
-    });
+    if (!date || isNaN(date.getTime())) return false;
+    return availableDates.some(availableDate => 
+      availableDate.getFullYear() === date.getFullYear() &&
+      availableDate.getMonth() === date.getMonth() &&
+      availableDate.getDate() === date.getDate()
+    );
   };
 
   const onSubmit = async (values: FormValues) => {
@@ -254,9 +230,9 @@ const NovaReserva = () => {
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
-                        disabled={(date) => {
-                          return isDateInPastOrToday(date) || !isDateAvailable(date);
-                        }}
+                        disabled={(date) => 
+                          isDateInPastOrToday(date) || !isDateAvailable(date)
+                        }
                         modifiers={{
                           available: (date) => isDateAvailable(date),
                         }}
@@ -264,7 +240,6 @@ const NovaReserva = () => {
                           available: { border: "2px solid green" },
                         }}
                         initialFocus
-                        className={cn("p-3 pointer-events-auto")}
                       />
                     </PopoverContent>
                   </Popover>
@@ -280,18 +255,14 @@ const NovaReserva = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Hora Inicial</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a hora inicial" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="max-h-60">
-                        {TIME_OPTIONS.map(time => (
-                          <SelectItem key={`start-${time}`} value={time}>{time}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <Input
+                        type="time"
+                        {...field}
+                        step="900"
+                        placeholder="HH:mm"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -303,18 +274,14 @@ const NovaReserva = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Hora Final</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a hora final" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="max-h-60">
-                        {TIME_OPTIONS.map(time => (
-                          <SelectItem key={`end-${time}`} value={time}>{time}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <Input
+                        type="time"
+                        {...field}
+                        step="900"
+                        placeholder="HH:mm"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -335,32 +302,29 @@ const NovaReserva = () => {
                         key={item.id}
                         control={form.control}
                         name="selectedEquipment"
-                        render={({ field }) => {
-                          return (
-                            <FormItem
-                              key={item.id}
-                              className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4"
-                            >
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value?.includes(item.id)}
-                                  onCheckedChange={(checked) => {
-                                    return checked
-                                      ? field.onChange([...field.value, item.id])
-                                      : field.onChange(
-                                          field.value?.filter(
-                                            (value) => value !== item.id
-                                          )
+                        render={({ field }) => (
+                          <FormItem
+                            className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4"
+                          >
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value?.includes(item.id)}
+                                onCheckedChange={(checked) => {
+                                  return checked
+                                    ? field.onChange([...field.value, item.id])
+                                    : field.onChange(
+                                        field.value?.filter(
+                                          (value) => value !== item.id
                                         )
-                                  }}
-                                />
-                              </FormControl>
-                              <FormLabel className="font-normal cursor-pointer">
-                                {item.name} ({item.type})
-                              </FormLabel>
-                            </FormItem>
-                          )
-                        }}
+                                      )
+                                }}
+                              />
+                            </FormControl>
+                            <FormLabel className="font-normal cursor-pointer">
+                              {item.name} ({item.type})
+                            </FormLabel>
+                          </FormItem>
+                        )}
                       />
                     ))}
                   </div>
@@ -375,18 +339,19 @@ const NovaReserva = () => {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Local de Uso</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o local de uso" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="max-h-60">
-                      {LOCATIONS.map(location => (
-                        <SelectItem key={location} value={location}>{location}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <Input
+                      type="text"
+                      {...field}
+                      placeholder="Digite o local de uso"
+                      list="locations-list"
+                    />
+                  </FormControl>
+                  <datalist id="locations-list">
+                    {LOCATIONS.map((location) => (
+                      <option key={location} value={location} />
+                    ))}
+                  </datalist>
                   <FormMessage />
                 </FormItem>
               )}
@@ -410,7 +375,11 @@ const NovaReserva = () => {
               )}
             />
 
-            <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting}>
+            <Button 
+              type="submit" 
+              className="w-full md:w-auto" 
+              disabled={isSubmitting}
+            >
               {isSubmitting ? "Enviando..." : "Enviar Solicitação"}
             </Button>
           </form>

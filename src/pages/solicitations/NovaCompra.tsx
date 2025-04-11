@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -24,12 +23,15 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 
-// Define the form schema
 const formSchema = z.object({
   itemName: z.string().min(1, 'Nome do item é obrigatório'),
-  itemType: z.string().min(1, 'Tipo de item é obrigatório'),
-  quantity: z.coerce.number().int().positive('Quantidade deve ser um número positivo'),
-  estimatedPrice: z.string().optional(),
+  quantity: z.coerce
+    .number()
+    .int({ message: 'Deve ser um número inteiro' })
+    .positive('Quantidade deve ser positiva'),
+  unitPrice: z.coerce
+    .number()
+    .positive('Valor unitário deve ser positivo'),
   urgency: z.string().min(1, 'Nível de urgência é obrigatório'),
   justification: z.string().min(10, 'Justificativa deve ter pelo menos 10 caracteres'),
   additionalInfo: z.string().optional(),
@@ -38,26 +40,21 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const NovaCompra = () => {
-  // Initialize form
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       itemName: '',
-      itemType: '',
-      quantity: 1,
-      estimatedPrice: '',
+      quantity: undefined,
+      unitPrice: undefined,
       urgency: '',
       justification: '',
       additionalInfo: '',
     },
   });
 
-  // Form submission handler
   const onSubmit = (values: FormValues) => {
-    console.log('Form values:', values);
-    
-    // Here you would usually send data to an API or Firebase
-    
+    const totalPrice = values.unitPrice * values.quantity;
+    console.log('Form values:', { ...values, totalPrice });
     toast.success('Solicitação enviada com sucesso!');
     form.reset();
   };
@@ -91,24 +88,30 @@ const NovaCompra = () => {
 
               <FormField
                 control={form.control}
-                name="itemType"
+                name="quantity"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tipo de Item</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o tipo de item" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="hardware">Hardware</SelectItem>
-                        <SelectItem value="software">Software</SelectItem>
-                        <SelectItem value="material">Material Didático</SelectItem>
-                        <SelectItem value="office">Material de Escritório</SelectItem>
-                        <SelectItem value="other">Outro</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Quantidade</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="Ex: 5"
+                        value={field.value || ''}
+                        onKeyPress={(e) => {
+                          if (['e', 'E', '+', '-', '.', ','].includes(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value);
+                          if (!isNaN(value)) {
+                            field.onChange(Math.max(1, value));
+                          } else {
+                            field.onChange('');
+                          }
+                        }}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -118,31 +121,38 @@ const NovaCompra = () => {
             <div className="grid gap-6 md:grid-cols-2">
               <FormField
                 control={form.control}
-                name="quantity"
+                name="unitPrice"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Quantidade</FormLabel>
+                    <FormLabel>Valor Unitário (R$)</FormLabel>
                     <FormControl>
-                      <Input type="number" min="1" {...field} onChange={e => field.onChange(parseInt(e.target.value) || 1)} />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        placeholder="Ex: 2500.00"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="estimatedPrice"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Preço Estimado (opcional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: R$ 2500,00" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <FormItem>
+                <FormLabel>Valor Total</FormLabel>
+                <FormControl>
+                  <Input
+                    readOnly
+                    value={new Intl.NumberFormat('pt-BR', {
+                      style: 'currency',
+                      currency: 'BRL',
+                    }).format(
+                      (form.watch('unitPrice') || 0) * (form.watch('quantity') || 0)
+                    )}
+                  />
+                </FormControl>
+              </FormItem>
             </div>
 
             <FormField

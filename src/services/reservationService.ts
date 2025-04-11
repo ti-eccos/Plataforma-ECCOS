@@ -15,7 +15,7 @@ import {
   deleteDoc
 } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-import { formatDateToYYYYMMDD } from "./availabilityService";
+import { formatDateToYYYYMMDD } from '@/services/availabilityService';
 
 const COLLECTION_NAME = "reservations";
 const PURCHASE_COLLECTION = "purchases";
@@ -193,51 +193,53 @@ export const getUserReservations = async (): Promise<any[]> => {
   }
 };
 
-// For admin: Get all requests (purchases, supports, reservations)
-export const getAllRequests = async (showHidden = false): Promise<RequestBase[]> => {
+export const getAllRequests = async (showHidden = false) => {
   try {
-    // Fetch data from all collections
-    const purchasesSnapshot = await getDocs(collection(db, "purchases"));
-    const supportsSnapshot = await getDocs(collection(db, "supports"));
-    const reservationsSnapshot = await getDocs(collection(db, "reservations"));
+    // Buscar todas as coleções
+    const [reservations, purchases, supports] = await Promise.all([
+      getDocs(collection(db, "reservations")),
+      getDocs(collection(db, "purchases")),
+      getDocs(collection(db, "supports"))
+    ]);
+
+    const requests = [];
     
-    // Process the data from each collection
-    const purchases = purchasesSnapshot.docs.map(doc => ({
-      id: doc.id,
-      collectionName: "purchases",
-      ...doc.data()
-    })) as RequestBase[];
-    
-    const supports = supportsSnapshot.docs.map(doc => ({
-      id: doc.id,
-      collectionName: "supports",
-      ...doc.data()
-    })) as RequestBase[];
-    
-    const reservations = reservationsSnapshot.docs.map(doc => ({
-      id: doc.id,
-      collectionName: "reservations",
-      ...doc.data()
-    })) as RequestBase[];
-    
-    // Combine all request types
-    let allRequests = [...purchases, ...supports, ...reservations];
-    
-    // Filter out hidden statuses if needed
-    if (!showHidden) {
-      allRequests = allRequests.filter(
-        req => {
-          // Make sure the status property exists
-          const status = req.status as string | undefined;
-          if (!status) return true; // Keep items without status
-          return !["canceled", "completed", "rejected"].includes(status);
-        }
-      );
-    }
-    
-    return allRequests;
+    // Processar reservas
+    reservations.forEach(doc => {
+      requests.push({
+        id: doc.id,
+        collectionName: "reservations",
+        type: "reservation",
+        ...doc.data()
+      });
+    });
+
+    // Processar compras
+    purchases.forEach(doc => {
+      requests.push({
+        id: doc.id,
+        collectionName: "purchases",
+        type: "purchase",
+        ...doc.data()
+      });
+    });
+
+    // Processar suportes
+    supports.forEach(doc => {
+      requests.push({
+        id: doc.id,
+        collectionName: "supports",
+        type: "support",
+        ...doc.data()
+      });
+    });
+
+    // Ordenar por data de criação
+    return requests.sort((a, b) => 
+      b.createdAt?.seconds - a.createdAt?.seconds
+    );
   } catch (error) {
-    console.error("Error getting all requests:", error);
+    console.error("Error fetching requests:", error);
     throw error;
   }
 };
