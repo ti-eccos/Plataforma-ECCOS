@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import AppLayout from "@/components/AppLayout";
@@ -32,13 +31,11 @@ const Disponibilidade = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  // Load available dates from Firestore
   useEffect(() => {
     const loadAvailableDates = async () => {
       setIsLoading(true);
       try {
         const dates = await getAvailableDates();
-        // Ensure all dates are properly instantiated as Date objects
         const validDates = dates.filter(date => date instanceof Date && !isNaN(date.getTime()));
         setAvailableDates(validDates);
       } catch (error) {
@@ -56,17 +53,14 @@ const Disponibilidade = () => {
     loadAvailableDates();
   }, [toast]);
 
-  // Handle date selection/deselection
   const handleDateSelect = (date: Date | undefined) => {
     if (!date || isNaN(date.getTime())) return;
 
     setSelectedDates((currentSelectedDates) => {
-      // Check if date is already selected
       const dateExists = currentSelectedDates.some(
         (selectedDate) => format(selectedDate, "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
       );
 
-      // If date exists, remove it, otherwise add it
       if (dateExists) {
         return currentSelectedDates.filter(
           (selectedDate) =>
@@ -78,7 +72,6 @@ const Disponibilidade = () => {
     });
   };
 
-  // Save selected dates as available
   const handleSaveAvailableDates = async () => {
     if (selectedDates.length === 0) {
       toast({
@@ -91,14 +84,10 @@ const Disponibilidade = () => {
 
     setIsLoading(true);
     try {
-      await addAvailableDates(selectedDates);
-      
-      // Update the available dates list
+      await Promise.all(selectedDates.map(date => addAvailableDates([date])));
+
       setAvailableDates((current) => {
-        // Create a new array with existing dates plus new dates
         const updatedDates = [...current];
-        
-        // Add each selected date if it doesn't exist already
         selectedDates.forEach((date) => {
           const dateExists = updatedDates.some(
             (existingDate) => 
@@ -130,7 +119,6 @@ const Disponibilidade = () => {
     }
   };
 
-  // Remove selected dates from available
   const handleRemoveAvailableDates = async () => {
     if (selectedDates.length === 0) {
       toast({
@@ -143,12 +131,10 @@ const Disponibilidade = () => {
 
     setIsLoading(true);
     try {
-      // Fix: Pass each date individually to avoid the type error
       for (const date of selectedDates) {
         await removeAvailableDates([date]);
       }
       
-      // Update the available dates list
       setAvailableDates((current) => 
         current.filter((existingDate) => 
           !selectedDates.some((selectedDate) => 
@@ -174,12 +160,10 @@ const Disponibilidade = () => {
     }
   };
 
-  // Clear selected dates
   const handleClearSelection = () => {
     setSelectedDates([]);
   };
 
-  // Check if a date is available
   const isDateAvailable = (date: Date): boolean => {
     return availableDates.some(
       (availableDate) =>
@@ -187,7 +171,6 @@ const Disponibilidade = () => {
     );
   };
 
-  // Check if a date is selected
   const isDateSelected = (date: Date): boolean => {
     return selectedDates.some(
       (selectedDate) =>
@@ -195,14 +178,12 @@ const Disponibilidade = () => {
     );
   };
 
-  // Determine the CSS classes for the date
   const getDateClassName = (date: Date): string => {
     if (isDateSelected(date)) return "selected";
     if (isDateAvailable(date)) return "available";
     return "";
   };
 
-  // Disable past dates
   const disableDate = (date: Date): boolean => {
     return isDateInPastOrToday(date);
   };

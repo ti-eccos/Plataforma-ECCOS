@@ -1,3 +1,4 @@
+
 import { db } from "@/lib/firebase";
 import { 
   collection, 
@@ -18,7 +19,7 @@ import { formatDateToYYYYMMDD } from "./availabilityService";
 
 const COLLECTION_NAME = "reservations";
 const PURCHASE_COLLECTION = "purchases";
-const SUPPORT_COLLECTION = "support";
+const SUPPORT_COLLECTION = "supports";
 
 export type RequestStatus = 
   | "pending" 
@@ -52,6 +53,20 @@ export interface MessageData {
   message: string;
   timestamp: any;
   isAdmin: boolean;
+}
+
+export interface RequestBase {
+  id: string;
+  collectionName: string;
+  userId: string;
+  userEmail: string;
+  userName: string;
+  status: RequestStatus;
+  createdAt: any;
+  type: RequestType;
+  purpose?: string;
+  messages: MessageData[];
+  [key: string]: any; // Allow for additional properties
 }
 
 // Add a new reservation
@@ -179,7 +194,7 @@ export const getUserReservations = async (): Promise<any[]> => {
 };
 
 // For admin: Get all requests (purchases, supports, reservations)
-export const getAllRequests = async (showHidden = false) => {
+export const getAllRequests = async (showHidden = false): Promise<RequestBase[]> => {
   try {
     // Fetch data from all collections
     const purchasesSnapshot = await getDocs(collection(db, "purchases"));
@@ -191,19 +206,19 @@ export const getAllRequests = async (showHidden = false) => {
       id: doc.id,
       collectionName: "purchases",
       ...doc.data()
-    }));
+    })) as RequestBase[];
     
     const supports = supportsSnapshot.docs.map(doc => ({
       id: doc.id,
       collectionName: "supports",
       ...doc.data()
-    }));
+    })) as RequestBase[];
     
     const reservations = reservationsSnapshot.docs.map(doc => ({
       id: doc.id,
       collectionName: "reservations",
       ...doc.data()
-    }));
+    })) as RequestBase[];
     
     // Combine all request types
     let allRequests = [...purchases, ...supports, ...reservations];
@@ -302,7 +317,7 @@ export const addMessageToRequest = async (
 export const getRequestById = async (
   requestId: string,
   collectionName: string
-): Promise<any> => {
+): Promise<RequestBase> => {
   try {
     const requestRef = doc(db, collectionName, requestId);
     const requestDoc = await getDoc(requestRef);
@@ -315,7 +330,7 @@ export const getRequestById = async (
       id: requestDoc.id,
       ...requestDoc.data(),
       collectionName
-    };
+    } as RequestBase;
   } catch (error) {
     console.error("Error getting request by ID:", error);
     throw error;
