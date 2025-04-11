@@ -1,7 +1,6 @@
-
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { 
-  User, 
+  User as FirebaseUser, 
   signInWithPopup, 
   signOut as firebaseSignOut, 
   onAuthStateChanged 
@@ -13,17 +12,21 @@ import { db } from "@/lib/firebase";
 
 type UserRole = "user" | "admin" | "superadmin";
 
-interface AuthUser {
+export interface AuthUser {
   uid: string;
   email: string;
   displayName: string;
   photoURL: string | null;
   role: UserRole;
   blocked?: boolean;
+  lastActive?: Date;
+  createdAt?: Date;
+  department?: string;
 }
 
 interface AuthContextType {
   currentUser: AuthUser | null;
+  user: AuthUser | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -42,10 +45,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAdmin = currentUser?.role === "admin" || isSuperAdmin;
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        // Check if user's email is from the allowed domain
-        if (!user.email?.endsWith("@colegioeccos.com.br")) {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        if (!firebaseUser.email?.endsWith("@colegioeccos.com.br")) {
           await firebaseSignOut(auth);
           toast({
             title: "Acesso negado",
@@ -58,16 +60,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         try {
-          // Get or create user document in Firestore
-          const userRef = doc(db, "users", user.uid);
+          const userRef = doc(db, "users", firebaseUser.uid);
           const docSnap = await getDoc(userRef);
           
-          let userData: any;
+          let userData: Partial<AuthUser>;
           
           if (docSnap.exists()) {
-            userData = docSnap.data();
+            userData = docSnap.data() as AuthUser;
             
-            // Check if user is blocked
             if (userData.blocked) {
               await firebaseSignOut(auth);
               toast({
@@ -80,27 +80,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               return;
             }
             
-            // Update last active
             await setDoc(userRef, {
               ...userData,
               lastActive: new Date().toISOString()
             }, { merge: true });
           } else {
-            // Initialize new user
-            let role: UserRole = "user";
-            if (user.email === "suporte@colegioeccos.com.br") {
-              role = "superadmin";
-            }
-            
+            const role: UserRole = firebaseUser.email === "suporte@colegioeccos.com.br" 
+              ? "superadmin" 
+              : "user";
+
             userData = {
-              uid: user.uid,
-              email: user.email,
-              displayName: user.displayName || "",
-              photoURL: user.photoURL,
-              role: role,
+              uid: firebaseUser.uid,
+              email: firebaseUser.email || "",
+              displayName: firebaseUser.displayName || "Usuário sem nome",
+              photoURL: firebaseUser.photoURL,
+              role,
               blocked: false,
-              lastActive: new Date().toISOString(),
-              createdAt: new Date().toISOString(),
+              lastActive: new Date(),
+              createdAt: new Date(),
               department: "Não definido"
             };
             
@@ -108,15 +105,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
           
           setCurrentUser({
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName || "",
-            photoURL: user.photoURL,
-            role: userData.role,
-            blocked: userData.blocked
+            uid: firebaseUser.uid,
+            email: firebaseUser.email || "",
+            displayName: firebaseUser.displayName || "Usuário sem nome",
+            photoURL: firebaseUser.photoURL,
+            role: userData.role || "user",
+            ...userData
           });
         } catch (error) {
-          console.error("Error fetching user data:", error);
+          console.error("Error handling auth state:", error);
           toast({
             title: "Erro",
             description: "Ocorreu um erro ao carregar seus dados.",
@@ -135,16 +132,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithGoogle = async () => {
     try {
       setLoading(true);
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
       toast({
-        title: "Login realizado com sucesso",
-        description: "Bem-vindo à Plataforma ECCOS.",
+        title: "Login realizado",
+        description: `Bem-vindo, ${result.user.displayName}!`,
       });
     } catch (error: any) {
-      console.error("Error signing in with Google:", error);
+      console.error("Login error:", error);
       toast({
-        title: "Erro ao fazer login",
-        description: error.message || "Ocorreu um erro durante o login.",
+        title: "Erro no login",
+        description: error.message || "Falha ao realizar login",
         variant: "destructive"
       });
     } finally {
@@ -157,29 +154,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await firebaseSignOut(auth);
       toast({
         title: "Logout realizado",
-        description: "Você foi desconectado com sucesso.",
+        description: "Até breve!",
       });
     } catch (error: any) {
-      console.error("Error signing out:", error);
+      console.error("Logout error:", error);
       toast({
-        title: "Erro ao fazer logout",
-        description: error.message || "Ocorreu um erro durante o logout.",
+        title: "Erro no logout",
+        description: error.message || "Falha ao sair da conta",
         variant: "destructive"
       });
     }
   };
 
-  const value = {
-    currentUser,
-    loading,
-    signInWithGoogle,
-    signOut,
-    isAdmin,
-    isSuperAdmin
-  };
-
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{
+      currentUser,
+      user: currentUser,
+      loading,
+      signInWithGoogle,
+      signOut,
+      isAdmin,
+      isSuperAdmin
+    }}>
       {children}
     </AuthContext.Provider>
   );
@@ -188,7 +184,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error("useAuth must be used within AuthProvider");
   }
   return context;
 }

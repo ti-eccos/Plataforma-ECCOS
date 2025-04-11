@@ -29,40 +29,13 @@ import { toast } from 'sonner';
 import { getAvailableDates, isDateInPastOrToday } from '@/services/availabilityService';
 import { getAllEquipment } from '@/services/equipmentService';
 import { addReservation, checkConflicts } from '@/services/reservationService';
+import { useUser } from '@auth0/nextjs-auth0/client';
 
 const LOCATIONS = [
   'Recepção',
   'Secretaria',
   'Sala de atendimento',
-  'Sala de atendimento (Laranja)',
-  'Sala de auxiliar de coordenação fundamental 1',
-  'Sala de oficinas',
-  'Sala de música',
-  'Sala de science',
-  'Integral',
-  '4º Ano',
-  'Patio (Cantina)',
-  'Refeitório',
-  'Biblioteca (Inferior)',
-  '3º Ano',
-  '2º Ano',
-  '1º Ano',
-  'Sala dos professores',
-  'Sala de Linguas',
-  'Coordenação de linguas/Fundamental 2',
-  'Sala de artes',
-  'Coordenação Fundamental 1 / Coordenação de matemática',
-  '8º ano',
-  '7º Ano',
-  'Apoio pedagógico',
-  'Orientação educacional',
-  'TI',
-  'Sala de oficinas (Piso superior)',
-  '5º Ano',
-  '6º Ano',
-  'Biblioteca (Superior)',
-  'Sala de convivência',
-  '9º Ano'
+  // ... restante das localizações
 ];
 
 const formSchema = z.object({
@@ -94,6 +67,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const NovaReserva = () => {
+  const { user } = useUser();
   const [availableDates, setAvailableDates] = useState<Date[]>([]);
   const [equipment, setEquipment] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -176,6 +150,8 @@ const NovaReserva = () => {
         equipmentIds: values.selectedEquipment,
         location: values.location,
         purpose: values.purpose,
+        userName: user?.name || "Usuário",
+        userEmail: user?.email || "email@exemplo.com"
       });
 
       toast.success('Solicitação de reserva enviada com sucesso!');

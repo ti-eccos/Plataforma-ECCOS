@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -15,7 +14,17 @@ import {
   Send
 } from "lucide-react";
 import { toast } from "sonner";
-
+import { 
+  getAllRequests,
+  getRequestById,
+  updateRequestStatus,
+  addMessageToRequest,
+  deleteRequest,
+  RequestStatus,
+  RequestData,
+  MessageData
+} from "@/services/reservationService";
+import { useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/components/AppLayout";
 import { 
   Table, 
@@ -61,51 +70,30 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { 
-  getAllRequests, 
-  getRequestById, 
-  updateRequestStatus, 
-  addMessageToRequest,
-  deleteRequest,
-  RequestStatus, 
-  RequestType,
-  MessageData
-} from "@/services/reservationService";
-import { useAuth } from "@/contexts/AuthContext";
+import { RequestType } from "@/services/reservationService";
 
-const getRequestTypeIcon = (type: string) => {
+const getRequestTypeIcon = (type: RequestType) => {
   switch (type) {
-    case "reservation":
-      return <Calendar className="h-4 w-4" />;
-    case "purchase":
-      return <ShoppingCart className="h-4 w-4" />;
-    case "support":
-      return <Wrench className="h-4 w-4" />;
-    default:
-      return <Calendar className="h-4 w-4" />;
+    case "reservation": return <Calendar className="h-4 w-4" />;
+    case "purchase": return <ShoppingCart className="h-4 w-4" />;
+    case "support": return <Wrench className="h-4 w-4" />;
+    default: return <Calendar className="h-4 w-4" />;
   }
 };
 
-const getStatusBadge = (status: string) => {
+const getStatusBadge = (status: RequestStatus) => {
   switch (status) {
-    case "pending":
-      return <Badge variant="outline">Pendente</Badge>;
-    case "approved":
-      return <Badge variant="default" className="bg-green-500">Aprovada</Badge>;
-    case "rejected":
-      return <Badge variant="destructive">Reprovada</Badge>;
-    case "in-progress":
-      return <Badge variant="default" className="bg-blue-500">Em Andamento</Badge>;
-    case "completed":
-      return <Badge variant="default" className="bg-slate-500">Concluída</Badge>;
-    case "canceled":
-      return <Badge variant="default" className="bg-amber-500">Cancelada</Badge>;
-    default:
-      return <Badge variant="outline">Desconhecido</Badge>;
+    case "pending": return <Badge variant="outline">Pendente</Badge>;
+    case "approved": return <Badge className="bg-green-500 text-white">Aprovada</Badge>;
+    case "rejected": return <Badge variant="destructive">Reprovada</Badge>;
+    case "in-progress": return <Badge className="bg-blue-500 text-white">Em Andamento</Badge>;
+    case "completed": return <Badge className="bg-slate-500 text-white">Concluída</Badge>;
+    case "canceled": return <Badge className="bg-amber-500 text-white">Cancelada</Badge>;
+    default: return <Badge variant="outline">Desconhecido</Badge>;
   }
 };
 
-const getReadableRequestType = (type: string): string => {
+const getReadableRequestType = (type: RequestType): string => {
   switch (type) {
     case "reservation": return "Reserva";
     case "purchase": return "Compra";
@@ -115,24 +103,21 @@ const getReadableRequestType = (type: string): string => {
 };
 
 const Solicitacoes = () => {
-  const { isAdmin } = useAuth();
+  const { currentUser: user, isAdmin } = useAuth();
   const [showHidden, setShowHidden] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedTypes, setSelectedTypes] = useState<string[]>(["reservation", "purchase", "support"]);
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([
+  const [selectedTypes, setSelectedTypes] = useState<RequestType[]>(["reservation", "purchase", "support"]);
+  const [selectedStatuses, setSelectedStatuses] = useState<RequestStatus[]>([
     "pending", "approved", "in-progress"
   ]);
   
-  const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const [selectedRequest, setSelectedRequest] = useState<RequestData | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [newStatus, setNewStatus] = useState<RequestStatus | "">("");
+  const [newStatus, setNewStatus] = useState<RequestStatus>("pending");
   const [newMessage, setNewMessage] = useState("");
-  
-  // Delete request states
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<{id: string, collectionName: string} | null>(null);
 
-  // Fetch all requests
   const { 
     data: requests = [], 
     isLoading, 
@@ -144,44 +129,36 @@ const Solicitacoes = () => {
     enabled: isAdmin,
   });
 
-  // Handle opening request details
-  const handleViewDetails = async (request: any) => {
+  const handleViewDetails = async (request: RequestData) => {
     try {
       const fullRequest = await getRequestById(request.id, request.collectionName);
       setSelectedRequest(fullRequest);
       setNewStatus(fullRequest.status);
       setIsDetailsOpen(true);
     } catch (error) {
-      toast.error("Erro ao carregar detalhes da solicitação");
-      console.error("Error loading request details:", error);
+      toast.error("Erro ao carregar detalhes");
+      console.error("Error:", error);
     }
   };
 
-  // Handle status change
   const handleStatusChange = async () => {
     if (!selectedRequest || !newStatus) return;
     
     try {
       await updateRequestStatus(
         selectedRequest.id, 
-        newStatus as RequestStatus, 
+        newStatus, 
         selectedRequest.collectionName
       );
-      toast.success("Status atualizado com sucesso");
+      toast.success("Status atualizado");
       refetch();
-      
-      // Update the local state
-      setSelectedRequest({
-        ...selectedRequest,
-        status: newStatus
-      });
+      setSelectedRequest({ ...selectedRequest, status: newStatus });
     } catch (error) {
-      toast.error("Erro ao atualizar status");
-      console.error("Error updating status:", error);
+      toast.error("Erro ao atualizar");
+      console.error("Error:", error);
     }
   };
 
-  // Handle sending message
   const handleSendMessage = async () => {
     if (!selectedRequest || !newMessage.trim()) return;
     
@@ -189,11 +166,11 @@ const Solicitacoes = () => {
       await addMessageToRequest(
         selectedRequest.id, 
         newMessage, 
-        true, // isAdmin 
-        selectedRequest.collectionName
+        true,
+        selectedRequest.collectionName,
+        user?.displayName || "Administrador"
       );
       
-      // Refetch the request to get updated messages
       const updatedRequest = await getRequestById(
         selectedRequest.id, 
         selectedRequest.collectionName
@@ -203,35 +180,12 @@ const Solicitacoes = () => {
       setNewMessage("");
       toast.success("Mensagem enviada");
     } catch (error) {
-      toast.error("Erro ao enviar mensagem");
-      console.error("Error sending message:", error);
+      toast.error("Erro ao enviar");
+      console.error("Error:", error);
     }
   };
 
-  // Handle delete confirmation
-  const handleDeleteConfirm = async () => {
-    if (!requestToDelete) return;
-
-    try {
-      await deleteRequest(requestToDelete.id, requestToDelete.collectionName);
-      toast.success("Solicitação excluída com sucesso");
-      setIsDeleteDialogOpen(false);
-      setRequestToDelete(null);
-      
-      // Close details dialog if open
-      if (isDetailsOpen) {
-        setIsDetailsOpen(false);
-      }
-      
-      refetch();
-    } catch (error) {
-      toast.error("Erro ao excluir solicitação");
-      console.error("Error deleting request:", error);
-    }
-  };
-
-  // Handle delete request
-  const handleDeleteRequest = (request: any) => {
+  const handleDeleteRequest = (request: RequestData) => {
     setRequestToDelete({
       id: request.id,
       collectionName: request.collectionName
@@ -239,23 +193,39 @@ const Solicitacoes = () => {
     setIsDeleteDialogOpen(true);
   };
 
-  // Filter requests based on search, type and status
+  const handleDeleteConfirm = async () => {
+    if (!requestToDelete) return;
+
+    try {
+      await deleteRequest(requestToDelete.id, requestToDelete.collectionName);
+      toast.success("Excluído com sucesso");
+      setIsDeleteDialogOpen(false);
+      setRequestToDelete(null);
+      if (isDetailsOpen) setIsDetailsOpen(false);
+      refetch();
+    } catch (error) {
+      toast.error("Erro ao excluir");
+      console.error("Error:", error);
+    }
+  };
+
   const filteredRequests = requests.filter(req => {
-    const matchesSearch = 
-      searchTerm === "" || 
-      req.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      req.userEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      req.purpose?.toLowerCase().includes(searchTerm.toLowerCase());
-      
-    const matchesType = selectedTypes.includes(req.type);
-    const matchesStatus = selectedStatuses.includes(req.status);
-    
-    return matchesSearch && matchesType && matchesStatus;
+    const search = searchTerm.toLowerCase();
+    return (
+      (req.userName?.toLowerCase().includes(search) ||
+      req.userEmail?.toLowerCase().includes(search) ||
+      req.purpose?.toLowerCase().includes(search) ||
+      req.itemName?.toLowerCase().includes(search) ||
+      req.location?.toLowerCase().includes(search)) &&
+      selectedTypes.includes(req.type) && 
+      selectedStatuses.includes(req.status)
+    );
   });
 
   return (
     <AppLayout>
       <div className="space-y-8">
+        {/* Cabeçalho e Filtros */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h1 className="text-3xl font-bold">Gerenciamento de Solicitações</h1>
           <Button
@@ -275,11 +245,12 @@ const Solicitacoes = () => {
           </Button>
         </div>
 
+        {/* Barra de Pesquisa e Filtros */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Pesquisar por nome, email ou finalidade..."
+              placeholder="Pesquisar por nome, email, finalidade ou local..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -287,6 +258,7 @@ const Solicitacoes = () => {
           </div>
           
           <div className="flex flex-wrap gap-2">
+            {/* Filtro de Tipo */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="flex items-center gap-2">
@@ -294,45 +266,25 @@ const Solicitacoes = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-background">
-                <DropdownMenuCheckboxItem
-                  checked={selectedTypes.includes("reservation")}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setSelectedTypes([...selectedTypes, "reservation"]);
-                    } else {
-                      setSelectedTypes(selectedTypes.filter(t => t !== "reservation"));
-                    }
-                  }}
-                >
-                  Reservas
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={selectedTypes.includes("purchase")}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setSelectedTypes([...selectedTypes, "purchase"]);
-                    } else {
-                      setSelectedTypes(selectedTypes.filter(t => t !== "purchase"));
-                    }
-                  }}
-                >
-                  Compras
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={selectedTypes.includes("support")}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setSelectedTypes([...selectedTypes, "support"]);
-                    } else {
-                      setSelectedTypes(selectedTypes.filter(t => t !== "support"));
-                    }
-                  }}
-                >
-                  Suporte
-                </DropdownMenuCheckboxItem>
+                {["reservation", "purchase", "support"].map((type) => (
+                  <DropdownMenuCheckboxItem
+                    key={type}
+                    checked={selectedTypes.includes(type as RequestType)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedTypes([...selectedTypes, type as RequestType]);
+                      } else {
+                        setSelectedTypes(selectedTypes.filter(t => t !== type));
+                      }
+                    }}
+                  >
+                    {getReadableRequestType(type as RequestType)}
+                  </DropdownMenuCheckboxItem>
+                ))}
               </DropdownMenuContent>
             </DropdownMenu>
 
+            {/* Filtro de Status */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="flex items-center gap-2">
@@ -340,94 +292,38 @@ const Solicitacoes = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-background">
-                <DropdownMenuCheckboxItem
-                  checked={selectedStatuses.includes("pending")}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setSelectedStatuses([...selectedStatuses, "pending"]);
-                    } else {
-                      setSelectedStatuses(selectedStatuses.filter(s => s !== "pending"));
-                    }
-                  }}
-                >
-                  Pendente
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={selectedStatuses.includes("approved")}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setSelectedStatuses([...selectedStatuses, "approved"]);
-                    } else {
-                      setSelectedStatuses(selectedStatuses.filter(s => s !== "approved"));
-                    }
-                  }}
-                >
-                  Aprovada
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={selectedStatuses.includes("rejected")}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setSelectedStatuses([...selectedStatuses, "rejected"]);
-                    } else {
-                      setSelectedStatuses(selectedStatuses.filter(s => s !== "rejected"));
-                    }
-                  }}
-                >
-                  Reprovada
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={selectedStatuses.includes("in-progress")}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setSelectedStatuses([...selectedStatuses, "in-progress"]);
-                    } else {
-                      setSelectedStatuses(selectedStatuses.filter(s => s !== "in-progress"));
-                    }
-                  }}
-                >
-                  Em Andamento
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={selectedStatuses.includes("completed")}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setSelectedStatuses([...selectedStatuses, "completed"]);
-                    } else {
-                      setSelectedStatuses(selectedStatuses.filter(s => s !== "completed"));
-                    }
-                  }}
-                >
-                  Concluída
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={selectedStatuses.includes("canceled")}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setSelectedStatuses([...selectedStatuses, "canceled"]);
-                    } else {
-                      setSelectedStatuses(selectedStatuses.filter(s => s !== "canceled"));
-                    }
-                  }}
-                >
-                  Cancelada
-                </DropdownMenuCheckboxItem>
+                {["pending", "approved", "rejected", "in-progress", "completed", "canceled"].map((status) => (
+                  <DropdownMenuCheckboxItem
+                    key={status}
+                    checked={selectedStatuses.includes(status as RequestStatus)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedStatuses([...selectedStatuses, status as RequestStatus]);
+                      } else {
+                        setSelectedStatuses(selectedStatuses.filter(s => s !== status));
+                      }
+                    }}
+                  >
+                    {getStatusBadge(status as RequestStatus)}
+                  </DropdownMenuCheckboxItem>
+                ))}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </div>
 
+        {/* Tabela de Resultados */}
         {isLoading ? (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
           </div>
         ) : isError ? (
           <div className="text-center text-destructive p-4 border border-destructive rounded-md">
-            Erro ao carregar solicitações. Tente novamente mais tarde.
+            Erro ao carregar solicitações
           </div>
         ) : filteredRequests.length === 0 ? (
           <div className="text-center text-muted-foreground p-8 border border-dashed rounded-md">
-            Nenhuma solicitação encontrada.
+            Nenhuma solicitação encontrada
           </div>
         ) : (
           <div className="rounded-md border overflow-hidden">
@@ -452,14 +348,11 @@ const Solicitacoes = () => {
                     </TableCell>
                     <TableCell>{request.userName || request.userEmail}</TableCell>
                     <TableCell>
-                      {request.createdAt ? 
-                        format(
-                          new Date(request.createdAt.seconds * 1000), 
-                          "dd/MM/yy HH:mm", 
-                          { locale: ptBR }
-                        ) : 
-                        "Sem data"
-                      }
+                      {format(
+                        new Date(request.createdAt.toMillis()), 
+                        "dd/MM/yy HH:mm", 
+                        { locale: ptBR }
+                      )}
                     </TableCell>
                     <TableCell>{getStatusBadge(request.status)}</TableCell>
                     <TableCell className="text-right">
@@ -477,222 +370,233 @@ const Solicitacoes = () => {
             </Table>
           </div>
         )}
-      </div>
-      
-      {/* Request Details Dialog */}
-      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="max-w-3xl overflow-y-auto max-h-[90vh]">
-        <DialogHeader>
-  <DialogTitle className="flex items-center gap-2">
-    {selectedRequest && (
-      <>
-        {getRequestTypeIcon(selectedRequest.type)}
-        <span>
-          {getReadableRequestType(selectedRequest.type)} - {selectedRequest.userName || selectedRequest.userEmail}
-        </span>
-      </>
-    )}
-  </DialogTitle>
-  {/* Replace DialogDescription with styled div */}
-  <div className="text-sm text-muted-foreground px-1">
-    {selectedRequest && (
-      <div className="flex items-center justify-between">
-        <div>
-          {selectedRequest.createdAt ? 
-            format(
-              new Date(selectedRequest.createdAt.seconds * 1000),
-              "dd 'de' MMMM 'de' yyyy 'às' HH:mm",
-              { locale: ptBR }
-            ) : 
-            "Sem data"
-          }
-        </div>
-        <div>{getStatusBadge(selectedRequest?.status)}</div>
-      </div>
-    )}
-  </div>
-</DialogHeader>
-          
-          {selectedRequest && (
-            <div className="space-y-6 py-4">
-              {/* Request Details */}
-              <div className="space-y-4 border-b pb-4">
-                <h3 className="text-lg font-medium">Detalhes da Solicitação</h3>
 
-                {selectedRequest.type === "reservation" && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Diálogo de Detalhes */}
+        <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+          <DialogContent className="max-w-3xl overflow-y-auto max-h-[90vh]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                {selectedRequest && (
+                  <>
+                    {getRequestTypeIcon(selectedRequest.type)}
+                    <span>
+                      {getReadableRequestType(selectedRequest.type)} - {selectedRequest.userName || selectedRequest.userEmail}
+                    </span>
+                  </>
+                )}
+              </DialogTitle>
+              <div className="text-sm text-muted-foreground px-1">
+                {selectedRequest && (
+                  <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Data</p>
-                      <p>
-                        {selectedRequest.date ? 
-                          format(
-                            new Date(selectedRequest.date.seconds * 1000),
+                      {format(
+                        new Date(selectedRequest.createdAt.toMillis()),
+                        "dd 'de' MMMM 'de' yyyy 'às' HH:mm",
+                        { locale: ptBR }
+                      )}
+                    </div>
+                    <div>{getStatusBadge(selectedRequest.status)}</div>
+                  </div>
+                )}
+              </div>
+            </DialogHeader>
+            
+            {selectedRequest && (
+              <div className="space-y-6 py-4">
+                {/* Detalhes Específicos por Tipo */}
+                <div className="space-y-4 border-b pb-4">
+                  <h3 className="text-lg font-medium">Detalhes da Solicitação</h3>
+
+                  {selectedRequest.type === "reservation" && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Data</p>
+                        <p>
+                          {format(
+                            new Date(selectedRequest.createdAt.toMillis()),
                             "dd/MM/yyyy",
                             { locale: ptBR }
-                          ) : 
-                          "Não especificada"
-                        }
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Horário</p>
-                      <p>{selectedRequest.startTime} - {selectedRequest.endTime}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Local</p>
-                      <p>{selectedRequest.location || "Não especificado"}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Finalidade</p>
-                      <p>{selectedRequest.purpose || "Não especificada"}</p>
-                    </div>
-                    <div className="col-span-2">
-                      <p className="text-sm font-medium text-muted-foreground">Equipamentos</p>
-                      <ul className="list-disc pl-5">
-                        {selectedRequest.equipmentIds?.map((id: string, index: number) => (
-                          <li key={index}>{id}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                )}
-
-                {selectedRequest.type === "purchase" && (
-                  <div className="grid grid-cols-1 gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Item Solicitado</p>
-                      <p>{selectedRequest.itemName || "Não especificado"}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Justificativa</p>
-                      <p>{selectedRequest.justification || "Não especificada"}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Urgência</p>
-                      <p>{selectedRequest.urgency || "Não especificada"}</p>
-                    </div>
-                  </div>
-                )}
-
-                {selectedRequest.type === "support" && (
-                  <div className="grid grid-cols-1 gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Problema</p>
-                      <p>{selectedRequest.issueDescription || "Não especificado"}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Local</p>
-                      <p>{selectedRequest.location || "Não especificado"}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Urgência</p>
-                      <p>{selectedRequest.urgency || "Não especificada"}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Status Change */}
-              <div className="space-y-4 border-b pb-4">
-                <h3 className="text-lg font-medium">Alterar Status</h3>
-                <div className="flex gap-4">
-                  <Select value={newStatus} onValueChange={(value) => setNewStatus(value as RequestStatus)}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Selecionar status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">Pendente</SelectItem>
-                      <SelectItem value="approved">Aprovada</SelectItem>
-                      <SelectItem value="rejected">Reprovada</SelectItem>
-                      <SelectItem value="in-progress">Em Andamento</SelectItem>
-                      <SelectItem value="completed">Concluída</SelectItem>
-                      <SelectItem value="canceled">Cancelada</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button onClick={handleStatusChange}>Atualizar Status</Button>
-                </div>
-              </div>
-
-              {/* Messages */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Mensagens</h3>
-                <div className="space-y-4 max-h-[200px] overflow-y-auto p-2 border rounded-md">
-                  {selectedRequest.messages?.length > 0 ? (
-                    selectedRequest.messages.map((msg: MessageData, index: number) => (
-                      <div 
-                        key={index} 
-                        className={`p-3 rounded-lg ${msg.isAdmin ? 
-                          'bg-primary text-primary-foreground ml-8' : 
-                          'bg-muted mr-8'}`}
-                      >
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="font-medium">{msg.userName}</span>
-                          <span>
-                            {msg.timestamp ? 
-                              format(
-                                new Date(msg.timestamp.seconds * 1000),
-                                "dd/MM HH:mm",
-                                { locale: ptBR }
-                              ) : 
-                              "Agora"
-                            }
-                          </span>
-                        </div>
-                        <p>{msg.message}</p>
+                          )}
+                        </p>
                       </div>
-                    ))
-                  ) : (
-                    <p className="text-center text-muted-foreground py-8">
-                      Nenhuma mensagem ainda.
-                    </p>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Horário</p>
+                        <p>{selectedRequest.startTime} - {selectedRequest.endTime}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Local</p>
+                        <p>{selectedRequest.location}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Finalidade</p>
+                        <p>{selectedRequest.purpose}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-sm font-medium text-muted-foreground">Equipamentos</p>
+                        <ul className="list-disc pl-5">
+                          {selectedRequest.equipmentIds?.map((id: string, index: number) => (
+                            <li key={index}>{id}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedRequest.type === "purchase" && (
+                    <div className="grid grid-cols-1 gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Item Solicitado</p>
+                        <p>{selectedRequest.itemName}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Quantidade</p>
+                        <p>{selectedRequest.quantity}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Valor Unitário</p>
+                        <p>
+                          {new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL'
+                          }).format(selectedRequest.unitPrice || 0)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Valor Total</p>
+                        <p>
+                          {new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL'
+                          }).format((selectedRequest.quantity || 0) * (selectedRequest.unitPrice || 0))}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Justificativa</p>
+                        <p>{selectedRequest.justification}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedRequest.type === "support" && (
+                    <div className="grid grid-cols-1 gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Problema</p>
+                        <p>{selectedRequest.issueDescription}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Local</p>
+                        <p>{selectedRequest.location}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Urgência</p>
+                        <p className="capitalize">{selectedRequest.urgency}</p>
+                      </div>
+                    </div>
                   )}
                 </div>
-                <div className="flex gap-2">
-                  <Textarea 
-                    placeholder="Digite uma mensagem..." 
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    className="resize-none"
-                  />
-                  <Button onClick={handleSendMessage} className="flex-shrink-0">
-                    <Send className="h-4 w-4" />
-                  </Button>
+
+                {/* Alteração de Status */}
+                <div className="space-y-4 border-b pb-4">
+                  <h3 className="text-lg font-medium">Alterar Status</h3>
+                  <div className="flex gap-4">
+                    <Select value={newStatus} onValueChange={(value) => setNewStatus(value as RequestStatus)}>
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Selecionar status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">Pendente</SelectItem>
+                        <SelectItem value="approved">Aprovada</SelectItem>
+                        <SelectItem value="rejected">Reprovada</SelectItem>
+                        <SelectItem value="in-progress">Em Andamento</SelectItem>
+                        <SelectItem value="completed">Concluída</SelectItem>
+                        <SelectItem value="canceled">Cancelada</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button onClick={handleStatusChange}>Atualizar Status</Button>
+                  </div>
+                </div>
+
+                {/* Mensagens */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Mensagens</h3>
+                  <div className="space-y-4 max-h-[200px] overflow-y-auto p-2 border rounded-md">
+                    {selectedRequest.messages?.length > 0 ? (
+                      selectedRequest.messages.map((msg: MessageData, index: number) => (
+                        <div 
+                          key={index} 
+                          className={`p-3 rounded-lg ${msg.isAdmin ? 
+                            'bg-primary text-primary-foreground ml-8' : 
+                            'bg-muted mr-8'}`}
+                        >
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="font-medium">{msg.userName}</span>
+                            <span>
+                              {format(
+                                new Date(msg.timestamp.toMillis()),
+                                "dd/MM HH:mm",
+                                { locale: ptBR }
+                              )}
+                            </span>
+                          </div>
+                          <p>{msg.message}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-center text-muted-foreground py-8">
+                        Nenhuma mensagem ainda
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Textarea 
+                      placeholder="Digite uma mensagem..." 
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      className="resize-none"
+                    />
+                    <Button onClick={handleSendMessage} className="flex-shrink-0">
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-          
-          <DialogFooter className="gap-2">
-            <Button 
-              variant="destructive" 
-              onClick={() => selectedRequest && handleDeleteRequest(selectedRequest)}
-            >
-              <Trash2 className="h-4 w-4 mr-2" /> Excluir
-            </Button>
-            <Button variant="outline" onClick={() => setIsDetailsOpen(false)}>
-              Fechar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            )}
+            
+            <DialogFooter className="gap-2">
+              <Button 
+                variant="destructive" 
+                onClick={() => selectedRequest && handleDeleteRequest(selectedRequest)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" /> Excluir
+              </Button>
+              <Button variant="outline" onClick={() => setIsDetailsOpen(false)}>
+                Fechar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir esta solicitação? Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground">
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        {/* Diálogo de Confirmação de Exclusão */}
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir permanentemente esta solicitação?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteConfirm} 
+                className="bg-destructive hover:bg-destructive/90"
+              >
+                Confirmar Exclusão
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </AppLayout>
   );
 };

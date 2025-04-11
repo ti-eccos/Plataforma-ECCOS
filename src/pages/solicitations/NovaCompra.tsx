@@ -22,6 +22,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { addPurchaseRequest } from '@/services/reservationService';
+import { useAuth } from '@/contexts/AuthContext';
 
 const formSchema = z.object({
   itemName: z.string().min(1, 'Nome do item é obrigatório'),
@@ -40,6 +42,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const NovaCompra = () => {
+  const { currentUser: user } = useAuth();
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -52,11 +55,23 @@ const NovaCompra = () => {
     },
   });
 
-  const onSubmit = (values: FormValues) => {
-    const totalPrice = values.unitPrice * values.quantity;
-    console.log('Form values:', { ...values, totalPrice });
-    toast.success('Solicitação enviada com sucesso!');
-    form.reset();
+  const onSubmit = async (values: FormValues) => {
+    try {
+      await addPurchaseRequest({
+        ...values,
+        userName: user?.displayName || "Usuário não identificado",
+        userEmail: user?.email || "email@nao.informado",
+        type: 'purchase',
+        status: 'pending',
+        createdAt: new Date(),
+        hidden: false
+      });
+      toast.success('Solicitação de compra enviada com sucesso!');
+      form.reset();
+    } catch (error) {
+      toast.error('Erro ao enviar solicitação');
+      console.error("Erro:", error);
+    }
   };
 
   return (
@@ -65,7 +80,7 @@ const NovaCompra = () => {
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-gradient">Nova Solicitação de Compra</h2>
           <p className="text-muted-foreground mt-1">
-            Preencha o formulário abaixo para solicitar a compra de um novo equipamento ou material.
+            Preencha todos os campos obrigatórios para solicitar novos equipamentos ou materiais
           </p>
         </div>
 
@@ -77,9 +92,12 @@ const NovaCompra = () => {
                 name="itemName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome do Item</FormLabel>
+                    <FormLabel>Nome do Item *</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ex: Notebook Dell Inspiron" {...field} />
+                      <Input 
+                        placeholder="Ex: Notebook Dell Latitude 5440" 
+                        {...field} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -91,24 +109,17 @@ const NovaCompra = () => {
                 name="quantity"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Quantidade</FormLabel>
+                    <FormLabel>Quantidade *</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
+                        min="1"
+                        step="1"
                         placeholder="Ex: 5"
-                        value={field.value || ''}
-                        onKeyPress={(e) => {
-                          if (['e', 'E', '+', '-', '.', ','].includes(e.key)) {
-                            e.preventDefault();
-                          }
-                        }}
+                        {...field}
                         onChange={(e) => {
                           const value = parseInt(e.target.value);
-                          if (!isNaN(value)) {
-                            field.onChange(Math.max(1, value));
-                          } else {
-                            field.onChange('');
-                          }
+                          field.onChange(isNaN(value) ? 0 : value);
                         }}
                       />
                     </FormControl>
@@ -124,13 +135,13 @@ const NovaCompra = () => {
                 name="unitPrice"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Valor Unitário (R$)</FormLabel>
+                    <FormLabel>Valor Unitário (R$) *</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
                         step="0.01"
                         min="0.01"
-                        placeholder="Ex: 2500.00"
+                        placeholder="Ex: 4500.00"
                         {...field}
                       />
                     </FormControl>
@@ -140,7 +151,7 @@ const NovaCompra = () => {
               />
 
               <FormItem>
-                <FormLabel>Valor Total</FormLabel>
+                <FormLabel>Valor Total Estimado</FormLabel>
                 <FormControl>
                   <Input
                     readOnly
@@ -160,18 +171,18 @@ const NovaCompra = () => {
               name="urgency"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nível de Urgência</FormLabel>
+                  <FormLabel>Nível de Urgência *</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione o nível de urgência" />
+                        <SelectValue placeholder="Selecione a urgência" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="low">Baixa - Pode esperar algumas semanas</SelectItem>
-                      <SelectItem value="medium">Média - Necessário nos próximos dias</SelectItem>
-                      <SelectItem value="high">Alta - Necessário imediatamente</SelectItem>
-                      <SelectItem value="critical">Crítica - Situação emergencial</SelectItem>
+                      <SelectItem value="low">Baixa (30+ dias)</SelectItem>
+                      <SelectItem value="medium">Média (15 dias)</SelectItem>
+                      <SelectItem value="high">Alta (7 dias)</SelectItem>
+                      <SelectItem value="critical">Crítica (Imediata)</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -184,10 +195,14 @@ const NovaCompra = () => {
               name="justification"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Justificativa</FormLabel>
+                  <FormLabel>Justificativa *</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="Descreva por que este item é necessário e como será utilizado"
+                    <Textarea
+                      placeholder="Descreva detalhadamente a necessidade desta compra, incluindo:
+- Finalidade do item
+- Benefícios esperados
+- Impacto da não aquisição
+- Alternativas consideradas"
                       className="min-h-[120px]"
                       {...field}
                     />
@@ -202,10 +217,10 @@ const NovaCompra = () => {
               name="additionalInfo"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Informações Adicionais (opcional)</FormLabel>
+                  <FormLabel>Informações Adicionais</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="Qualquer informação adicional relevante para a solicitação"
+                    <Textarea
+                      placeholder="Links de referência, especificações técnicas, observações relevantes..."
                       className="min-h-[100px]"
                       {...field}
                     />
@@ -215,9 +230,21 @@ const NovaCompra = () => {
               )}
             />
 
-            <Button type="submit" className="w-full md:w-auto">
-              Enviar Solicitação
-            </Button>
+            <div className="flex justify-end gap-4">
+              <Button 
+                type="button" 
+                variant="ghost"
+                onClick={() => form.reset()}
+              >
+                Limpar Formulário
+              </Button>
+              <Button 
+                type="submit" 
+                className="bg-primary hover:bg-primary/90 text-white"
+              >
+                Enviar Solicitação
+              </Button>
+            </div>
           </form>
         </Form>
       </div>
