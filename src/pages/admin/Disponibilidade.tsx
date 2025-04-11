@@ -1,3 +1,4 @@
+
 // src/pages/Disponibilidade.tsx
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -150,7 +151,7 @@ export default function Disponibilidade() {
                     mode="multiple"
                     selected={selectedAddDates}
                     onSelect={setSelectedAddDates}
-                    disabled={date => 
+                    disabled={(date) => 
                       isDateInPastOrToday(date) || 
                       isDateAvailable(date) ||
                       date < new Date()
@@ -203,7 +204,7 @@ export default function Disponibilidade() {
                     mode="multiple"
                     selected={selectedRemoveDates}
                     onSelect={setSelectedRemoveDates}
-                    disabled={date => !isDateAvailable(date)}
+                    disabled={(date) => !isDateAvailable(date)}
                     className="rounded-lg border p-4"
                     modifiers={{
                       available: (date) => isDateAvailable(date),

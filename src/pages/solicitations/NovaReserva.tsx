@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
@@ -29,7 +30,7 @@ import { toast } from 'sonner';
 import { getAvailableDates, isDateInPastOrToday } from '@/services/availabilityService';
 import { getAllEquipment } from '@/services/equipmentService';
 import { addReservation, checkConflicts } from '@/services/reservationService';
-import { useUser } from '@auth0/nextjs-auth0/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 const LOCATIONS = [
   'Recepção',
@@ -67,7 +68,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const NovaReserva = () => {
-  const { user } = useUser();
+  const { currentUser } = useAuth();
   const [availableDates, setAvailableDates] = useState<Date[]>([]);
   const [equipment, setEquipment] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -150,8 +151,8 @@ const NovaReserva = () => {
         equipmentIds: values.selectedEquipment,
         location: values.location,
         purpose: values.purpose,
-        userName: user?.name || "Usuário",
-        userEmail: user?.email || "email@exemplo.com"
+        userName: currentUser?.displayName || "Usuário",
+        userEmail: currentUser?.email || "email@exemplo.com"
       });
 
       toast.success('Solicitação de reserva enviada com sucesso!');
