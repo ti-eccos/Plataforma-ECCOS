@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -39,12 +39,14 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
             
-            {/* Protected User Routes */}
+            {/* Redirect / to dashboard */}
             <Route path="/" element={
               <ProtectedRoute>
                 <Dashboard />
               </ProtectedRoute>
             } />
+            
+            {/* Protected User Routes */}
             <Route path="/nova-solicitacao/reserva" element={
               <ProtectedRoute>
                 <NovaReserva />
@@ -87,6 +89,9 @@ const App = () => (
                 <Solicitacoes />
               </ProtectedRoute>
             } />
+            
+            {/* Index route redirect */}
+            <Route path="/index" element={<Navigate to="/" replace />} />
             
             {/* 404 Route */}
             <Route path="*" element={<NotFound />} />

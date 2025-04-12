@@ -17,19 +17,16 @@ const Login = () => {
   useEffect(() => {
     if (currentUser && !isRedirecting) {
       setIsRedirecting(true);
+      console.log("Login: Usuario autenticado, redirecionando...");
       
-      // Use a small timeout to prevent immediate redirection which might cause render issues
-      const timer = setTimeout(() => {
-        const from = location.state?.from?.pathname || "/";
-        navigate(from, { replace: true });
-        
-        toast({
-          title: "Login bem-sucedido",
-          description: `Bem-vindo, ${currentUser.displayName}!`,
-        });
-      }, 100);
+      // Simplificando a lógica de redirecionamento
+      const from = location.state?.from?.pathname || "/";
+      navigate(from, { replace: true });
       
-      return () => clearTimeout(timer);
+      toast({
+        title: "Login bem-sucedido",
+        description: `Bem-vindo, ${currentUser.displayName}!`,
+      });
     }
   }, [currentUser, navigate, toast, location, isRedirecting]);
 
@@ -41,12 +38,9 @@ const Login = () => {
     );
   }
 
+  // Não renderizar conteúdo se o usuário já estiver logado
   if (currentUser) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-pulse text-eccos-blue">Redirecionando...</div>
-      </div>
-    );
+    return null;
   }
 
   return (

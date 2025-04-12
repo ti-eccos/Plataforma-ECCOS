@@ -1,7 +1,6 @@
 
-import { Navigate, useNavigate, useLocation } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEffect } from "react";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -10,20 +9,8 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute = ({ children, requiresAdmin = false }: ProtectedRouteProps) => {
   const { currentUser, loading, isAdmin } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
 
-  useEffect(() => {
-    // Only navigate if not loading and conditions aren't met
-    if (!loading) {
-      if (!currentUser) {
-        navigate("/login", { replace: true, state: { from: location } });
-      } else if (requiresAdmin && !isAdmin) {
-        navigate("/unauthorized", { replace: true });
-      }
-    }
-  }, [currentUser, loading, isAdmin, requiresAdmin, navigate, location]);
-
+  // Exibir o spinner enquanto estiver carregando
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -32,16 +19,17 @@ const ProtectedRoute = ({ children, requiresAdmin = false }: ProtectedRouteProps
     );
   }
 
-  // Instead of using Navigate component which might cause issues,
-  // return null while the useEffect handles the navigation
+  // Redirecionar para login se não estiver autenticado
   if (!currentUser) {
-    return null;
+    return <Navigate to="/login" replace />;
   }
 
+  // Redirecionar para página de não autorizado se for rota de admin e usuário não for admin
   if (requiresAdmin && !isAdmin) {
-    return null;
+    return <Navigate to="/unauthorized" replace />;
   }
 
+  // Renderizar o conteúdo protegido
   return <>{children}</>;
 };
 
