@@ -195,6 +195,16 @@ const NovaReserva = () => {
     }
   };
 
+  // Function to handle equipment selection without infinite loop
+  const handleEquipmentClick = (itemId: string, currentValues: string[]) => {
+    const isSelected = currentValues.includes(itemId);
+    if (isSelected) {
+      return currentValues.filter(id => id !== itemId);
+    } else {
+      return [...currentValues, itemId];
+    }
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -307,36 +317,38 @@ const NovaReserva = () => {
                         key={item.id}
                         control={form.control}
                         name="selectedEquipment"
-                        render={({ field }) => (
-                          <FormItem
-                            className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 cursor-pointer"
-                            onClick={() => {
-                              const newValue = field.value?.includes(item.id)
-                                ? field.value.filter((value) => value !== item.id)
-                                : [...field.value, item.id];
-                              field.onChange(newValue);
-                            }}
-                          >
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value?.includes(item.id)}
-                                onCheckedChange={(checked) => {
-                                  return checked
-                                    ? field.onChange([...field.value, item.id])
-                                    : field.onChange(
-                                        field.value?.filter(
-                                          (value) => value !== item.id
-                                        )
-                                      )
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                            </FormControl>
-                            <FormLabel className="font-normal cursor-pointer">
-                              {item.name} ({item.type})
-                            </FormLabel>
-                          </FormItem>
-                        )}
+                        render={({ field }) => {
+                          // Check without modifying state
+                          const isChecked = field.value?.includes(item.id);
+                          
+                          return (
+                            <FormItem
+                              key={item.id}
+                              className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 cursor-pointer"
+                              onClick={() => {
+                                const newValue = handleEquipmentClick(item.id, field.value);
+                                field.onChange(newValue);
+                              }}
+                            >
+                              <FormControl>
+                                <Checkbox
+                                  checked={isChecked}
+                                  onCheckedChange={() => {
+                                    const newValue = handleEquipmentClick(item.id, field.value);
+                                    field.onChange(newValue);
+                                  }}
+                                  // Prevent event propagation
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                  }}
+                                />
+                              </FormControl>
+                              <FormLabel className="font-normal cursor-pointer">
+                                {item.name} ({item.type})
+                              </FormLabel>
+                            </FormItem>
+                          );
+                        }}
                       />
                     ))}
                   </div>
