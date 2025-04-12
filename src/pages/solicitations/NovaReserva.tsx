@@ -36,7 +36,35 @@ const LOCATIONS = [
   'Recepção',
   'Secretaria',
   'Sala de atendimento',
-  // ... restante das localizações
+  'Sala de atendimento (Laranja)',
+  'Sala de auxiliar de coordenação fundamental 1',
+  'Sala de oficinas',
+  'Sala de música',
+  'Sala de science',
+  'Integral',
+  '4º Ano',
+  'Patio (Cantina)',
+  'Refeitório',
+  'Biblioteca (Inferior)',
+  '3º Ano',
+  '2º Ano',
+  '1º Ano',
+  'Sala dos professores',
+  'Sala de Linguas',
+  'Coordenação de linguas/Fundamental 2',
+  'Sala de artes',
+  'Coordenação Fundamental 1 / Coordenação de matemática',
+  '8º ano',
+  '7º Ano',
+  'Apoio pedagógico',
+  'Orientação educacional',
+  'TI',
+  'Sala de oficinas (Piso superior)',
+  '5º Ano',
+  '6º Ano',
+  'Biblioteca (Superior)',
+  'Sala de convivência',
+  '9º Ano'
 ];
 
 const formSchema = z.object({
@@ -78,6 +106,8 @@ const NovaReserva = () => {
     defaultValues: {
       selectedEquipment: [],
       purpose: '',
+      startTime: '',
+      endTime: '',
     },
   });
 
@@ -234,9 +264,8 @@ const NovaReserva = () => {
                     <FormLabel>Hora Inicial</FormLabel>
                     <FormControl>
                       <Input
-                        type="time"
+                        type="text"
                         {...field}
-                        step="900"
                         placeholder="HH:mm"
                       />
                     </FormControl>
@@ -253,9 +282,8 @@ const NovaReserva = () => {
                     <FormLabel>Hora Final</FormLabel>
                     <FormControl>
                       <Input
-                        type="time"
+                        type="text"
                         {...field}
-                        step="900"
                         placeholder="HH:mm"
                       />
                     </FormControl>
@@ -281,7 +309,13 @@ const NovaReserva = () => {
                         name="selectedEquipment"
                         render={({ field }) => (
                           <FormItem
-                            className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4"
+                            className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 cursor-pointer"
+                            onClick={() => {
+                              const newValue = field.value?.includes(item.id)
+                                ? field.value.filter((value) => value !== item.id)
+                                : [...field.value, item.id];
+                              field.onChange(newValue);
+                            }}
                           >
                             <FormControl>
                               <Checkbox
@@ -295,6 +329,7 @@ const NovaReserva = () => {
                                         )
                                       )
                                 }}
+                                onClick={(e) => e.stopPropagation()}
                               />
                             </FormControl>
                             <FormLabel className="font-normal cursor-pointer">
