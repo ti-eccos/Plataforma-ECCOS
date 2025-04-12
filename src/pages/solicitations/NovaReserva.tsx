@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -195,15 +194,14 @@ const NovaReserva = () => {
     }
   };
 
-  // Function to handle equipment selection without infinite loop
-  const handleEquipmentClick = (itemId: string, currentValues: string[]) => {
+  const handleEquipmentClick = React.useCallback((itemId: string, currentValues: string[]) => {
     const isSelected = currentValues.includes(itemId);
     if (isSelected) {
       return currentValues.filter(id => id !== itemId);
     } else {
       return [...currentValues, itemId];
     }
-  };
+  }, []);
 
   return (
     <AppLayout>
@@ -318,14 +316,14 @@ const NovaReserva = () => {
                         control={form.control}
                         name="selectedEquipment"
                         render={({ field }) => {
-                          // Check without modifying state
                           const isChecked = field.value?.includes(item.id);
                           
                           return (
                             <FormItem
                               key={item.id}
                               className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 cursor-pointer"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 const newValue = handleEquipmentClick(item.id, field.value);
                                 field.onChange(newValue);
                               }}
@@ -333,11 +331,6 @@ const NovaReserva = () => {
                               <FormControl>
                                 <Checkbox
                                   checked={isChecked}
-                                  onCheckedChange={() => {
-                                    const newValue = handleEquipmentClick(item.id, field.value);
-                                    field.onChange(newValue);
-                                  }}
-                                  // Prevent event propagation
                                   onClick={(e) => {
                                     e.stopPropagation();
                                   }}
