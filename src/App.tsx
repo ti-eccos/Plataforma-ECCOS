@@ -17,7 +17,6 @@ import NotFound from "./pages/NotFound";
 import Equipamentos from "./pages/admin/Equipamentos";
 import Disponibilidade from "./pages/admin/Disponibilidade";
 import Usuarios from "./pages/admin/Usuarios";
-import Inventario from "./pages/admin/Inventario";
 import Solicitacoes from "./pages/admin/Solicitacoes";
 
 // Solicitation Pages
@@ -77,11 +76,6 @@ const App = () => (
             <Route path="/usuarios" element={
               <ProtectedRoute requiresAdmin>
                 <Usuarios />
-              </ProtectedRoute>
-            } />
-            <Route path="/inventario" element={
-              <ProtectedRoute requiresAdmin>
-                <Inventario />
               </ProtectedRoute>
             } />
             <Route path="/solicitacoes" element={

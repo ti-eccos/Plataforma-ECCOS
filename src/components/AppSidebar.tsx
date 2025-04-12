@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
@@ -118,7 +119,6 @@ export const AppSidebar = () => {
     { icon: Laptop, label: "Equipamentos", href: "/equipamentos" },
     { icon: Calendar, label: "Disponibilidade", href: "/disponibilidade" },
     { icon: Users, label: "Usuários", href: "/usuarios" },
-    { icon: PackageOpen, label: "Inventário", href: "/inventario" },
     { icon: FileText, label: "Solicitações", href: "/solicitacoes" }
   ];
 
