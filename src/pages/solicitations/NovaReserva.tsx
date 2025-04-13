@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import React, { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
@@ -93,6 +93,25 @@ const formSchema = z.object({
 });
 
 type FormValues = z.infer<typeof formSchema>;
+
+const autoCompleteTime = (value: string) => {
+  const digits = value.replace(/\D/g, '');
+  let formatted = '';
+  
+  if (digits.length >= 1) {
+    formatted += digits.substring(0, 2);
+  }
+  
+  if (digits.length >= 3) {
+    formatted += ':' + digits.substring(2, 4);
+  }
+  
+  if (digits.length === 2 && value.length === 2) {
+    formatted += ':';
+  }
+  
+  return formatted.substring(0, 5);
+};
 
 const NovaReserva = () => {
   const { currentUser } = useAuth();
@@ -194,15 +213,6 @@ const NovaReserva = () => {
     }
   };
 
-  const handleEquipmentClick = React.useCallback((itemId: string, currentValues: string[]) => {
-    const isSelected = currentValues.includes(itemId);
-    if (isSelected) {
-      return currentValues.filter(id => id !== itemId);
-    } else {
-      return [...currentValues, itemId];
-    }
-  }, []);
-
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -272,9 +282,13 @@ const NovaReserva = () => {
                     <FormLabel>Hora Inicial</FormLabel>
                     <FormControl>
                       <Input
-                        type="text"
                         {...field}
                         placeholder="HH:mm"
+                        maxLength={5}
+                        onChange={(e) => {
+                          const formatted = autoCompleteTime(e.target.value);
+                          field.onChange(formatted);
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -290,9 +304,13 @@ const NovaReserva = () => {
                     <FormLabel>Hora Final</FormLabel>
                     <FormControl>
                       <Input
-                        type="text"
                         {...field}
                         placeholder="HH:mm"
+                        maxLength={5}
+                        onChange={(e) => {
+                          const formatted = autoCompleteTime(e.target.value);
+                          field.onChange(formatted);
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -304,46 +322,40 @@ const NovaReserva = () => {
             <FormField
               control={form.control}
               name="selectedEquipment"
-              render={() => (
+              render={({ field }) => (
                 <FormItem>
                   <div className="mb-4">
                     <FormLabel className="text-base">Equipamentos</FormLabel>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                    {equipment.map((item) => (
-                      <FormField
-                        key={item.id}
-                        control={form.control}
-                        name="selectedEquipment"
-                        render={({ field }) => {
-                          const isChecked = field.value?.includes(item.id);
-                          
-                          return (
-                            <FormItem
-                              key={item.id}
-                              className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 cursor-pointer"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const newValue = handleEquipmentClick(item.id, field.value);
+                    {equipment
+                      .slice()
+                      .sort((a, b) => a.name.localeCompare(b.name))
+                      .map((item) => (
+                        <FormItem
+                          key={item.id}
+                          className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4"
+                        >
+                          <FormControl>
+                            <Checkbox
+                              id={`equipment-${item.id}`}
+                              checked={field.value.includes(item.id)}
+                              onCheckedChange={(checked) => {
+                                const newValue = checked
+                                  ? [...field.value, item.id]
+                                  : field.value.filter((id: string) => id !== item.id);
                                 field.onChange(newValue);
                               }}
-                            >
-                              <FormControl>
-                                <Checkbox
-                                  checked={isChecked}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                  }}
-                                />
-                              </FormControl>
-                              <FormLabel className="font-normal cursor-pointer">
-                                {item.name} ({item.type})
-                              </FormLabel>
-                            </FormItem>
-                          );
-                        }}
-                      />
-                    ))}
+                            />
+                          </FormControl>
+                          <FormLabel 
+                            htmlFor={`equipment-${item.id}`} 
+                            className="font-normal cursor-pointer"
+                          >
+                            {item.name} ({item.type})
+                          </FormLabel>
+                        </FormItem>
+                      ))}
                   </div>
                   <FormMessage />
                 </FormItem>
@@ -358,7 +370,6 @@ const NovaReserva = () => {
                   <FormLabel>Local de Uso</FormLabel>
                   <FormControl>
                     <Input
-                      type="text"
                       {...field}
                       placeholder="Digite o local de uso"
                       list="locations-list"
@@ -382,9 +393,9 @@ const NovaReserva = () => {
                   <FormLabel>Finalidade</FormLabel>
                   <FormControl>
                     <Textarea
+                      {...field}
                       placeholder="Descreva para que você precisa deste equipamento"
                       className="min-h-[120px]"
-                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
