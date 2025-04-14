@@ -137,6 +137,11 @@ const Dashboard = () => {
   const isLoading = requestsLoading || usersLoading || equipmentLoading;
   const isError = requestsError || usersError || equipmentError;
 
+  // Count request by type
+  const reservationRequests = requests.filter((req: any) => req.type === 'reservation').length;
+  const purchaseRequests = requests.filter((req: any) => req.type === 'purchase').length;
+  const supportRequests = requests.filter((req: any) => req.type === 'support').length;
+
   return (
     <AppLayout>
       <div className="space-y-8">
@@ -259,9 +264,9 @@ const Dashboard = () => {
                 <CardContent>
                   <RequestStatusChart
                     data={[
-                      { name: 'Reservas', value: requestTypes.reservation || 0, color: '#3b82f6' },
-                      { name: 'Compras', value: requestTypes.purchase || 0, color: '#8b5cf6' },
-                      { name: 'Suporte', value: requestTypes.support || 0, color: '#ec4899' }
+                      { name: 'Reservas', value: reservationRequests, color: '#3b82f6' },
+                      { name: 'Compras', value: purchaseRequests, color: '#8b5cf6' },
+                      { name: 'Suporte', value: supportRequests, color: '#ec4899' }
                     ]}
                   />
                 </CardContent>
