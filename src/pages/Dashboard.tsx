@@ -1,42 +1,18 @@
 
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
-import { 
-  Users, 
-  ShoppingCart, 
-  Wrench, 
-  Calendar,
-  Check,
-  Clock,
-  Package,
-  BarChart3,
-  Laptop,
-  Tablet,
-  FileText,
-  FileClock,
-  FileCheck,
-  FileMinus
-} from "lucide-react";
-
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Legend, PieChart, Pie, Cell } from "recharts";
-import { getAllRequests, RequestStatus, RequestType } from "@/services/reservationService";
+import { getAllRequests } from "@/services/reservationService";
 import { getAllUsers } from "@/services/userService";
-import { getAllEquipment, EquipmentType } from "@/services/equipmentService";
-import { StatCard } from "@/components/dashboard/StatCard";
-import { RequestStatusChart } from "@/components/dashboard/RequestStatusChart";
-import { EquipmentUsageChart } from "@/components/dashboard/EquipmentUsageChart";
-import { RecentActivity } from "@/components/dashboard/RecentActivity";
+import { getAllEquipment } from "@/services/equipmentService";
+import { DashboardMetrics } from "@/components/dashboard/DashboardMetrics";
+import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
+import { UserDashboard } from "@/components/dashboard/UserDashboard";
+import { DashboardLoading } from "@/components/dashboard/DashboardLoading";
 
 const Dashboard = () => {
   const { currentUser, isAdmin } = useAuth();
-  const navigate = useNavigate();
   
   // Fetch all requests
   const { 
@@ -70,6 +46,14 @@ const Dashboard = () => {
     queryFn: getAllEquipment,
     enabled: isAdmin,
   });
+
+  // If user is not an admin, show another dashboard
+  if (!isAdmin) {
+    return <UserDashboard />;
+  }
+
+  const isLoading = requestsLoading || usersLoading || equipmentLoading;
+  const isError = requestsError || usersError || equipmentError;
 
   // Count active users (not blocked)
   const activeUsers = users.filter((user: any) => !user.blocked).length;
@@ -117,177 +101,43 @@ const Dashboard = () => {
     { name: 'iPads', value: ipads, color: '#8b5cf6' },
   ];
 
-  // Navigate to other pages on click
-  const handleNavigateToUsers = () => navigate('/usuarios');
-  const handleNavigateToRequests = () => navigate('/solicitacoes');
-  const handleNavigateToEquipment = () => navigate('/equipamentos');
-
-  // If user is not an admin, show another dashboard
-  if (!isAdmin) {
-    return (
-      <AppLayout>
-        <div className="space-y-8">
-          <h1 className="text-3xl font-bold">Dashboard do Usuário</h1>
-          <p>Bem-vindo ao sistema de gestão de TI.</p>
-        </div>
-      </AppLayout>
-    );
-  }
-
-  const isLoading = requestsLoading || usersLoading || equipmentLoading;
-  const isError = requestsError || usersError || equipmentError;
-
   // Count request by type
   const reservationRequests = requests.filter((req: any) => req.type === 'reservation').length;
   const purchaseRequests = requests.filter((req: any) => req.type === 'purchase').length;
   const supportRequests = requests.filter((req: any) => req.type === 'support').length;
+
+  // Data for request types pie chart
+  const requestTypeData = [
+    { name: 'Reservas', value: reservationRequests, color: '#3b82f6' },
+    { name: 'Compras', value: purchaseRequests, color: '#8b5cf6' },
+    { name: 'Suporte', value: supportRequests, color: '#ec4899' }
+  ];
 
   return (
     <AppLayout>
       <div className="space-y-8">
         <h1 className="text-3xl font-bold">Dashboard Administrativo</h1>
         
-        {isLoading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-          </div>
-        ) : isError ? (
-          <div className="text-center text-destructive p-4 border border-destructive rounded-md">
-            Erro ao carregar dados. Tente novamente mais tarde.
-          </div>
-        ) : (
+        <DashboardLoading isLoading={isLoading} isError={isError} />
+        
+        {!isLoading && !isError && (
           <div className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Cards for main metrics */}
-              <StatCard 
-                title="Usuários Ativos" 
-                value={activeUsers} 
-                description="Usuários não bloqueados"
-                icon={<Users className="h-8 w-8" />}
-                onClick={handleNavigateToUsers}
-              />
-              <StatCard 
-                title="Chromebooks" 
-                value={chromebooks} 
-                description="Total cadastrado"
-                icon={<Laptop className="h-8 w-8" />}
-                onClick={handleNavigateToEquipment}
-              />
-              <StatCard 
-                title="iPads" 
-                value={ipads} 
-                description="Total cadastrado"
-                icon={<Tablet className="h-8 w-8" />}
-                onClick={handleNavigateToEquipment}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <StatCard 
-                title="Solicitações Pendentes" 
-                value={pendingRequests} 
-                description="Aguardando aprovação"
-                icon={<FileMinus className="h-8 w-8" />}
-                onClick={handleNavigateToRequests}
-                className="border-yellow-400 hover:border-yellow-500"
-              />
-              <StatCard 
-                title="Solicitações Aprovadas" 
-                value={approvedRequests} 
-                description="Aprovadas recentemente"
-                icon={<FileCheck className="h-8 w-8" />}
-                onClick={handleNavigateToRequests}
-                className="border-green-400 hover:border-green-500"
-              />
-              <StatCard 
-                title="Solicitações Em Andamento" 
-                value={inProgressRequests} 
-                description="Em processamento"
-                icon={<FileClock className="h-8 w-8" />}
-                onClick={handleNavigateToRequests}
-                className="border-blue-400 hover:border-blue-500"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Request Status Chart */}
-              <Card className="shadow-md hover:shadow-lg transition-shadow cursor-pointer" onClick={handleNavigateToRequests}>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span>Status das Solicitações</span>
-                    <Button variant="ghost" size="sm">
-                      Ver Detalhes
-                    </Button>
-                  </CardTitle>
-                  <CardDescription>Distribuição das solicitações por status</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-80">
-                    <RequestStatusChart
-                      data={requestStatusData}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Equipment Type Chart */}
-              <Card className="shadow-md hover:shadow-lg transition-shadow cursor-pointer" onClick={handleNavigateToEquipment}>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span>Tipos de Equipamentos</span>
-                    <Button variant="ghost" size="sm">
-                      Ver Inventário
-                    </Button>
-                  </CardTitle>
-                  <CardDescription>Distribuição por tipo de equipamento</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-80">
-                    <RequestStatusChart
-                      data={equipmentTypeData}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Request Types Chart */}
-              <Card className="shadow-md hover:shadow-lg transition-shadow cursor-pointer" onClick={handleNavigateToRequests}>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span>Tipos de Solicitações</span>
-                    <Button variant="ghost" size="sm">
-                      Ver Detalhes
-                    </Button>
-                  </CardTitle>
-                  <CardDescription>Distribuição por tipo de solicitação</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <RequestStatusChart
-                    data={[
-                      { name: 'Reservas', value: reservationRequests, color: '#3b82f6' },
-                      { name: 'Compras', value: purchaseRequests, color: '#8b5cf6' },
-                      { name: 'Suporte', value: supportRequests, color: '#ec4899' }
-                    ]}
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Recent Activity */}
-              <Card className="shadow-md hover:shadow-lg transition-shadow cursor-pointer" onClick={handleNavigateToRequests}>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span>Atividade Recente</span>
-                    <Button variant="ghost" size="sm">
-                      Ver Todas
-                    </Button>
-                  </CardTitle>
-                  <CardDescription>Últimas 5 solicitações</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <RecentActivity requests={requests} />
-                </CardContent>
-              </Card>
-            </div>
+            <DashboardMetrics 
+              activeUsers={activeUsers}
+              chromebooks={chromebooks}
+              ipads={ipads}
+              pendingRequests={pendingRequests}
+              approvedRequests={approvedRequests}
+              inProgressRequests={inProgressRequests}
+              isLoading={isLoading}
+            />
+            
+            <DashboardCharts 
+              requestStatusData={requestStatusData}
+              equipmentTypeData={equipmentTypeData}
+              requestTypeData={requestTypeData}
+              requests={requests}
+            />
           </div>
         )}
       </div>
