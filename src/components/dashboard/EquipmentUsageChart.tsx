@@ -1,81 +1,61 @@
-
-import React, { useMemo } from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
-import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
+import React from "react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 
 interface EquipmentUsageChartProps {
-  requests: any[];
-  equipment: any[];
-  showTop?: number;
+  chromebooks: number;
+  ipads: number;
 }
 
-export const EquipmentUsageChart = ({
-  requests,
-  equipment,
-  showTop = 10 // Valor padrão
-}: EquipmentUsageChartProps) => {
-  // Count equipment usage in reservations
-  const equipmentUsage = useMemo(() => {
-    const usageCounts: Record<string, number> = {};
-    
-    // Go through each request that has equipment IDs
-    requests.forEach((request: any) => {
-      if (request.type === 'reservation' && Array.isArray(request.equipmentIds)) {
-        request.equipmentIds.forEach((equipId: string) => {
-          usageCounts[equipId] = (usageCounts[equipId] || 0) + 1;
-        });
-      }
-    });
-    
-    // Convert to array and map equipment names
-    const equipmentMap = equipment.reduce((map, item) => {
-      map[item.id] = item.name;
-      return map;
-    }, {} as Record<string, string>);
+const COLORS = ['#3b82f6', '#8b5cf6'];
 
-    // Create chart data
-    const chartData = Object.entries(usageCounts)
-      .map(([id, count]) => ({
-        name: equipmentMap[id] || `Equip. ${id.substring(0, 4)}`,
-        value: count,
-        fill: '#3b82f6'
-      }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 5); // Get top 5
-    
-    return chartData;
-  }, [requests, equipment]);
+export function EquipmentUsageChart({ chromebooks, ipads }: EquipmentUsageChartProps) {
+  const data = [
+    { name: 'Chromebooks', value: chromebooks },
+    { name: 'iPads', value: ipads },
+  ];
 
   return (
-    <div className="h-[300px] w-full">
-      <ChartContainer
-        config={{
-          value: { color: '#3b82f6' }
-        }}
-      >
-        <BarChart 
-          data={equipmentUsage}
-          layout="vertical"
-          margin={{ top: 20, right: 30, left: 70, bottom: 5 }}
+    <ResponsiveContainer width="100%" height="100%">
+      <PieChart>
+        <Pie
+          data={data}
+          cx="50%"
+          cy="50%"
+          innerRadius={60}
+          outerRadius={80}
+          paddingAngle={2}
+          dataKey="value"
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-          <XAxis type="number" tick={{ fill: '#e5e7eb' }} />
-          <YAxis 
-            dataKey="name" 
-            type="category" 
-            tick={{ fill: '#e5e7eb' }} 
-            width={60}
-          />
-          <Tooltip content={<ChartTooltipContent />} />
-          <Bar dataKey="value" name="Requisições" />
-        </BarChart>
-      </ChartContainer>
-      
-      {equipmentUsage.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <p className="text-muted-foreground">Sem dados disponíveis</p>
-        </div>
-      )}
-    </div>
+          {data.map((entry, index) => (
+            <Cell 
+              key={`cell-${index}`} 
+              fill={COLORS[index % COLORS.length]} 
+              stroke="#1f2937"
+              strokeWidth={2}
+            />
+          ))}
+        </Pie>
+        <Legend 
+          layout="vertical"
+          verticalAlign="middle"
+          align="right"
+          wrapperStyle={{
+            paddingLeft: '20px',
+            fontSize: '14px'
+          }}
+          formatter={(value: string) => (
+            <span className="text-gray-400">{value}</span>
+          )}
+        />
+        <Tooltip 
+          contentStyle={{
+            backgroundColor: '#1f2937',
+            border: '1px solid #374151',
+            borderRadius: '8px'
+          }}
+          itemStyle={{ color: '#e5e7eb' }}
+        />
+      </PieChart>
+    </ResponsiveContainer>
   );
 }

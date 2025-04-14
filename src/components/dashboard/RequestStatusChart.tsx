@@ -1,4 +1,3 @@
-// components/dashboard/RequestStatusChart.tsx
 import React from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 
@@ -10,10 +9,26 @@ interface DataItem {
 
 interface RequestStatusChartProps {
   data: DataItem[];
+  legendPosition?: 'top' | 'bottom' | 'left' | 'right';
 }
 
-export function RequestStatusChart({ data }: RequestStatusChartProps) {
+export function RequestStatusChart({ 
+  data, 
+  legendPosition = 'bottom' 
+}: RequestStatusChartProps) {
   const totalValue = data.reduce((sum, item) => sum + item.value, 0);
+
+  const legendConfig = {
+    layout: (legendPosition === 'top' || legendPosition === 'bottom' ? 'horizontal' : 'vertical') as 'horizontal' | 'vertical',
+    verticalAlign: (legendPosition === 'left' || legendPosition === 'right' ? 'middle' : legendPosition) as 'top' | 'bottom' | 'middle',
+    align: (legendPosition === 'right' ? 'right' : legendPosition === 'left' ? 'left' : 'center') as 'left' | 'center' | 'right',
+    wrapperStyle: {
+      paddingLeft: legendPosition === 'right' ? '20px' : '0',
+      paddingRight: legendPosition === 'left' ? '20px' : '0',
+      paddingTop: legendPosition === 'bottom' ? '20px' : '0',
+      fontSize: '14px'
+    }
+  };
 
   return (
     <div className="h-[300px] w-full relative">
@@ -38,17 +53,16 @@ export function RequestStatusChart({ data }: RequestStatusChartProps) {
               }
             >
               {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
+                <Cell 
+                  key={`cell-${index}`} 
+                  fill={entry.color}
+                  stroke="#1f2937"
+                  strokeWidth={2}
+                />
               ))}
             </Pie>
             <Legend 
-              layout="vertical"
-              verticalAlign="middle"
-              align="right"
-              wrapperStyle={{
-                paddingLeft: '20px',
-                fontSize: '14px'
-              }}
+              {...legendConfig}
               formatter={(value: string) => (
                 <span className="text-gray-400">{value}</span>
               )}
@@ -58,14 +72,21 @@ export function RequestStatusChart({ data }: RequestStatusChartProps) {
                 backgroundColor: '#1f2937',
                 border: '1px solid #374151',
                 borderRadius: '8px',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
               }}
-              itemStyle={{ color: '#e5e7eb' }}
+              itemStyle={{ 
+                color: '#e5e7eb',
+                fontSize: '14px'
+              }}
               formatter={(value: number, name: string, entry: any) => [
-                value, 
-                <span key={name} style={{ color: entry.payload.color }}>
+                <span key={`value-${name}`} className="text-indigo-400">
+                  {value}
+                </span>,
+                <span key={`name-${name}`} style={{ color: entry.payload.color }}>
                   {name}
                 </span>
               ]}
+              itemSorter={(item) => -item.value}
             />
           </PieChart>
         </ResponsiveContainer>

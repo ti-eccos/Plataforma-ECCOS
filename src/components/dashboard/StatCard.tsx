@@ -1,44 +1,26 @@
-
 import React from "react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 interface StatCardProps {
   title: string;
   value: number | string;
-  description: string;
-  icon?: React.ReactNode;
+  icon: React.ReactNode;
   onClick?: () => void;
-  className?: string;
+  colorClass?: string;
 }
 
-export function StatCard({
-  title,
-  value,
-  description,
-  icon,
-  onClick,
-  className
-}: StatCardProps) {
+export const StatCard = ({ title, value, icon, onClick, colorClass = 'border-primary' }: StatCardProps) => {
   return (
-    <Card 
-      className={cn(
-        "shadow-md hover:shadow-lg transition-shadow", 
-        onClick && "cursor-pointer hover:border-primary",
-        className
-      )}
+    <Button 
+      variant="outline" 
+      className={`h-32 w-full flex flex-col items-center justify-center gap-2 transition-all hover:bg-muted ${colorClass}`}
       onClick={onClick}
     >
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <div className="h-10 w-10 rounded-full bg-primary/10 p-2 text-primary">
-          {icon}
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        <p className="text-xs text-muted-foreground">{description}</p>
-      </CardContent>
-    </Card>
+      <div className="flex items-center gap-2">
+        {icon}
+        <span className="text-lg font-semibold">{value}</span>
+      </div>
+      <span className="text-sm text-muted-foreground">{title}</span>
+    </Button>
   );
-}
+};
