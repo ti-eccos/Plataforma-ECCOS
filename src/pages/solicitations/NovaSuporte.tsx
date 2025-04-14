@@ -5,97 +5,49 @@ import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessa
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useState } from "react";
 import * as z from "zod";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
+import { useAuth } from '@/contexts/AuthContext';
+import { db } from '@/lib/firebase';
+import { addDoc, collection, Timestamp } from 'firebase/firestore';
 
 const locationsByUnit = {
   'Berçário e Educação Infantil': [
-    'Recepção',
-    'Sala de reuniões',
-    'Cozinha',
-    'Pátio',
-    'Sala de música',
-    'Sala de science',
-    'Berçário 2',
-    'Berçário 3',
-    'Refeitório',
-    'Sala de movimento',
-    'Pátio integral',
-    'Infantil 1',
-    'Infantil 2'
+    'Recepção', 'Sala de reuniões', 'Cozinha', 'Pátio', 'Sala de música',
+    'Sala de science', 'Berçário 2', 'Berçário 3', 'Refeitório',
+    'Sala de movimento', 'Pátio integral', 'Infantil 1', 'Infantil 2'
   ],
   'Fundamental': [
-    'Recepção',
-    'Secretaria',
-    'Sala de atendimento',
-    'Sala de atendimento (Laranja)',
-    'Sala de auxiliar de coordenação fundamental 1',
-    'Sala de oficinas',
-    'Sala de música',
-    'Sala de science',
-    'Integral',
-    '4º Ano',
-    'Patio (Cantina)',
-    'Refeitório',
-    'Biblioteca (Inferior)',
-    '3º Ano',
-    '2º Ano',
-    '1º Ano',
-    'Sala dos professores',
-    'Sala de Linguas',
-    'Coordenação de linguas/Fundamental 2',
-    'Sala de artes',
-    'Coordenação Fundamental 1 / Coordenação de matemática',
-    '8º ano',
-    '7º Ano',
-    'Apoio pedagógico',
-    'Orientação educacional',
-    'TI',
-    'Sala de oficinas (Piso superior)',
-    '5º Ano',
-    '6º Ano',
-    'Biblioteca (Superior)',
-    'Sala de convivência',
-    '9º Ano'
+    'Recepção', 'Secretaria', 'Sala de atendimento', 'Sala de atendimento (Laranja)',
+    'Sala de auxiliar de coordenação fundamental 1', 'Sala de oficinas', 'Sala de música',
+    'Sala de science', 'Integral', '4º Ano', 'Patio (Cantina)', 'Refeitório',
+    'Biblioteca (Inferior)', '3º Ano', '2º Ano', '1º Ano', 'Sala dos professores',
+    'Sala de Linguas', 'Coordenação de linguas/Fundamental 2', 'Sala de artes',
+    'Coordenação Fundamental 1 / Coordenação de matemática', '8º ano', '7º Ano',
+    'Apoio pedagógico', 'Orientação educacional', 'TI', 'Sala de oficinas (Piso superior)',
+    '5º Ano', '6º Ano', 'Biblioteca (Superior)', 'Sala de convivência', '9º Ano'
   ],
   'Anexo': [
-    'Sala de manutenção',
-    'Sala de reuniões',
-    'Refeitório',
-    'Cozinha',
-    'Nutrição',
-    'Controladoria',
-    'Financeiro',
-    'Operacional',
-    'Mantenedoria'
+    'Sala de manutenção', 'Sala de reuniões', 'Refeitório', 'Cozinha',
+    'Nutrição', 'Controladoria', 'Financeiro', 'Operacional', 'Mantenedoria'
   ]
 };
 
 const formSchema = z.object({
-  unit: z.string({
-    required_error: "Selecione a unidade",
-  }),
-  location: z.string({
-    required_error: "Selecione a localização",
-  }),
-  category: z.string({
-    required_error: "Selecione a categoria",
-  }),
-  priority: z.string({
-    required_error: "Selecione a prioridade",
-  }),
+  unit: z.string({ required_error: "Selecione a unidade" }),
+  location: z.string({ required_error: "Selecione a localização" }),
+  category: z.string({ required_error: "Selecione a categoria" }),
+  priority: z.string({ required_error: "Selecione a prioridade" }),
   deviceInfo: z.string().optional(),
-  description: z.string().min(10, {
-    message: "A descrição deve ter pelo menos 10 caracteres",
-  }),
+  description: z.string().min(10, "A descrição deve ter pelo menos 10 caracteres"),
 });
 
 const NovaSuporte = () => {
-  const { toast } = useToast();
+  const { currentUser: user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedUnit, setSelectedUnit] = useState("");
   
@@ -111,21 +63,32 @@ const NovaSuporte = () => {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsSubmitting(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      console.log(values);
-      toast({
-        title: "Solicitação enviada!",
-        description: `Sua solicitação de suporte foi registrada com sucesso. Um técnico irá atendê-la em breve.`,
-      });
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    try {
+      setIsSubmitting(true);
+      
+      const payload = {
+        ...values,
+        userName: user?.displayName || "Usuário não identificado",
+        userEmail: user?.email || "email@nao.informado",
+        status: 'pending',
+        type: 'support',
+        createdAt: Timestamp.now(),
+        hidden: false
+      };
+
+      await addDoc(collection(db, 'supports'), payload);
+
+      toast.success('Solicitação enviada com sucesso!');
       form.reset();
       setSelectedUnit("");
+    } catch (error) {
+      toast.error('Erro ao enviar solicitação');
+      console.error("Erro detalhado:", error);
+    } finally {
       setIsSubmitting(false);
-    }, 1500);
-  }
+    }
+  };
 
   return (
     <AppLayout>
@@ -136,44 +99,49 @@ const NovaSuporte = () => {
       >
         <div className="space-y-6">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight text-gradient">Novo Suporte Técnico</h2>
+            <h2 className="text-3xl font-bold tracking-tight text-gradient">
+              Novo Suporte Técnico
+            </h2>
             <p className="text-muted-foreground mt-2">
-              Preencha o formulário abaixo para solicitar suporte técnico.
+              Preencha todos os campos obrigatórios (*) para registrar sua solicitação
             </p>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>Detalhes do Suporte</CardTitle>
+              <CardTitle>Formulário de Suporte</CardTitle>
               <CardDescription>
-                Descreva o problema para que nossa equipe possa ajudar você da melhor forma.
+                Forneça informações detalhadas para um atendimento mais eficiente
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    {/* Campo Unidade */}
                     <FormField
                       control={form.control}
                       name="unit"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Unidade</FormLabel>
-                          <Select 
+                          <FormLabel>Unidade *</FormLabel>
+                          <Select
                             onValueChange={(value) => {
                               field.onChange(value);
                               setSelectedUnit(value);
                               form.resetField("location");
-                            }} 
+                            }}
                             defaultValue={field.value}
                           >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Selecione a unidade" />
+                                <SelectValue placeholder="Selecione sua unidade" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="Berçário e Educação Infantil">Berçário e Educação Infantil</SelectItem>
+                              <SelectItem value="Berçário e Educação Infantil">
+                                Berçário e Educação Infantil
+                              </SelectItem>
                               <SelectItem value="Fundamental">Fundamental</SelectItem>
                               <SelectItem value="Anexo">Anexo</SelectItem>
                             </SelectContent>
@@ -183,28 +151,35 @@ const NovaSuporte = () => {
                       )}
                     />
 
+                    {/* Campo Localização */}
                     <FormField
                       control={form.control}
                       name="location"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Localização</FormLabel>
-                          <Select 
-                            onValueChange={field.onChange} 
+                          <FormLabel>Localização Exata *</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
                             value={field.value}
                             disabled={!selectedUnit}
                           >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder={selectedUnit ? "Selecione a localização" : "Selecione a unidade primeiro"} />
+                                <SelectValue 
+                                  placeholder={selectedUnit 
+                                    ? "Selecione o local específico" 
+                                    : "Selecione a unidade primeiro"}
+                                />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {selectedUnit && locationsByUnit[selectedUnit as keyof typeof locationsByUnit].map((location) => (
-                                <SelectItem key={location} value={location}>
-                                  {location}
-                                </SelectItem>
-                              ))}
+                              {selectedUnit && 
+                                locationsByUnit[selectedUnit as keyof typeof locationsByUnit].map((location) => (
+                                  <SelectItem key={location} value={location}>
+                                    {location}
+                                  </SelectItem>
+                                ))
+                              }
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -212,24 +187,26 @@ const NovaSuporte = () => {
                       )}
                     />
 
+                    {/* Campo Categoria */}
                     <FormField
                       control={form.control}
                       name="category"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Categoria</FormLabel>
+                          <FormLabel>Tipo de Problema *</FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Selecione a categoria" />
+                                <SelectValue placeholder="Selecione a categoria do problema" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="Internet">Internet</SelectItem>
-                              <SelectItem value="Notebook">Notebook</SelectItem>
-                              <SelectItem value="Projeção">Projeção</SelectItem>
-                              <SelectItem value="Áudio">Áudio</SelectItem>
-                              <SelectItem value="Outros">Outros</SelectItem>
+                              <SelectItem value="Internet">Problemas de Internet</SelectItem>
+                              <SelectItem value="Hardware">Defeito em Equipamento</SelectItem>
+                              <SelectItem value="Software">Erro de Sistema</SelectItem>
+                              <SelectItem value="Projeção">Problemas de Projeção</SelectItem>
+                              <SelectItem value="Áudio">Falhas de Áudio</SelectItem>
+                              <SelectItem value="Outros">Outros Problemas</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -237,23 +214,32 @@ const NovaSuporte = () => {
                       )}
                     />
 
+                    {/* Campo Prioridade */}
                     <FormField
                       control={form.control}
                       name="priority"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Prioridade</FormLabel>
+                          <FormLabel>Nível de Urgência *</FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Selecione a prioridade" />
+                                <SelectValue placeholder="Qual a urgência do atendimento?" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="low">Baixa - Não é urgente</SelectItem>
-                              <SelectItem value="medium">Média - Importante, mas pode esperar</SelectItem>
-                              <SelectItem value="high">Alta - Urgente, afeta o trabalho</SelectItem>
-                              <SelectItem value="critical">Crítica - Impede completamente o trabalho</SelectItem>
+                              <SelectItem value="low">
+                                Baixa - Não interfere nas atividades
+                              </SelectItem>
+                              <SelectItem value="medium">
+                                Média - Afeta parcialmente o trabalho
+                              </SelectItem>
+                              <SelectItem value="high">
+                                Alta - Impede atividades importantes
+                              </SelectItem>
+                              <SelectItem value="critical">
+                                Crítica - Paralisação total
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -261,17 +247,21 @@ const NovaSuporte = () => {
                       )}
                     />
 
+                    {/* Campo Informações do Dispositivo */}
                     <FormField
                       control={form.control}
                       name="deviceInfo"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Informações do Dispositivo (Opcional)</FormLabel>
+                          <FormLabel>Identificação do Equipamento</FormLabel>
                           <FormControl>
-                            <Input placeholder="Ex: Notebook Dell, Série X123" {...field} />
+                            <Input 
+                              placeholder="Ex: Notebook Dell Latitude 3420, Nº Patrimônio 1234" 
+                              {...field} 
+                            />
                           </FormControl>
                           <FormDescription className="text-muted-foreground">
-                            Marca, modelo ou informações adicionais do equipamento
+                            Forneça número de patrimônio, modelo ou identificação completa
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -279,17 +269,22 @@ const NovaSuporte = () => {
                     />
                   </div>
 
+                  {/* Campo Descrição Detalhada */}
                   <FormField
                     control={form.control}
                     name="description"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Descrição Detalhada</FormLabel>
+                        <FormLabel>Descrição Completa do Problema *</FormLabel>
                         <FormControl>
-                          <Textarea 
-                            placeholder="Descreva o problema em detalhes. O que acontece? Quando começou? Tentou alguma solução?" 
-                            className="min-h-[120px]" 
-                            {...field} 
+                          <Textarea
+                            placeholder="Descreva detalhadamente: 
+- O que está acontecendo?
+- Quando começou o problema?
+- Quais mensagens de erro aparecem?
+- Quais tentativas de solução já foram feitas?"
+                            className="min-h-[150px]"
+                            {...field}
                           />
                         </FormControl>
                         <FormMessage />
@@ -297,13 +292,34 @@ const NovaSuporte = () => {
                     )}
                   />
 
-                  <Button 
-                    type="submit" 
-                    disabled={isSubmitting} 
-                    className="bg-gradient-to-r from-eccos-green to-eccos-blue hover:from-eccos-green/90 hover:to-eccos-blue/90"
-                  >
-                    {isSubmitting ? "Enviando..." : "Enviar Solicitação"}
-                  </Button>
+                  {/* Botões de Ação */}
+                  <div className="flex justify-end gap-4">
+                    <Button 
+                      type="button" 
+                      variant="ghost"
+                      onClick={() => {
+                        form.reset();
+                        setSelectedUnit("");
+                      }}
+                    >
+                      Limpar Campos
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      disabled={isSubmitting}
+                      className="bg-primary hover:bg-primary/90 text-white"
+                    >
+                      {isSubmitting ? (
+                        <span className="flex items-center">
+                          <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                          </svg>
+                          Enviando...
+                        </span>
+                      ) : "Enviar Solicitação"}
+                    </Button>
+                  </div>
                 </form>
               </Form>
             </CardContent>
