@@ -48,7 +48,19 @@ export default function Disponibilidade() {
     const loadDates = async () => {
       try {
         const dates = await getAvailableDates();
-        setAvailableDates(dates);
+        
+        // Filtrar datas passadas ou hoje
+        const datesToRemove = dates.filter(date => isDateInPastOrToday(date));
+        
+        if (datesToRemove.length > 0) {
+          // Remover do backend
+          await removeAvailableDates(datesToRemove);
+          // Manter apenas datas futuras no estado
+          const futureDates = dates.filter(date => !isDateInPastOrToday(date));
+          setAvailableDates(futureDates);
+        } else {
+          setAvailableDates(dates);
+        }
       } catch (error) {
         showErrorToast("Erro ao carregar datas disponíveis");
       } finally {

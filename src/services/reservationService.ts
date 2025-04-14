@@ -1,4 +1,3 @@
-
 import { db } from "@/lib/firebase";
 import { 
   collection, 
@@ -17,6 +16,24 @@ import {
 export type RequestStatus = "pending" | "approved" | "rejected" | "in-progress" | "completed" | "canceled";
 export type RequestType = "reservation" | "purchase" | "support";
 
+export interface MessageData {
+  message: string;
+  isAdmin: boolean;
+  userName: string;
+  timestamp: Timestamp;
+}
+
+export interface RequestData {
+  id: string;
+  collectionName: string;
+  type: RequestType;
+  status: RequestStatus;
+  userName: string;
+  userEmail: string;
+  createdAt: Timestamp;
+  [key: string]: any;
+}
+
 export const addReservation = async (data: {
   date: Date;
   startTime: string;
@@ -26,11 +43,12 @@ export const addReservation = async (data: {
   purpose: string;
   userName: string;
   userEmail: string;
+  status?: RequestStatus;
 }) => {
   const docRef = await addDoc(collection(db, 'reservations'), {
     ...data,
     type: 'reservation' as const,
-    status: 'pending' as const,
+    status: data.status || 'pending',
     createdAt: new Date(),
     hidden: false
   });
@@ -116,24 +134,6 @@ export const checkConflicts = async (data: {
   return conflicts;
 };
 
-export interface MessageData {
-  message: string;
-  isAdmin: boolean;
-  userName: string;
-  timestamp: Timestamp;
-}
-
-export interface RequestData {
-  id: string;
-  collectionName: string;
-  type: RequestType;
-  status: RequestStatus;
-  userName: string;
-  userEmail: string;
-  createdAt: Timestamp;
-  [key: string]: any;
-}
-
 export const getAllRequests = async (showHidden: boolean): Promise<RequestData[]> => {
   const collections = ['reservations', 'purchases', 'supports'];
   const requests: RequestData[] = [];
@@ -151,12 +151,11 @@ export const getAllRequests = async (showHidden: boolean): Promise<RequestData[]
     querySnapshot.forEach((doc) => {
       const data = doc.data();
       
-      // Set default values if fields are missing
       const createdAt = data.createdAt || Timestamp.now();
       const userName = data.userName || "Usuário não identificado";
       const userEmail = data.userEmail || "";
       const status = data.status || "pending";
-      const type = data.type || col.slice(0, -1); // Remove 's' from collection name
+      const type = data.type || col.slice(0, -1);
       
       requests.push({
         id: doc.id,

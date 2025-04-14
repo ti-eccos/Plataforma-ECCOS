@@ -90,6 +90,15 @@ const formSchema = z.object({
 }, {
   message: "A hora final deve ser depois da hora inicial",
   path: ["endTime"],
+}).refine((data) => {
+  const [startH, startM] = data.startTime.split(':').map(Number);
+  const [endH, endM] = data.endTime.split(':').map(Number);
+  const startTotal = startH * 60 + startM;
+  const endTotal = endH * 60 + endM;
+  return startTotal >= 420 && endTotal <= 1140;
+}, {
+  message: "O horário deve estar entre 07:00 e 19:00",
+  path: ["endTime"],
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -192,6 +201,20 @@ const NovaReserva = () => {
         return;
       }
 
+      const [startH, startM] = values.startTime.split(':').map(Number);
+      const [endH, endM] = values.endTime.split(':').map(Number);
+      const startMinutes = startH * 60 + startM;
+      const endMinutes = endH * 60 + endM;
+      
+      const isWithinBusinessHours = 
+        startMinutes >= 420 && 
+        endMinutes <= 1140;
+
+      const autoApproved = 
+        conflicts.length === 0 &&
+        isWithinBusinessHours &&
+        isDateAvailable(values.date);
+
       await addReservation({
         date: values.date,
         startTime: values.startTime,
@@ -200,10 +223,13 @@ const NovaReserva = () => {
         location: values.location,
         purpose: values.purpose,
         userName: currentUser?.displayName || "Usuário",
-        userEmail: currentUser?.email || "email@exemplo.com"
+        userEmail: currentUser?.email || "email@exemplo.com",
+        status: autoApproved ? 'approved' : 'pending'
       });
 
-      toast.success('Solicitação de reserva enviada com sucesso!');
+      toast.success(autoApproved 
+        ? 'Reserva aprovada automaticamente!' 
+        : 'Solicitação de reserva enviada com sucesso!');
       form.reset();
     } catch (error) {
       console.error("Error submitting reservation:", error);
