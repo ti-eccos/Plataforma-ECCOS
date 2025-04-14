@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -70,45 +71,58 @@ const Dashboard = () => {
     enabled: isAdmin,
   });
 
-  // Contagem completa de status
-  const requestStatusCounts = requests.reduce((acc: Record<RequestStatus, number>, req) => {
-    acc[req.status] = (acc[req.status] || 0) + 1;
+  // Count active users (not blocked)
+  const activeUsers = users.filter((user: any) => !user.blocked).length;
+  
+  // Count request types
+  const requestTypes = requests.reduce((acc: Record<string, number>, req: any) => {
+    const type = req.type || 'unknown';
+    acc[type] = (acc[type] || 0) + 1;
     return acc;
-  }, {} as Record<RequestStatus, number>);
+  }, {});
 
-  // Contagem de tipos de solicitação
-  const requestTypeCounts = requests.reduce((acc: Record<RequestType, number>, req) => {
-    acc[req.type] = (acc[req.type] || 0) + 1;
+  // Count request statuses
+  const requestStatuses = requests.reduce((acc: Record<string, number>, req: any) => {
+    const status = req.status || 'unknown';
+    acc[status] = (acc[status] || 0) + 1;
     return acc;
-  }, {} as Record<RequestType, number>);
+  }, {});
 
-  // Dados para gráfico de status
-  const requestStatusData = [
-    { name: 'Pendentes', value: requestStatusCounts.pending || 0, color: '#eab308' },
-    { name: 'Aprovadas', value: requestStatusCounts.approved || 0, color: '#22c55e' },
-    { name: 'Reprovadas', value: requestStatusCounts.rejected || 0, color: '#ef4444' },
-    { name: 'Em Andamento', value: requestStatusCounts['in-progress'] || 0, color: '#3b82f6' },
-    { name: 'Concluídas', value: requestStatusCounts.completed || 0, color: '#64748b' },
-    { name: 'Canceladas', value: requestStatusCounts.canceled || 0, color: '#f59e0b' },
-  ];
+  // Count equipment by type
+  const equipmentByType = equipment.reduce((acc: Record<string, number>, equip: any) => {
+    const type = equip.type || 'unknown';
+    acc[type] = (acc[type] || 0) + 1;
+    return acc;
+  }, {});
 
-  // Dados para gráfico de tipos de solicitação
-  const requestTypeData = [
-    { name: 'Reservas', value: requestTypeCounts.reservation || 0, color: '#3b82f6' },
-    { name: 'Compras', value: requestTypeCounts.purchase || 0, color: '#8b5cf6' },
-    { name: 'Suporte', value: requestTypeCounts.support || 0, color: '#ec4899' }
-  ];
-
-  // Contagem de equipamentos
+  // Count pending, approved and in-progress requests
+  const pendingRequests = requests.filter((req: any) => req.status === 'pending').length;
+  const approvedRequests = requests.filter((req: any) => req.status === 'approved').length;
+  const inProgressRequests = requests.filter((req: any) => req.status === 'in-progress').length;
+  
+  // Count Chromebooks and iPads
   const chromebooks = equipment.filter((equip: any) => equip.type === 'Chromebook').length;
   const ipads = equipment.filter((equip: any) => equip.type === 'iPad').length;
-  const activeUsers = users.filter((user: any) => !user.blocked).length;
 
-  // Handlers de navegação
+  // Data for request status pie chart
+  const requestStatusData = [
+    { name: 'Pendentes', value: pendingRequests, color: '#eab308' },
+    { name: 'Aprovadas', value: approvedRequests, color: '#22c55e' },
+    { name: 'Em Progresso', value: inProgressRequests, color: '#3b82f6' },
+  ];
+
+  // Data for equipment type pie chart
+  const equipmentTypeData = [
+    { name: 'Chromebooks', value: chromebooks, color: '#3b82f6' },
+    { name: 'iPads', value: ipads, color: '#8b5cf6' },
+  ];
+
+  // Navigate to other pages on click
   const handleNavigateToUsers = () => navigate('/usuarios');
   const handleNavigateToRequests = () => navigate('/solicitacoes');
   const handleNavigateToEquipment = () => navigate('/equipamentos');
 
+  // If user is not an admin, show another dashboard
   if (!isAdmin) {
     return (
       <AppLayout>
@@ -122,6 +136,11 @@ const Dashboard = () => {
 
   const isLoading = requestsLoading || usersLoading || equipmentLoading;
   const isError = requestsError || usersError || equipmentError;
+
+  // Count request by type
+  const reservationRequests = requests.filter((req: any) => req.type === 'reservation').length;
+  const purchaseRequests = requests.filter((req: any) => req.type === 'purchase').length;
+  const supportRequests = requests.filter((req: any) => req.type === 'support').length;
 
   return (
     <AppLayout>
@@ -138,8 +157,8 @@ const Dashboard = () => {
           </div>
         ) : (
           <div className="space-y-8">
-            {/* Primeira linha de estatísticas */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Cards for main metrics */}
               <StatCard 
                 title="Usuários Ativos" 
                 value={activeUsers} 
@@ -163,11 +182,10 @@ const Dashboard = () => {
               />
             </div>
 
-            {/* Segunda linha de estatísticas */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <StatCard 
                 title="Solicitações Pendentes" 
-                value={requestStatusCounts.pending || 0} 
+                value={pendingRequests} 
                 description="Aguardando aprovação"
                 icon={<FileMinus className="h-8 w-8" />}
                 onClick={handleNavigateToRequests}
@@ -175,15 +193,15 @@ const Dashboard = () => {
               />
               <StatCard 
                 title="Solicitações Aprovadas" 
-                value={requestStatusCounts.approved || 0} 
+                value={approvedRequests} 
                 description="Aprovadas recentemente"
                 icon={<FileCheck className="h-8 w-8" />}
                 onClick={handleNavigateToRequests}
                 className="border-green-400 hover:border-green-500"
               />
               <StatCard 
-                title="Em Andamento" 
-                value={requestStatusCounts['in-progress'] || 0} 
+                title="Solicitações Em Andamento" 
+                value={inProgressRequests} 
                 description="Em processamento"
                 icon={<FileClock className="h-8 w-8" />}
                 onClick={handleNavigateToRequests}
@@ -191,9 +209,8 @@ const Dashboard = () => {
               />
             </div>
 
-            {/* Gráficos e visualizações */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Gráfico de status das solicitações */}
+              {/* Request Status Chart */}
               <Card className="shadow-md hover:shadow-lg transition-shadow cursor-pointer" onClick={handleNavigateToRequests}>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
@@ -202,19 +219,18 @@ const Dashboard = () => {
                       Ver Detalhes
                     </Button>
                   </CardTitle>
-                  <CardDescription>Distribuição completa dos status</CardDescription>
+                  <CardDescription>Distribuição das solicitações por status</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="h-80">
                     <RequestStatusChart
                       data={requestStatusData}
-                      legendPosition="bottom"
                     />
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Gráfico de tipos de equipamentos */}
+              {/* Equipment Type Chart */}
               <Card className="shadow-md hover:shadow-lg transition-shadow cursor-pointer" onClick={handleNavigateToEquipment}>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
@@ -227,15 +243,14 @@ const Dashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="h-80">
-                    <EquipmentUsageChart
-                      chromebooks={chromebooks}
-                      ipads={ipads}
+                    <RequestStatusChart
+                      data={equipmentTypeData}
                     />
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Gráfico de tipos de solicitação */}
+              {/* Request Types Chart */}
               <Card className="shadow-md hover:shadow-lg transition-shadow cursor-pointer" onClick={handleNavigateToRequests}>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
@@ -247,16 +262,17 @@ const Dashboard = () => {
                   <CardDescription>Distribuição por tipo de solicitação</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-80">
-                    <RequestStatusChart
-                      data={requestTypeData}
-                      legendPosition="right"
-                    />
-                  </div>
+                  <RequestStatusChart
+                    data={[
+                      { name: 'Reservas', value: reservationRequests, color: '#3b82f6' },
+                      { name: 'Compras', value: purchaseRequests, color: '#8b5cf6' },
+                      { name: 'Suporte', value: supportRequests, color: '#ec4899' }
+                    ]}
+                  />
                 </CardContent>
               </Card>
 
-              {/* Atividade Recente */}
+              {/* Recent Activity */}
               <Card className="shadow-md hover:shadow-lg transition-shadow cursor-pointer" onClick={handleNavigateToRequests}>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
@@ -268,10 +284,7 @@ const Dashboard = () => {
                   <CardDescription>Últimas 5 solicitações</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <RecentActivity 
-                    requests={requests.slice(-5).reverse()} 
-                    showType={true}
-                  />
+                  <RecentActivity requests={requests} />
                 </CardContent>
               </Card>
             </div>

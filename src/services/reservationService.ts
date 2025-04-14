@@ -1,3 +1,4 @@
+
 import { db } from "@/lib/firebase";
 import { 
   collection, 
@@ -14,7 +15,7 @@ import {
 } from "firebase/firestore";
 
 export type RequestStatus = "pending" | "approved" | "rejected" | "in-progress" | "completed" | "canceled";
-export type RequestType = "reservation" | "purchase" | "support"; // Deve estar exportado
+export type RequestType = "reservation" | "purchase" | "support";
 
 export const addReservation = async (data: {
   date: Date;
@@ -138,28 +139,42 @@ export const getAllRequests = async (showHidden: boolean): Promise<RequestData[]
   const requests: RequestData[] = [];
 
   for (const col of collections) {
-    const q = query(
-      collection(db, col),
-      where("hidden", "==", showHidden)
-    );
+    const q = showHidden 
+      ? query(collection(db, col))
+      : query(
+          collection(db, col),
+          where("hidden", "==", false)
+        );
+    
     const querySnapshot = await getDocs(q);
     
     querySnapshot.forEach((doc) => {
       const data = doc.data();
+      
+      // Set default values if fields are missing
+      const createdAt = data.createdAt || Timestamp.now();
+      const userName = data.userName || "Usuário não identificado";
+      const userEmail = data.userEmail || "";
+      const status = data.status || "pending";
+      const type = data.type || col.slice(0, -1); // Remove 's' from collection name
+      
       requests.push({
         id: doc.id,
         collectionName: col,
-        type: data.type as RequestType,
-        status: data.status as RequestStatus,
-        userName: data.userName,
-        userEmail: data.userEmail,
-        createdAt: data.createdAt,
+        type: type as RequestType,
+        status: status as RequestStatus,
+        userName,
+        userEmail,
+        createdAt,
         ...data
       });
     });
   }
 
-  return requests.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+  return requests.sort((a, b) => {
+    if (!a.createdAt || !b.createdAt) return 0;
+    return b.createdAt.toMillis() - a.createdAt.toMillis();
+  });
 };
 
 export const getRequestById = async (id: string, collectionName: string): Promise<RequestData> => {
