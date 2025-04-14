@@ -22,7 +22,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="fixed top-4 left-4 z-50 md:hidden pointer-events-auto"
+                className="fixed top-4 left-4 z-40 md:hidden"
               >
                 <Menu className="h-5 w-5" />
               </Button>
@@ -31,7 +31,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
               <AppSidebar />
             </SheetContent>
           </Sheet>
-          <main className="flex-1 overflow-auto p-6 pt-20 pointer-events-auto">
+          <main className="flex-1 overflow-auto p-6 pt-20">
             <div className="max-w-7xl mx-auto animate-fade-in">
               {children}
             </div>
@@ -40,7 +40,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       ) : (
         <>
           <AppSidebar />
-          <main className="flex-1 overflow-auto p-6 pointer-events-auto">
+          <main className="flex-1 overflow-auto p-6">
             <div className="max-w-7xl mx-auto animate-fade-in">
               {children}
             </div>

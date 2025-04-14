@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -127,8 +126,7 @@ const Dashboard = () => {
             Erro ao carregar dados. Tente novamente mais tarde.
           </div>
         ) : (
-          <>
-            {/* Main stats row */}
+          <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard 
                 title="Usuários" 
@@ -160,7 +158,6 @@ const Dashboard = () => {
               />
             </div>
 
-            {/* Charts row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Request Types Chart */}
               <Card className="shadow-md hover:shadow-lg transition-shadow">
@@ -259,7 +256,7 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
             </div>
-          </>
+          </div>
         )}
       </div>
     </AppLayout>
