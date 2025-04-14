@@ -21,26 +21,33 @@ export interface User {
   photoURL: string | null;
   role: UserRole;
   blocked?: boolean;
-  lastActive?: string;
+  lastActive: string; // Alterado para obrigatório
   department?: string;
   pendingRoleChange?: {
     from: UserRole;
     to: UserRole;
     requestedBy: string;
     approvals: string[];
+    createdAt?: string;
   };
 }
 
 // Collection reference
 const usersCollectionRef = collection(db, "users");
 
-// Get all users
+// Alteração na função getAllUsers para converter o Timestamp
 export const getAllUsers = async (): Promise<User[]> => {
   try {
     const snapshot = await getDocs(usersCollectionRef);
-    return snapshot.docs.map(doc => ({
-      ...doc.data()
-    })) as User[];
+    return snapshot.docs.map(doc => {
+      const data = doc.data();
+      // Convertendo o Timestamp para ISO string
+      const lastActive = data.lastActive ? data.lastActive.toDate().toISOString() : null;
+      return {
+        ...data,
+        lastActive // Atribuindo a versão convertida
+      } as User;
+    });
   } catch (error) {
     console.error("Error getting users:", error);
     throw error;

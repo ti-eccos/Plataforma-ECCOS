@@ -6,9 +6,14 @@ import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 interface EquipmentUsageChartProps {
   requests: any[];
   equipment: any[];
+  showTop?: number;
 }
 
-export function EquipmentUsageChart({ requests, equipment }: EquipmentUsageChartProps) {
+export const EquipmentUsageChart = ({
+  requests,
+  equipment,
+  showTop = 10 // Valor padrão
+}: EquipmentUsageChartProps) => {
   // Count equipment usage in reservations
   const equipmentUsage = useMemo(() => {
     const usageCounts: Record<string, number> = {};

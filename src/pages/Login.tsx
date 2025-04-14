@@ -6,6 +6,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const Login = () => {
   const { signInWithGoogle, currentUser, loading } = useAuth();
@@ -15,19 +17,28 @@ const Login = () => {
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
-    if (currentUser && !isRedirecting) {
-      setIsRedirecting(true);
-      console.log("Login: Usuario autenticado, redirecionando...");
-      
-      // Simplificando a lógica de redirecionamento
-      const from = location.state?.from?.pathname || "/";
-      navigate(from, { replace: true });
-      
-      toast({
-        title: "Login bem-sucedido",
-        description: `Bem-vindo, ${currentUser.displayName}!`,
-      });
-    }
+    const updateLastActive = async () => {
+      if (currentUser && !isRedirecting) {
+        setIsRedirecting(true);
+        console.log("Login: Usuario autenticado, redirecionando...");
+  
+        // Atualiza o lastActive no Firestore
+        const userRef = doc(db, "users", currentUser.uid);
+        await updateDoc(userRef, {
+          lastActive: serverTimestamp()
+        });
+  
+        const from = location.state?.from?.pathname || "/";
+        navigate(from, { replace: true });
+  
+        toast({
+          title: "Login bem-sucedido",
+          description: `Bem-vindo, ${currentUser.displayName}!`,
+        });
+      }
+    };
+  
+    updateLastActive();
   }, [currentUser, navigate, toast, location, isRedirecting]);
 
   if (loading || isRedirecting) {

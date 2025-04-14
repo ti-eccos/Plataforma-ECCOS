@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
@@ -181,25 +180,20 @@ const Usuarios = () => {
     
     return false;
   };
-  
-  const getLastActive = (lastActiveStr?: string) => {
-    if (!lastActiveStr) return "Nunca";
+
+  const getLastActive = (isoDate: string | null): string => {
+    if (!isoDate) return "Nunca acessou";
     
-    const lastActive = new Date(lastActiveStr);
-    const now = new Date();
+    const date = new Date(isoDate);
+    if (isNaN(date.getTime())) return "Data inválida";
     
-    const diffMs = now.getTime() - lastActive.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-    
-    if (diffMins < 1) return "Agora";
-    if (diffMins < 60) return `Há ${diffMins} ${diffMins === 1 ? 'minuto' : 'minutos'}`;
-    if (diffHours < 24) return `Há ${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`;
-    if (diffDays < 30) return `Há ${diffDays} ${diffDays === 1 ? 'dia' : 'dias'}`;
-    
-    // For older dates, return formatted date
-    return lastActive.toLocaleDateString('pt-BR');
+    return date.toLocaleString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   // Check if user should have actions button visible
@@ -296,53 +290,23 @@ const Usuarios = () => {
                                       {user.role === "admin" ? "Remover Admin" : "Tornar Admin"}
                                     </DropdownMenuItem>
                                   )}
-                                  
-                                  {/* If there's a pending role change and current user is not the requester */}
-                                  {user.pendingRoleChange && 
-                                   user.pendingRoleChange.requestedBy !== currentUser?.uid && 
-                                   currentUser?.role === "admin" && 
-                                   !user.pendingRoleChange.approvals.includes(currentUser?.uid) && (
-                                    <DropdownMenuItem 
-                                      onClick={() => handleRoleChangeClick(user)}
-                                      className="text-blue-600"
-                                    >
-                                      <ShieldCheck className="mr-2 h-4 w-4" />
-                                      Aprovar alteração
-                                    </DropdownMenuItem>
-                                  )}
-                                  
-                                  {/* If this user has requested a role change */}
-                                  {user.pendingRoleChange && 
-                                   user.pendingRoleChange.requestedBy === currentUser?.uid && (
-                                    <DropdownMenuItem 
-                                      onClick={() => handleRoleChangeClick(user)}
-                                      className="text-yellow-600"
-                                    >
-                                      <Edit className="mr-2 h-4 w-4" />
-                                      Cancelar solicitação
-                                    </DropdownMenuItem>
-                                  )}
-                                  
                                   {canBlock(user) && (
-                                    <>
-                                      {canEditRole(user) && <DropdownMenuSeparator />}
-                                      <DropdownMenuItem 
-                                        onClick={() => handleBlockClick(user)}
-                                        className={user.blocked ? "text-green-600" : "text-red-600"}
-                                      >
-                                        {user.blocked ? (
-                                          <>
+                                    <DropdownMenuItem 
+                                      onClick={() => handleBlockClick(user)}
+                                      className={user.blocked ? "text-green-600" : "text-red-600"}
+                                    >
+                                      {user.blocked ? (
+                                        <>
                                             <Unlock className="mr-2 h-4 w-4" />
                                             Desbloquear
-                                          </>
-                                        ) : (
-                                          <>
+                                        </>
+                                      ) : (
+                                        <>
                                             <Lock className="mr-2 h-4 w-4" />
                                             Bloquear
-                                          </>
-                                        )}
-                                      </DropdownMenuItem>
-                                    </>
+                                        </>
+                                      )}
+                                    </DropdownMenuItem>
                                   )}
                                 </DropdownMenuContent>
                               </DropdownMenu>
