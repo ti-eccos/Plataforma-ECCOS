@@ -94,9 +94,9 @@ const Dashboard = () => {
   });
 
   // Navigate to other pages on click
-  const handleNavigateToUsers = () => navigate('/admin/usuarios');
-  const handleNavigateToRequests = () => navigate('/admin/solicitacoes');
-  const handleNavigateToEquipment = () => navigate('/admin/equipamentos');
+  const handleNavigateToUsers = () => navigate('/usuarios');
+  const handleNavigateToRequests = () => navigate('/solicitacoes');
+  const handleNavigateToEquipment = () => navigate('/equipamentos');
 
   // If user is not an admin, show another dashboard
   if (!isAdmin) {
