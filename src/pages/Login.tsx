@@ -1,4 +1,5 @@
 
+import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
@@ -53,8 +54,10 @@ const Login = () => {
       
       <Card className="w-full max-w-md glass-morphism">
         <CardHeader className="space-y-4 text-center">
-          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-eccos-blue to-eccos-green rounded-xl flex items-center justify-center">
-            <motion.div 
+          <div className="mx-auto w-24 h-24 flex items-center justify-center">
+            <motion.img 
+              src="/logo.png" 
+              alt="ECCOS Logo"
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ 
@@ -63,9 +66,8 @@ const Login = () => {
                 damping: 20,
                 delay: 0.3
               }}
-            >
-              <span className="text-3xl font-bold text-white">E</span>
-            </motion.div>
+              className="max-w-full max-h-full object-contain"
+            />
           </div>
           
           <motion.div
