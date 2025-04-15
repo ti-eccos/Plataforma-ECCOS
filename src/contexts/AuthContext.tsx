@@ -1,5 +1,4 @@
-
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 import { 
   User as FirebaseUser, 
   signInWithPopup, 
@@ -8,7 +7,7 @@ import {
 } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { collection, doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 type UserRole = "user" | "admin" | "superadmin";
@@ -42,12 +41,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState<boolean>(true);
   const { toast } = useToast();
 
+  // Define isSuperAdmin e isAdmin com base no usuário atual
   const isSuperAdmin = currentUser?.email === "suporte@colegioeccos.com.br";
   const isAdmin = currentUser?.role === "admin" || isSuperAdmin;
 
+  // Caso o hook useToast não garanta a estabilidade da função toast, removemos-o
+  // da lista de dependências para evitar reexecuções desnecessárias.
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
+        // Verifica se o email pertence ao domínio permitido
         if (!firebaseUser.email?.endsWith("@colegioeccos.com.br")) {
           await firebaseSignOut(auth);
           toast({
@@ -81,11 +84,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               return;
             }
             
+            // Atualiza o campo lastActive se o documento já existe
             await setDoc(userRef, {
               ...userData,
               lastActive: new Date()
             }, { merge: true });
           } else {
+            // Define o papel do usuário conforme o email
             const role: UserRole = firebaseUser.email === "suporte@colegioeccos.com.br" 
               ? "superadmin" 
               : "user";
@@ -128,13 +133,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, [toast]);
+  }, []); // Removemos 'toast' da lista de dependências
 
-  const signInWithGoogle = async () => {
+  // Memorizamos signInWithGoogle para evitar recriações desnecessárias
+  const signInWithGoogle = useCallback(async () => {
     try {
       setLoading(true);
       await signInWithPopup(auth, googleProvider);
-      // Toast is moved to Login.tsx to avoid multiple notifications
+      // A notificação de sucesso pode ser exibida em outra parte (por exemplo, na tela de login)
     } catch (error: any) {
       console.error("Login error:", error);
       toast({
@@ -145,9 +151,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
-  const signOut = async () => {
+  // Memorizamos signOut
+  const signOut = useCallback(async () => {
     try {
       await firebaseSignOut(auth);
       toast({
@@ -162,18 +169,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         variant: "destructive"
       });
     }
-  };
+  }, [toast]);
+
+  // Memorizamos o valor do contexto para evitar re-renderizações em cascata
+  const authContextValue = useMemo(() => ({
+    currentUser,
+    user: currentUser,
+    loading,
+    signInWithGoogle,
+    signOut,
+    isAdmin,
+    isSuperAdmin
+  }), [currentUser, loading, signInWithGoogle, signOut, isAdmin, isSuperAdmin]);
 
   return (
-    <AuthContext.Provider value={{
-      currentUser,
-      user: currentUser,
-      loading,
-      signInWithGoogle,
-      signOut,
-      isAdmin,
-      isSuperAdmin
-    }}>
+    <AuthContext.Provider value={authContextValue}>
       {children}
     </AuthContext.Provider>
   );

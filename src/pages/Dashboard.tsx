@@ -8,7 +8,7 @@ import { getAllUsers } from "@/services/userService";
 import { getAllEquipment } from "@/services/equipmentService";
 import { DashboardMetrics } from "@/components/dashboard/DashboardMetrics";
 import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
-import { UserDashboard } from "@/components/dashboard/UserDashboard";
+import UserDashboard from "../components/dashboard/UserDashboard";
 import { DashboardLoading } from "@/components/dashboard/DashboardLoading";
 
 const Dashboard = () => {

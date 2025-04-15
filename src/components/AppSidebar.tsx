@@ -102,18 +102,22 @@ export const AppSidebar = () => {
   const location = useLocation();
   const { currentUser, isAdmin, signOut } = useAuth();
   
-  const userMenuItems = [
-    { icon: Home, label: "Página Inicial", href: "/" },
-    { 
-      icon: PlusCircle,
-      label: "Nova Solicitação",
-      items: [
-        { label: "Reserva", href: "/nova-solicitacao/reserva" },
-        { label: "Compra", href: "/nova-solicitacao/compra" },
-        { label: "Suporte", href: "/nova-solicitacao/suporte" },
-      ]
-    },
-  ];
+  // No componente AppSidebar, atualize o userMenuItems para:
+const userMenuItems = [
+  { icon: Home, label: "Página Inicial", href: "/" },
+  { icon: FileText, label: "Minhas Solicitações", href: "/minhas-solicitacoes" },
+  { 
+    icon: PlusCircle,
+    label: "Nova Solicitação",
+    items: [
+      { label: "Reserva", href: "/nova-solicitacao/reserva" },
+      { label: "Compra", href: "/nova-solicitacao/compra" },
+      { label: "Suporte", href: "/nova-solicitacao/suporte" },
+    ]
+  },
+   // Rota corrigida
+];
+  
   
   const adminMenuItems = [
     { icon: Laptop, label: "Equipamentos", href: "/equipamentos" },

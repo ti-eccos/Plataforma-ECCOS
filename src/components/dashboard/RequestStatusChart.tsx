@@ -1,3 +1,4 @@
+// components/dashboard/RequestStatusChart.tsx
 import React from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 
@@ -10,19 +11,23 @@ interface DataItem {
 interface RequestStatusChartProps {
   data: DataItem[];
   legendPosition?: 'top' | 'bottom' | 'left' | 'right';
+  legendWrapperStyle?: React.CSSProperties;
 }
 
 export function RequestStatusChart({ 
   data, 
-  legendPosition = 'bottom' 
+  legendPosition = 'bottom',
+  legendWrapperStyle = {}
 }: RequestStatusChartProps) {
-  const totalValue = data.reduce((sum, item) => sum + item.value, 0);
+  const filteredData = data.filter(item => item.value > 0);
+  const totalValue = filteredData.reduce((sum, item) => sum + item.value, 0);
 
   const legendConfig = {
     layout: (legendPosition === 'top' || legendPosition === 'bottom' ? 'horizontal' : 'vertical') as 'horizontal' | 'vertical',
     verticalAlign: (legendPosition === 'left' || legendPosition === 'right' ? 'middle' : legendPosition) as 'top' | 'bottom' | 'middle',
     align: (legendPosition === 'right' ? 'right' : legendPosition === 'left' ? 'left' : 'center') as 'left' | 'center' | 'right',
     wrapperStyle: {
+      ...legendWrapperStyle,
       paddingLeft: legendPosition === 'right' ? '20px' : '0',
       paddingRight: legendPosition === 'left' ? '20px' : '0',
       paddingTop: legendPosition === 'bottom' ? '20px' : '0',
@@ -40,7 +45,7 @@ export function RequestStatusChart({
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
-              data={data}
+              data={filteredData}
               cx="50%"
               cy="50%"
               innerRadius={60}
@@ -52,7 +57,7 @@ export function RequestStatusChart({
                 `${name}: ${(percent * 100).toFixed(0)}%`
               }
             >
-              {data.map((entry, index) => (
+              {filteredData.map((entry, index) => (
                 <Cell 
                   key={`cell-${index}`} 
                   fill={entry.color}

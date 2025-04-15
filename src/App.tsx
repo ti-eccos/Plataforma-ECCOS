@@ -12,6 +12,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
+import UserSolicitacoes from "@/pages/UserSolicitacoes";
 
 // Admin Pages
 import Equipamentos from "./pages/admin/Equipamentos";
@@ -23,6 +24,8 @@ import Solicitacoes from "./pages/admin/Solicitacoes";
 import NovaReserva from "./pages/solicitations/NovaReserva";
 import NovaCompra from "./pages/solicitations/NovaCompra";
 import NovaSuporte from "./pages/solicitations/NovaSuporte";
+
+
 
 const queryClient = new QueryClient();
 
@@ -87,6 +90,8 @@ const App = () => (
             {/* Index route redirect */}
             <Route path="/index" element={<Navigate to="/" replace />} />
             
+            <Route path="/minhas-solicitacoes" element={<UserSolicitacoes />} />
+
             {/* 404 Route */}
             <Route path="*" element={<NotFound />} />
           </Routes>

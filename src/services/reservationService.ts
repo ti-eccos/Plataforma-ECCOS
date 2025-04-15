@@ -1,3 +1,4 @@
+// src/services/reservationService.ts
 import { db } from "@/lib/firebase";
 import { 
   collection, 
@@ -13,6 +14,7 @@ import {
   Timestamp
 } from "firebase/firestore";
 
+// Tipos e Interfaces
 export type RequestStatus = "pending" | "approved" | "rejected" | "in-progress" | "completed" | "canceled";
 export type RequestType = "reservation" | "purchase" | "support";
 
@@ -30,10 +32,12 @@ export interface RequestData {
   status: RequestStatus;
   userName: string;
   userEmail: string;
+  userId: string;
   createdAt: Timestamp;
   [key: string]: any;
 }
 
+// Funções do Serviço
 export const addReservation = async (data: {
   date: Date;
   startTime: string;
@@ -43,13 +47,14 @@ export const addReservation = async (data: {
   purpose: string;
   userName: string;
   userEmail: string;
+  userId: string;
   status?: RequestStatus;
-}) => {
+}): Promise<string> => {
   const docRef = await addDoc(collection(db, 'reservations'), {
     ...data,
-    type: 'reservation' as const,
+    type: 'reservation',
     status: data.status || 'pending',
-    createdAt: new Date(),
+    createdAt: Timestamp.now(),
     hidden: false
   });
   return docRef.id;
@@ -60,7 +65,7 @@ export const checkConflicts = async (data: {
   startTime: string;
   endTime: string;
   equipmentIds: string[];
-}) => {
+}): Promise<Array<{ equipmentName: string; startTime: string; endTime: string }>> => {
   const conflicts: Array<{
     equipmentName: string;
     startTime: string;
@@ -101,9 +106,7 @@ export const checkConflicts = async (data: {
     
     reservationDate.setHours(0, 0, 0, 0);
     
-    if (reservationDate.getTime() !== requestDate.getTime()) {
-      continue;
-    }
+    if (reservationDate.getTime() !== requestDate.getTime()) continue;
     
     const [resStartHours, resStartMinutes] = reservation.startTime.split(':').map(Number);
     const [resEndHours, resEndMinutes] = reservation.endTime.split(':').map(Number);
@@ -141,39 +144,29 @@ export const getAllRequests = async (showHidden: boolean): Promise<RequestData[]
   for (const col of collections) {
     const q = showHidden 
       ? query(collection(db, col))
-      : query(
-          collection(db, col),
-          where("hidden", "==", false)
-        );
+      : query(collection(db, col), where("hidden", "==", false));
     
     const querySnapshot = await getDocs(q);
     
     querySnapshot.forEach((doc) => {
       const data = doc.data();
-      
-      const createdAt = data.createdAt || Timestamp.now();
-      const userName = data.userName || "Usuário não identificado";
-      const userEmail = data.userEmail || "";
-      const status = data.status || "pending";
-      const type = data.type || col.slice(0, -1);
-      
       requests.push({
         id: doc.id,
         collectionName: col,
-        type: type as RequestType,
-        status: status as RequestStatus,
-        userName,
-        userEmail,
-        createdAt,
+        type: (data.type || col.slice(0, -1)) as RequestType,
+        status: (data.status || "pending") as RequestStatus,
+        userName: data.userName || "Usuário não identificado",
+        userEmail: data.userEmail || "",
+        userId: data.userId || "",
+        createdAt: data.createdAt || Timestamp.now(),
         ...data
       });
     });
   }
 
-  return requests.sort((a, b) => {
-    if (!a.createdAt || !b.createdAt) return 0;
-    return b.createdAt.toMillis() - a.createdAt.toMillis();
-  });
+  return requests.sort((a, b) => 
+    b.createdAt.toMillis() - a.createdAt.toMillis()
+  );
 };
 
 export const getRequestById = async (id: string, collectionName: string): Promise<RequestData> => {
@@ -192,6 +185,7 @@ export const getRequestById = async (id: string, collectionName: string): Promis
     status: data.status as RequestStatus,
     userName: data.userName,
     userEmail: data.userEmail,
+    userId: data.userId,
     createdAt: data.createdAt,
     ...data
   };
@@ -231,10 +225,46 @@ export const deleteRequest = async (id: string, collectionName: string): Promise
 export const addPurchaseRequest = async (data: Omit<RequestData, 'id' | 'collectionName'>): Promise<string> => {
   const docRef = await addDoc(collection(db, 'purchases'), {
     ...data,
-    type: 'purchase' as const,
-    status: 'pending' as const,
+    type: 'purchase',
+    status: 'pending',
     createdAt: Timestamp.now(),
     hidden: false
   });
   return docRef.id;
+};
+
+export const getUserRequests = async (userId: string): Promise<RequestData[]> => {
+  if (!userId) return [];
+  
+  const collections = ["reservations", "purchases", "supports"];
+  const requests: RequestData[] = [];
+
+  for (const col of collections) {
+    const q = query(
+      collection(db, col),
+      where("userId", "==", userId),
+      where("status", "!=", "canceled")
+    );
+    
+    const querySnapshot = await getDocs(q);
+    
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      requests.push({
+        id: doc.id,
+        collectionName: col,
+        type: data.type as RequestType,
+        status: data.status as RequestStatus,
+        userName: data.userName,
+        userEmail: data.userEmail,
+        userId: data.userId,
+        createdAt: data.createdAt,
+        ...data
+      });
+    });
+  }
+
+  return requests.sort((a, b) => 
+    b.createdAt.toMillis() - a.createdAt.toMillis()
+  );
 };
