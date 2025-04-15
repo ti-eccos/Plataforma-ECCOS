@@ -1,4 +1,5 @@
 
+import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
@@ -64,28 +65,16 @@ const Login = () => {
       
       <Card className="w-full max-w-md glass-morphism">
         <CardHeader className="space-y-4 text-center">
-          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-eccos-blue to-eccos-green rounded-xl flex items-center justify-center">
-            <motion.div 
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ 
-                type: "spring", 
-                stiffness: 260, 
-                damping: 20,
-                delay: 0.3
-              }}
-            >
-              <span className="text-3xl font-bold text-white">E</span>
-            </motion.div>
-          </div>
           
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5, duration: 0.5 }}
-          >
-            <CardTitle className="text-2xl text-gradient">ECCOS</CardTitle>
-            <CardDescription className="text-muted-foreground text-base mt-1">
+          ><CardDescription className="text-2xl text-gradient">
+          Colégio
+        </CardDescription>  
+            <CardTitle className="text-5xl text-gradient">ECCOS</CardTitle>
+            <CardDescription className="text-muted-foreground text-base mt-1 text-2xl">
               Plataforma de Tecnologia
             </CardDescription>
           </motion.div>
