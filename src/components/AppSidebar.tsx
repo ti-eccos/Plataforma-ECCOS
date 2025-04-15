@@ -131,9 +131,6 @@ export const AppSidebar = () => {
     >
       <div className="flex items-center justify-between p-4 h-16">
         <div className="flex items-center gap-3 overflow-hidden">
-          <div className="h-8 w-8 bg-eccos-blue rounded-md flex items-center justify-center text-white font-bold">
-            E
-          </div>
           <span 
             className={cn(
               "text-xl font-bold text-white transition-all duration-300",
