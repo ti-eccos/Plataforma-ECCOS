@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
@@ -102,22 +101,19 @@ export const AppSidebar = () => {
   const location = useLocation();
   const { currentUser, isAdmin, signOut } = useAuth();
   
-  // No componente AppSidebar, atualize o userMenuItems para:
-const userMenuItems = [
-  { icon: Home, label: "Página Inicial", href: "/" },
-  { icon: FileText, label: "Minhas Solicitações", href: "/minhas-solicitacoes" },
-  { 
-    icon: PlusCircle,
-    label: "Nova Solicitação",
-    items: [
-      { label: "Reserva", href: "/nova-solicitacao/reserva" },
-      { label: "Compra", href: "/nova-solicitacao/compra" },
-      { label: "Suporte", href: "/nova-solicitacao/suporte" },
-    ]
-  },
-   // Rota corrigida
-];
-  
+  const userMenuItems = [
+    { icon: Home, label: "Página Inicial", href: "/" },
+    { icon: FileText, label: "Minhas Solicitações", href: "/minhas-solicitacoes" },
+    { 
+      icon: PlusCircle,
+      label: "Nova Solicitação",
+      items: [
+        { label: "Reserva", href: "/nova-solicitacao/reserva" },
+        { label: "Compra", href: "/nova-solicitacao/compra" },
+        { label: "Suporte", href: "/nova-solicitacao/suporte" },
+      ]
+    },
+  ];
   
   const adminMenuItems = [
     { icon: Laptop, label: "Equipamentos", href: "/equipamentos" },
@@ -130,7 +126,7 @@ const userMenuItems = [
     <div
       className={cn(
         "h-screen bg-background border-r border-border flex flex-col transition-all duration-300 z-10",
-        expanded ? "w-64" : "w-16"
+        expanded ? "w-64" : "w-16",
       )}
     >
       <div className="flex items-center justify-between p-4 h-16">
@@ -144,15 +140,7 @@ const userMenuItems = [
             ECCOS
           </span>
         </div>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={() => setExpanded(!expanded)} 
-          className="text-white hover:bg-white/10"
-        >
-          {expanded ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </Button>
-      </div>
+              </div>
 
       <div className="flex-1 overflow-y-auto px-2 py-4 space-y-4 scrollbar-none">
         {userMenuItems.map((item, index) => {

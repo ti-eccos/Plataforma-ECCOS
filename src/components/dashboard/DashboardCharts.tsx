@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { RequestStatusChart } from "@/components/dashboard/RequestStatusChart";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
+import { TopUsersChart } from "@/components/dashboard/TopUsersChart";
 
 interface PieData {
   name: string;
@@ -11,32 +12,42 @@ interface PieData {
   color: string;
 }
 
+interface TopUserData {
+  userId: string;
+  userName: string;
+  requestCount: number;
+}
+
+// Atualizando a interface para incluir topUsersData
 interface DashboardChartsProps {
   requestStatusData?: PieData[];
   equipmentTypeData?: PieData[];
   requestTypeData?: PieData[];
   statusData?: PieData[]; // Adicionado para compatibilidade
+  topUsersData?: TopUserData[]; // Adicionado para o novo gráfico de usuários ativos
   requests?: any[];
   hideOtherCharts?: boolean;
-  darkMode?: boolean; // Novo prop para controlar o tema escuro
+  darkMode?: boolean;
 }
 
 export function DashboardCharts({
   requestStatusData,
   equipmentTypeData,
   requestTypeData,
+  topUsersData,
   statusData, // Para compatibilidade com o uso anterior
   requests,
   hideOtherCharts = false,
   darkMode = false
 }: DashboardChartsProps) {
   const navigate = useNavigate();
-
+  const handleNavigateToMyRequests = () => navigate('/minhas-solicitacoes');
   // Usar statusData se requestStatusData não for fornecido (para compatibilidade)
   const statusChartData = requestStatusData || statusData;
 
   const handleNavigateToRequests = () => navigate('/solicitacoes');
   const handleNavigateToEquipment = () => navigate('/equipamentos');
+  const handleNavigateToUsers = () => navigate('/usuarios');
 
   // Classes condicionais baseadas no tema escuro
   const cardClass = darkMode 
@@ -50,11 +61,16 @@ export function DashboardCharts({
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Status das Solicitações */}
       {statusChartData && (
-        <Card className={cardClass} onClick={handleNavigateToRequests}>
+        <Card className={cardClass}>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span>Status das Solicitações</span>
-              <Button variant="ghost" size="sm" className={buttonClass}>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className={buttonClass}
+                onClick={handleNavigateToRequests}
+              >
                 Ver Detalhes
               </Button>
             </CardTitle>
@@ -72,11 +88,16 @@ export function DashboardCharts({
 
       {/* Gráfico de Tipos de Solicitação */}
       {requestTypeData && (
-        <Card className={cardClass} onClick={handleNavigateToRequests}>
+        <Card className={cardClass}>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span>Tipos de Solicitações</span>
-              <Button variant="ghost" size="sm" className={buttonClass}>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className={buttonClass}
+                onClick={handleNavigateToRequests}
+              >
                 Ver Detalhes
               </Button>
             </CardTitle>
@@ -102,7 +123,7 @@ export function DashboardCharts({
                 <CardTitle className="flex items-center justify-between">
                   <span>Tipos de Equipamentos</span>
                   <Button variant="ghost" size="sm" className={buttonClass}>
-                    Ver Inventário
+                    Ver Equipamentos
                   </Button>
                 </CardTitle>
                 <CardDescription className={descriptionClass}>
@@ -116,16 +137,42 @@ export function DashboardCharts({
               </CardContent>
             </Card>
           )}
+
+          {/* Novo gráfico - Usuários Mais Ativos */}
+          {topUsersData && topUsersData.length > 0 && (
+            <Card className={cardClass} onClick={handleNavigateToUsers}>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Usuários Mais Ativos</span>
+                  <Button variant="ghost" size="sm" className={buttonClass}>
+                    Ver Usuários
+                  </Button>
+                </CardTitle>
+                <CardDescription className={descriptionClass}>
+                  Top 5 usuários com mais solicitações
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-80">
+                  <TopUsersChart data={topUsersData} darkMode={darkMode} />
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
 
-      {/* Atividade Recente */}
       {requests && requests.length > 0 && (
-        <Card className={cardClass} onClick={handleNavigateToRequests}>
+        <Card className={`${cardClass} lg:col-span-2`}>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span>Atividade Recente</span>
-              <Button variant="ghost" size="sm" className={buttonClass}>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className={buttonClass}
+                onClick={handleNavigateToRequests}
+              >
                 Ver Todas
               </Button>
             </CardTitle>

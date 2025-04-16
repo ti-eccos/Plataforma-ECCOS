@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import AppLayout from "@/components/AppLayout";
@@ -11,7 +10,7 @@ import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
 import UserDashboard from "../components/dashboard/UserDashboard";
 import { DashboardLoading } from "@/components/dashboard/DashboardLoading";
 
-const Dashboard = () => {
+export const Dashboard = () => {
   const { currentUser, isAdmin } = useAuth();
   
   // Fetch all requests
@@ -113,6 +112,33 @@ const Dashboard = () => {
     { name: 'Suporte', value: supportRequests, color: '#ec4899' }
   ];
 
+  // Get top users by request count
+  const userRequestCounts = requests.reduce((acc: Record<string, any>, req: any) => {
+    const userName = req.userName || 'Usuário Desconhecido';
+    const userId = req.userId || 'unknown';
+    
+    if (!acc[userId]) {
+      acc[userId] = {
+        userId,
+        userName,
+        requestCount: 0
+      };
+    }
+    
+    acc[userId].requestCount++;
+    return acc;
+  }, {});
+  
+  // Convert to array, sort by count, and take top 5
+  const topUsersData = Object.values(userRequestCounts)
+  .sort((a: any, b: any) => b.requestCount - a.requestCount)
+  .slice(0, 5)
+  .map((user: any) => ({
+    userId: user.userId,       // Add userId here
+    userName: user.userName,
+    requestCount: user.requestCount,
+  }));
+
   return (
     <AppLayout>
       <div className="space-y-8">
@@ -136,6 +162,7 @@ const Dashboard = () => {
               requestStatusData={requestStatusData}
               equipmentTypeData={equipmentTypeData}
               requestTypeData={requestTypeData}
+              topUsersData={topUsersData}
               requests={requests}
             />
           </div>
@@ -145,4 +172,5 @@ const Dashboard = () => {
   );
 };
 
+// Adicione esta linha para exportar como padrão
 export default Dashboard;

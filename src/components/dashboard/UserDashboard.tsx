@@ -7,7 +7,7 @@ import { DashboardLoading } from "@/components/dashboard/DashboardLoading";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { useNavigate } from "react-router-dom";
 import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
 
 enum RequestStatus {
@@ -55,6 +55,8 @@ type Request = {
 
 const UserDashboard = () => {
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
+  const handleNavigateToRequests = () => navigate('/minhas-solicitacoes');
 
   const convertFirestoreData = (data: any): Request | null => {
     try {
@@ -176,19 +178,19 @@ const UserDashboard = () => {
   }, [isError, error]);
 
   const statusLabels: Record<RequestStatus, string> = {
-    [RequestStatus.pending]: "Pendente",
-    [RequestStatus.approved]: "Aprovada",
-    [RequestStatus.rejected]: "Reprovada",
-    [RequestStatus['in-progress']]: "Em Andamento",
-    [RequestStatus.completed]: "Concluída",
+    [RequestStatus.pending]: "Pendentes",
+    [RequestStatus.approved]: "Aprovadas",
+    [RequestStatus.rejected]: "Reprovadas",
+    [RequestStatus['in-progress']]: "Em Progresso", // Corrigido ortografia
+    [RequestStatus.completed]: "Concluídas",
   };
 
   const statusColors: Record<RequestStatus, string> = {
-    [RequestStatus.pending]: "bg-yellow-500",
-    [RequestStatus.approved]: "bg-green-500",
-    [RequestStatus.rejected]: "bg-red-500",
-    [RequestStatus['in-progress']]: "bg-blue-500",
-    [RequestStatus.completed]: "bg-purple-500",
+    [RequestStatus.pending]: "#F59E0B",    // Amarelo-Âmbar (Pendentes)
+    [RequestStatus.approved]: "#10B981",   // Verde-Esmeralda (Aprovadas)
+    [RequestStatus['in-progress']]: "#3B82F6", // Azul (Em Progresso)
+    [RequestStatus.rejected]: "#EF4444",   // Vermelho (Mantido padrão)
+    [RequestStatus.completed]: "#8B5CF6",  // Roxo (Mantido padrão)
   };
 
   const statusCounts = Object.values(RequestStatus).reduce((acc, status) => {
@@ -196,7 +198,8 @@ const UserDashboard = () => {
     return acc;
   }, {} as Record<RequestStatus, number>);
 
-  const statusChartData = Object.values(RequestStatus).map((status) => ({
+  const statusChartData = [RequestStatus.pending, RequestStatus.approved, RequestStatus['in-progress']]
+  .map((status) => ({
     name: statusLabels[status],
     value: statusCounts[status] || 0,
     color: statusColors[status]
@@ -250,20 +253,24 @@ const UserDashboard = () => {
             {/* Cards de status */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
               {Object.values(RequestStatus).map((status) => (
-                <Card key={status} className="bg-gray-800 border-gray-700 text-white">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      {statusLabels[status]}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{statusCounts[status] || 0}</div>
-                    <Badge className={`mt-2 ${statusColors[status]}`}>
-                      Solicitações
-                    </Badge>
-                  </CardContent>
-                </Card>
-              ))}
+  <Card 
+    key={status} 
+    className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700 transition-colors cursor-pointer"
+    onClick={handleNavigateToRequests}
+  >
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-medium">
+        {statusLabels[status]}
+      </CardTitle>
+    </CardHeader>
+    <CardContent>
+      <div className="text-2xl font-bold">{statusCounts[status] || 0}</div>
+      <Badge className={`mt-2 ${statusColors[status]}`}>
+        Solicitações
+      </Badge>
+    </CardContent>
+  </Card>
+))}
             </div>
 
             <DashboardCharts
@@ -272,34 +279,6 @@ const UserDashboard = () => {
               requests={requests}
               darkMode={true}
             />
-
-            {/* Atividades recentes */}
-            <Card className="bg-gray-800 border-gray-700 text-white">
-  <CardHeader className="flex flex-row items-center justify-between">
-    <div>
-      <CardTitle>Status das Solicitações</CardTitle>
-      <p className="text-xs text-gray-400">Filtros por Estado</p>
-    </div>
-  </CardHeader>
-  <CardContent>
-    <div className="space-y-3">
-      {Object.values(RequestStatus).map((status) => (
-        <div 
-          key={status}
-          className="flex items-center justify-between p-3 hover:bg-gray-700 rounded-lg transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <div className={`w-3 h-3 rounded-full ${statusColors[status]}`} />
-            <span className="capitalize">{statusLabels[status]}</span>
-          </div>
-          <span className="text-gray-400">
-            {statusCounts[status] || 0}
-          </span>
-        </div>
-      ))}
-    </div>
-  </CardContent>
-</Card>
           </>
         )}
       </div>
