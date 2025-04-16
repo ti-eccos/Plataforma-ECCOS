@@ -41,25 +41,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState<boolean>(true);
   const { toast } = useToast();
 
-  // Define isSuperAdmin e isAdmin com base no usuário atual
   const isSuperAdmin = currentUser?.email === "suporte@colegioeccos.com.br";
   const isAdmin = currentUser?.role === "admin" || isSuperAdmin;
 
-  // Caso o hook useToast não garanta a estabilidade da função toast, removemos-o
-  // da lista de dependências para evitar reexecuções desnecessárias.
   useEffect(() => {
+    let isMounted = true;
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      if (!isMounted) return;
+
       if (firebaseUser) {
-        // Verifica se o email pertence ao domínio permitido
         if (!firebaseUser.email?.endsWith("@colegioeccos.com.br")) {
           await firebaseSignOut(auth);
-          toast({
-            title: "Acesso negado",
-            description: "Apenas emails do domínio @colegioeccos.com.br são permitidos.",
-            variant: "destructive"
-          });
-          setCurrentUser(null);
-          setLoading(false);
+          if (isMounted) {
+            toast({
+              title: "Acesso negado",
+              description: "Apenas emails do domínio @colegioeccos.com.br são permitidos.",
+              variant: "destructive"
+            });
+            setCurrentUser(null);
+            setLoading(false);
+          }
           return;
         }
 
@@ -74,23 +75,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             
             if (userData.blocked) {
               await firebaseSignOut(auth);
-              toast({
-                title: "Acesso bloqueado",
-                description: "Sua conta foi bloqueada. Entre em contato com um administrador.",
-                variant: "destructive"
-              });
-              setCurrentUser(null);
-              setLoading(false);
+              if (isMounted) {
+                toast({
+                  title: "Acesso bloqueado",
+                  description: "Sua conta foi bloqueada. Entre em contato com um administrador.",
+                  variant: "destructive"
+                });
+                setCurrentUser(null);
+                setLoading(false);
+              }
               return;
             }
             
-            // Atualiza o campo lastActive se o documento já existe
             await setDoc(userRef, {
               ...userData,
               lastActive: new Date()
             }, { merge: true });
           } else {
-            // Define o papel do usuário conforme o email
             const role: UserRole = firebaseUser.email === "suporte@colegioeccos.com.br" 
               ? "superadmin" 
               : "user";
@@ -110,37 +111,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             await setDoc(userRef, userData);
           }
           
-          setCurrentUser({
-            uid: firebaseUser.uid,
-            email: firebaseUser.email || "",
-            displayName: firebaseUser.displayName || "Usuário sem nome",
-            photoURL: firebaseUser.photoURL,
-            role: userData.role || "user",
-            ...userData
-          });
+          if (isMounted) {
+            setCurrentUser({
+              uid: firebaseUser.uid,
+              email: firebaseUser.email || "",
+              displayName: firebaseUser.displayName || "Usuário sem nome",
+              photoURL: firebaseUser.photoURL,
+              role: userData.role || "user",
+              ...userData
+            });
+          }
         } catch (error) {
           console.error("Error handling auth state:", error);
-          toast({
-            title: "Erro",
-            description: "Ocorreu um erro ao carregar seus dados.",
-            variant: "destructive"
-          });
+          if (isMounted) {
+            toast({
+              title: "Erro",
+              description: "Ocorreu um erro ao carregar seus dados.",
+              variant: "destructive"
+            });
+          }
         }
-      } else {
+      } else if (isMounted) {
         setCurrentUser(null);
       }
-      setLoading(false);
+      if (isMounted) setLoading(false);
     });
 
-    return () => unsubscribe();
-  }, []); // Removemos 'toast' da lista de dependências
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, []);
 
-  // Memorizamos signInWithGoogle para evitar recriações desnecessárias
   const signInWithGoogle = useCallback(async () => {
     try {
       setLoading(true);
       await signInWithPopup(auth, googleProvider);
-      // A notificação de sucesso pode ser exibida em outra parte (por exemplo, na tela de login)
     } catch (error: any) {
       console.error("Login error:", error);
       toast({
@@ -153,7 +159,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [toast]);
 
-  // Memorizamos signOut
   const signOut = useCallback(async () => {
     try {
       await firebaseSignOut(auth);
@@ -171,7 +176,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [toast]);
 
-  // Memorizamos o valor do contexto para evitar re-renderizações em cascata
   const authContextValue = useMemo(() => ({
     currentUser,
     user: currentUser,
