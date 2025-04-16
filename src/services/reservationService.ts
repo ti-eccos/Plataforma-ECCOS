@@ -233,38 +233,53 @@ export const addPurchaseRequest = async (data: Omit<RequestData, 'id' | 'collect
   return docRef.id;
 };
 
-export const getUserRequests = async (userId: string): Promise<RequestData[]> => {
-  if (!userId) return [];
+export const getUserRequests = async (userId: string, userEmail?: string): Promise<RequestData[]> => {
+  console.log("Buscando solicitações para:", userId, userEmail);
+  if (!userId && !userEmail) return [];
   
   const collections = ["reservations", "purchases", "supports"];
   const requests: RequestData[] = [];
 
-  for (const col of collections) {
-    const q = query(
-      collection(db, col),
-      where("userId", "==", userId),
-      where("status", "!=", "canceled")
-    );
-    
-    const querySnapshot = await getDocs(q);
-    
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      requests.push({
-        id: doc.id,
-        collectionName: col,
-        type: data.type as RequestType,
-        status: data.status as RequestStatus,
-        userName: data.userName,
-        userEmail: data.userEmail,
-        userId: data.userId,
-        createdAt: data.createdAt,
-        ...data
+  try {
+    for (const col of collections) {
+      console.log(`Buscando na coleção: ${col}`);
+      
+      // Usar email em vez de userId
+      const q = userEmail 
+        ? query(
+            collection(db, col),
+            where("userEmail", "==", userEmail),
+            where("status", "!=", "canceled")
+          )
+        : query(
+            collection(db, col),
+            where("userId", "==", userId),
+            where("status", "!=", "canceled")
+          );
+      
+      const querySnapshot = await getDocs(q);
+      console.log(`Documentos encontrados em ${col}:`, querySnapshot.size);
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        requests.push({
+          id: doc.id,
+          collectionName: col,
+          type: data.type || col.slice(0, -1),
+          status: data.status || 'pending',
+          userName: data.userName || '',
+          userEmail: data.userEmail || '',
+          userId: data.userId || userId,
+          createdAt: data.createdAt,
+          ...data
+        });
       });
-    });
-  }
+    }
 
-  return requests.sort((a, b) => 
-    b.createdAt.toMillis() - a.createdAt.toMillis()
-  );
+    console.log("Total de solicitações encontradas:", requests.length);
+    return requests;
+  } catch (error) {
+    console.error("Erro ao buscar solicitações do usuário:", error);
+    return [];
+  }
 };

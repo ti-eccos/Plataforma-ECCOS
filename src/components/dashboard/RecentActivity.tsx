@@ -37,7 +37,15 @@ export const RecentActivity = ({ requests, showType = false }: RecentActivityPro
             <div>
               <p className="text-sm font-medium">{request.userName}</p>
               <p className="text-xs text-muted-foreground">
-                {format(request.createdAt.toDate(), "dd/MM/yy HH:mm", { locale: ptBR })}
+              {format(
+  new Date(
+    typeof request.createdAt === 'string' 
+      ? request.createdAt 
+      : Number(request.createdAt) * 1000 // Convert to number and handle Unix timestamp
+  ), 
+  "dd/MM/yy HH:mm", 
+  { locale: ptBR }
+)}
               </p>
             </div>
           </div>
