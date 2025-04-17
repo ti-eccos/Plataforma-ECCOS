@@ -35,61 +35,86 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
+        {/* Agora informamos o basename */}
+        <BrowserRouter basename={import.meta.env.BASE_URL}>
           <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
-            
+
             {/* Redirect / to dashboard */}
-            <Route path="/" element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } />
-            
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+
             {/* Protected User Routes */}
-            <Route path="/nova-solicitacao/reserva" element={
-              <ProtectedRoute>
-                <NovaReserva />
-              </ProtectedRoute>
-            } />
-            <Route path="/nova-solicitacao/compra" element={
-              <ProtectedRoute>
-                <NovaCompra />
-              </ProtectedRoute>
-            } />
-            <Route path="/nova-solicitacao/suporte" element={
-              <ProtectedRoute>
-                <NovaSuporte />
-              </ProtectedRoute>
-            } />
-            
+            <Route
+              path="/nova-solicitacao/reserva"
+              element={
+                <ProtectedRoute>
+                  <NovaReserva />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/nova-solicitacao/compra"
+              element={
+                <ProtectedRoute>
+                  <NovaCompra />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/nova-solicitacao/suporte"
+              element={
+                <ProtectedRoute>
+                  <NovaSuporte />
+                </ProtectedRoute>
+              }
+            />
+
             {/* Protected Admin Routes */}
-            <Route path="/equipamentos" element={
-              <ProtectedRoute requiresAdmin>
-                <Equipamentos />
-              </ProtectedRoute>
-            } />
-            <Route path="/disponibilidade" element={
-              <ProtectedRoute requiresAdmin>
-                <Disponibilidade />
-              </ProtectedRoute>
-            } />
-            <Route path="/usuarios" element={
-              <ProtectedRoute requiresAdmin>
-                <Usuarios />
-              </ProtectedRoute>
-            } />
-            <Route path="/solicitacoes" element={
-              <ProtectedRoute requiresAdmin>
-                <Solicitacoes />
-              </ProtectedRoute>
-            } />
-            
+            <Route
+              path="/equipamentos"
+              element={
+                <ProtectedRoute requiresAdmin>
+                  <Equipamentos />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/disponibilidade"
+              element={
+                <ProtectedRoute requiresAdmin>
+                  <Disponibilidade />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/usuarios"
+              element={
+                <ProtectedRoute requiresAdmin>
+                  <Usuarios />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/solicitacoes"
+              element={
+                <ProtectedRoute requiresAdmin>
+                  <Solicitacoes />
+                </ProtectedRoute>
+              }
+            />
+
             {/* Index route redirect */}
             <Route path="/index" element={<Navigate to="/" replace />} />
-            
+
             <Route path="/minhas-solicitacoes" element={<UserSolicitacoes />} />
 
             {/* 404 Route */}
