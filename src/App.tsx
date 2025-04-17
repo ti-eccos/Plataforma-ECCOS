@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 // Pages
 import Login from "./pages/Login";
@@ -25,9 +26,36 @@ import NovaReserva from "./pages/solicitations/NovaReserva";
 import NovaCompra from "./pages/solicitations/NovaCompra";
 import NovaSuporte from "./pages/solicitations/NovaSuporte";
 
-
-
 const queryClient = new QueryClient();
+
+const RedirectToDashboard = () => {
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    if (sessionStorage.redirect) {
+      const redirect = sessionStorage.redirect;
+      delete sessionStorage.redirect;
+      navigate(redirect);
+    }
+  }, [navigate]);
+
+  return null;
+};
+
+const RoutingHandler = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const savedPath = sessionStorage.getItem('redirectPath');
+    if (savedPath) {
+      sessionStorage.removeItem('redirectPath');
+      navigate(savedPath.replace('/eccos-portal-digital', ''));
+    }
+  }, [navigate, location]);
+
+  return null;
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -35,14 +63,14 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        {/* Agora informamos o basename */}
         <BrowserRouter basename={import.meta.env.BASE_URL}>
+          <RoutingHandler />
           <Routes>
-            {/* Public Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
+            <Route path="/404" element={<NotFound />} />
+            <Route path="*" element={<RedirectToDashboard />} />
 
-            {/* Redirect / to dashboard */}
             <Route
               path="/"
               element={
@@ -52,7 +80,7 @@ const App = () => (
               }
             />
 
-            {/* Protected User Routes */}
+            {/* Rotas protegidas para usuários */}
             <Route
               path="/nova-solicitacao/reserva"
               element={
@@ -78,7 +106,7 @@ const App = () => (
               }
             />
 
-            {/* Protected Admin Routes */}
+            {/* Rotas administrativas */}
             <Route
               path="/equipamentos"
               element={
@@ -112,12 +140,8 @@ const App = () => (
               }
             />
 
-            {/* Index route redirect */}
             <Route path="/index" element={<Navigate to="/" replace />} />
-
             <Route path="/minhas-solicitacoes" element={<UserSolicitacoes />} />
-
-            {/* 404 Route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
