@@ -1,10 +1,12 @@
+// emailService.ts
 import nodemailer from "nodemailer";
 import admin from "firebase-admin";
 import path from "path";
 import fs from "fs";
+// Corrigir importação da função getAllUsers
+import { getAllUsers } from "./userService"; // Adicione esta linha
 
-// Certificado Firebase Admin (ex: .env.local ou firebase-service-account.json)
-const serviceAccountPath = path.resolve(process.cwd(), ".env.local");
+const serviceAccountPath = path.resolve(process.cwd(), "firebase-service-account.json");
 
 if (!admin.apps.length) {
   const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, "utf-8"));
@@ -13,6 +15,7 @@ if (!admin.apps.length) {
   });
 }
 
+// Declarar o transporter antes de usar
 const transporter = nodemailer.createTransport({
   host: "smtplw.com.br",
   port: 465,
@@ -26,14 +29,12 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Interface para e-mails diretos
 export interface EmailPayload {
   to: string;
   subject: string;
   html: string;
 }
 
-// Envia e-mail para destinatário único
 export const sendEmail = async ({ to, subject, html }: EmailPayload): Promise<void> => {
   try {
     await transporter.sendMail({
@@ -49,32 +50,42 @@ export const sendEmail = async ({ to, subject, html }: EmailPayload): Promise<vo
   }
 };
 
-// Notifica todos os admins (admin ou superadmin) com base no Firestore
 export const notifyAdmins = async (subject: string, html: string): Promise<void> => {
   try {
-    const snapshot = await admin.firestore()
-      .collection("users")
-      .where("role", "in", ["admin", "superadmin"])
-      .get();
-
-    const adminEmails = snapshot.docs
-      .map(doc => doc.data().email)
-      .filter((email): email is string => !!email);
+    // Usar a função importada corretamente
+    const allUsers = await getAllUsers();
+    
+    const adminEmails = allUsers
+      .filter(user => 
+        (user.role === "admin" || user.role === "superadmin") && 
+        !user.blocked &&
+        user.email
+      )
+      .map(user => user.email) as string[];
 
     if (adminEmails.length === 0) return;
 
+    // Usar o transporter declarado
     await transporter.sendMail({
       from: '"Sistema de Reservas" <cirandinha2008@smtplw.com.br>',
-      to: adminEmails.join(","),
-      subject,
-      html,
+      bcc: adminEmails.join(","),
+      subject: `[Notificação] ${subject}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px;">
+          <h2 style="color: #1a365d;">Nova solicitação registrada</h2>
+          ${html}
+          <p style="margin-top: 20px; color: #666;">
+            Acesse o sistema para ver detalhes: ${process.env.NEXT_PUBLIC_APP_URL}
+          </p>
+        </div>
+      `,
       headers: {
         "x-source": "api",
         "x-api-message-id": Date.now().toString(),
       },
     });
 
-    console.log("Notificação enviada para admins.");
+    console.log("Notificação enviada para", adminEmails.length, "administradores.");
   } catch (error) {
     console.error("Erro ao notificar admins:", error);
     throw error;
