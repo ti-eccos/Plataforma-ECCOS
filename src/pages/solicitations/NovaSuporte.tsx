@@ -12,8 +12,8 @@ import * as z from "zod";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useAuth } from '@/contexts/AuthContext';
-import { db } from '@/lib/firebase';
-import { addDoc, collection, Timestamp } from 'firebase/firestore';
+import { addSupportRequest } from '@/services/reservationService';
+import { Timestamp } from 'firebase/firestore';
 
 const locationsByUnit = {
   'Berçário e Educação Infantil': [
@@ -77,7 +77,7 @@ const NovaSuporte = () => {
         hidden: false
       };
 
-      await addDoc(collection(db, 'supports'), payload);
+      await addSupportRequest(payload);
 
       toast.success('Solicitação enviada com sucesso!');
       form.reset();
@@ -118,7 +118,6 @@ const NovaSuporte = () => {
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                    {/* Campo Unidade */}
                     <FormField
                       control={form.control}
                       name="unit"
@@ -151,7 +150,6 @@ const NovaSuporte = () => {
                       )}
                     />
 
-                    {/* Campo Localização */}
                     <FormField
                       control={form.control}
                       name="location"
@@ -187,7 +185,6 @@ const NovaSuporte = () => {
                       )}
                     />
 
-                    {/* Campo Categoria */}
                     <FormField
                       control={form.control}
                       name="category"
@@ -214,7 +211,6 @@ const NovaSuporte = () => {
                       )}
                     />
 
-                    {/* Campo Prioridade */}
                     <FormField
                       control={form.control}
                       name="priority"
@@ -247,7 +243,6 @@ const NovaSuporte = () => {
                       )}
                     />
 
-                    {/* Campo Informações do Dispositivo */}
                     <FormField
                       control={form.control}
                       name="deviceInfo"
@@ -269,7 +264,6 @@ const NovaSuporte = () => {
                     />
                   </div>
 
-                  {/* Campo Descrição Detalhada */}
                   <FormField
                     control={form.control}
                     name="description"
@@ -292,7 +286,6 @@ const NovaSuporte = () => {
                     )}
                   />
 
-                  {/* Botões de Ação */}
                   <div className="flex justify-end gap-4">
                     <Button 
                       type="button" 

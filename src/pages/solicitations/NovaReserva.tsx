@@ -32,73 +32,53 @@ import { addReservation, checkConflicts } from '@/services/reservationService';
 import { useAuth } from '@/contexts/AuthContext';
 
 const LOCATIONS = [
-  'Recepção',
-  'Secretaria',
-  'Sala de atendimento',
-  'Sala de atendimento (Laranja)',
-  'Sala de auxiliar de coordenação fundamental 1',
-  'Sala de oficinas',
-  'Sala de música',
-  'Sala de science',
-  'Integral',
-  '4º Ano',
-  'Patio (Cantina)',
-  'Refeitório',
-  'Biblioteca (Inferior)',
-  '3º Ano',
-  '2º Ano',
-  '1º Ano',
-  'Sala dos professores',
-  'Sala de Linguas',
-  'Coordenação de linguas/Fundamental 2',
-  'Sala de artes',
-  'Coordenação Fundamental 1 / Coordenação de matemática',
-  '8º ano',
-  '7º Ano',
-  'Apoio pedagógico',
-  'Orientação educacional',
-  'TI',
-  'Sala de oficinas (Piso superior)',
-  '5º Ano',
-  '6º Ano',
-  'Biblioteca (Superior)',
-  'Sala de convivência',
-  '9º Ano'
+  'Recepção', 'Secretaria', 'Sala de atendimento', 
+  'Sala de atendimento (Laranja)', 'Sala de auxiliar de coordenação fundamental 1',
+  'Sala de oficinas', 'Sala de música', 'Sala de science', 'Integral', '4º Ano',
+  'Patio (Cantina)', 'Refeitório', 'Biblioteca (Inferior)', '3º Ano', '2º Ano',
+  '1º Ano', 'Sala dos professores', 'Sala de Linguas', 
+  'Coordenação de linguas/Fundamental 2', 'Sala de artes',
+  'Coordenação Fundamental 1 / Coordenação de matemática', '8º ano', '7º Ano',
+  'Apoio pedagógico', 'Orientação educacional', 'TI', 
+  'Sala de oficinas (Piso superior)', '5º Ano', '6º Ano',
+  'Biblioteca (Superior)', 'Sala de convivência', '9º Ano'
 ];
 
 const formSchema = z.object({
   date: z.date({
     required_error: "Data de reserva é obrigatória",
+    invalid_type_error: "Formato de data inválido"
   }),
-  startTime: z.string({
-    required_error: "Hora inicial é obrigatória",
-  }).regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Formato inválido (use HH:mm)"),
-  endTime: z.string({
-    required_error: "Hora final é obrigatória",
-  }).regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Formato inválido (use HH:mm)"),
-  selectedEquipment: z.array(z.string()).min(1, "Pelo menos um equipamento deve ser selecionado"),
-  location: z.string({
+  startTime: z.string({ required_error: "Hora inicial é obrigatória" })
+    .regex(/^(0[7-9]|1[0-9]):[0-5]\d$/, "Horário deve ser entre 07:00 e 19:00"),
+  endTime: z.string({ required_error: "Hora final é obrigatória" })
+    .regex(/^(0[7-9]|1[0-9]):[0-5]\d$/, "Horário deve ser entre 07:00 e 19:00"),
+  selectedEquipment: z.array(z.string(), {
+    required_error: "Selecione pelo menos um equipamento",
+    invalid_type_error: "Selecione equipamentos válidos"
+  }).min(1, "Pelo menos um equipamento deve ser selecionado"),
+  location: z.string({ 
     required_error: "Local de uso é obrigatório",
-  }),
-  purpose: z.string().min(10, "Finalidade deve ter pelo menos 10 caracteres"),
-}).refine((data) => {
-  const [startHours, startMinutes] = data.startTime.split(':').map(Number);
-  const [endHours, endMinutes] = data.endTime.split(':').map(Number);
-  const startTotal = startHours * 60 + startMinutes;
-  const endTotal = endHours * 60 + endMinutes;
-  return startTotal < endTotal;
-}, {
-  message: "A hora final deve ser depois da hora inicial",
-  path: ["endTime"],
-}).refine((data) => {
+    invalid_type_error: "Selecione um local válido"
+  }).min(1, "Local não pode estar vazio"),
+  purpose: z.string({
+    required_error: "Finalidade é obrigatória",
+    invalid_type_error: "Insira uma descrição válida"
+  }).min(10, "Finalidade deve ter pelo menos 10 caracteres")
+}).refine(data => {
   const [startH, startM] = data.startTime.split(':').map(Number);
   const [endH, endM] = data.endTime.split(':').map(Number);
-  const startTotal = startH * 60 + startM;
-  const endTotal = endH * 60 + endM;
-  return startTotal >= 420 && endTotal <= 1140;
+  return startH * 60 + startM < endH * 60 + endM;
+}, {
+  message: "A hora final deve ser depois da hora inicial",
+  path: ["endTime"]
+}).refine(data => {
+  const [startH, startM] = data.startTime.split(':').map(Number);
+  const [endH, endM] = data.endTime.split(':').map(Number);
+  return (startH >= 7 && startH < 19) && (endH > 7 && endH <= 19);
 }, {
   message: "O horário deve estar entre 07:00 e 19:00",
-  path: ["endTime"],
+  path: ["endTime"]
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -107,17 +87,9 @@ const autoCompleteTime = (value: string) => {
   const digits = value.replace(/\D/g, '');
   let formatted = '';
   
-  if (digits.length >= 1) {
-    formatted += digits.substring(0, 2);
-  }
-  
-  if (digits.length >= 3) {
-    formatted += ':' + digits.substring(2, 4);
-  }
-  
-  if (digits.length === 2 && value.length === 2) {
-    formatted += ':';
-  }
+  if (digits.length >= 1) formatted += digits.substring(0, 2);
+  if (digits.length >= 3) formatted += ':' + digits.substring(2, 4);
+  if (digits.length === 2 && value.length === 2) formatted += ':';
   
   return formatted.substring(0, 5);
 };
@@ -139,39 +111,27 @@ const NovaReserva = () => {
   });
 
   useEffect(() => {
-    const loadAvailableDates = async () => {
+    const loadData = async () => {
       try {
-        const dates = await getAvailableDates();
-        const validDates = dates.filter(date => 
-          date instanceof Date && !isNaN(date.getTime())
-        );
-        setAvailableDates(validDates);
+        const [dates, equipment] = await Promise.all([
+          getAvailableDates(),
+          getAllEquipment()
+        ]);
+        
+        setAvailableDates(dates.filter(date => 
+          date instanceof Date && !isNaN(date.getTime()) // Fechar parêntese corretamente
+        ));
+        setEquipment(equipment.sort((a, b) => a.name.localeCompare(b.name)));
       } catch (error) {
-        console.error("Error loading available dates:", error);
-        toast.error("Erro ao carregar datas disponíveis");
+        toast.error("Erro ao carregar dados iniciais");
       }
     };
-
-    const loadEquipment = async () => {
-      try {
-        const items = await getAllEquipment();
-        setEquipment(items);
-      } catch (error) {
-        console.error("Error loading equipment:", error);
-        toast.error("Erro ao carregar equipamentos");
-      }
-    };
-
-    loadAvailableDates();
-    loadEquipment();
+    loadData();
   }, []);
 
   const isDateAvailable = (date: Date) => {
-    if (!date || isNaN(date.getTime())) return false;
     return availableDates.some(availableDate => 
-      availableDate.getFullYear() === date.getFullYear() &&
-      availableDate.getMonth() === date.getMonth() &&
-      availableDate.getDate() === date.getDate()
+      availableDate.toDateString() === date.toDateString()
     );
   };
 
@@ -186,54 +146,44 @@ const NovaReserva = () => {
       });
 
       if (conflicts.length > 0) {
-        const conflictMessages = conflicts.map(conflict => 
-          `- ${conflict.equipmentName}: já reservado das ${conflict.startTime} às ${conflict.endTime}`
-        ).join('\n');
-        
         toast.error(
           <div>
-            <p>Conflitos de reserva detectados:</p>
-            <pre className="mt-2 p-2 bg-gray-100 rounded text-sm max-h-40 overflow-auto">
-              {conflictMessages}
-            </pre>
+            <p>Conflitos detectados:</p>
+            <ul className="mt-2 list-disc pl-4">
+              {conflicts.map((conflict, i) => (
+                <li key={i}>
+                  {conflict.equipmentName}: {conflict.startTime} - {conflict.endTime}
+                </li>
+              ))}
+            </ul>
           </div>
         );
         return;
       }
 
-      const [startH, startM] = values.startTime.split(':').map(Number);
-      const [endH, endM] = values.endTime.split(':').map(Number);
-      const startMinutes = startH * 60 + startM;
-      const endMinutes = endH * 60 + endM;
-      
-      const isWithinBusinessHours = 
-        startMinutes >= 420 && 
-        endMinutes <= 1140;
+      const autoApproved = isDateAvailable(values.date) && 
+        values.startTime >= '07:00' && 
+        values.endTime <= '19:00';
 
-      const autoApproved = 
-        conflicts.length === 0 &&
-        isWithinBusinessHours &&
-        isDateAvailable(values.date);
-
-      await addReservation({
-        date: values.date,
-        startTime: values.startTime,
-        endTime: values.endTime,
-        equipmentIds: values.selectedEquipment,
-        location: values.location,
-        purpose: values.purpose,
-        userName: currentUser?.displayName || "Usuário",
-        userEmail: currentUser?.email || "email@exemplo.com",
-        status: autoApproved ? 'approved' : 'pending'
-      });
+        await addReservation({
+          date: values.date, // Garantir que está presente
+          startTime: values.startTime,
+          endTime: values.endTime,
+          equipmentIds: values.selectedEquipment,
+          location: values.location,
+          purpose: values.purpose,
+          userName: currentUser?.displayName || "Usuário",
+          userEmail: currentUser?.email || "email@exemplo.com",
+          userId: currentUser?.uid || "",
+          status: autoApproved ? 'approved' : 'pending'
+        });
 
       toast.success(autoApproved 
         ? 'Reserva aprovada automaticamente!' 
-        : 'Solicitação de reserva enviada com sucesso!');
+        : 'Solicitação enviada para aprovação');
       form.reset();
     } catch (error) {
-      console.error("Error submitting reservation:", error);
-      toast.error("Erro ao enviar solicitação de reserva");
+      toast.error("Erro ao processar reserva");
     } finally {
       setIsSubmitting(false);
     }
@@ -245,7 +195,7 @@ const NovaReserva = () => {
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-gradient">Nova Reserva</h2>
           <p className="text-muted-foreground mt-1">
-            Preencha o formulário abaixo para solicitar a reserva de equipamentos.
+            Preencha o formulário para reservar equipamentos
           </p>
         </div>
 
@@ -256,12 +206,12 @@ const NovaReserva = () => {
               name="date"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel>Data</FormLabel>
+                  <FormLabel>Data *</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
-                          variant={"outline"}
+                          variant="outline"
                           className={cn(
                             "w-full pl-3 text-left font-normal",
                             !field.value && "text-muted-foreground"
@@ -284,11 +234,9 @@ const NovaReserva = () => {
                         disabled={(date) => 
                           isDateInPastOrToday(date) || !isDateAvailable(date)
                         }
-                        modifiers={{
-                          available: (date) => isDateAvailable(date),
-                        }}
+                        modifiers={{ available: availableDates }}
                         modifiersStyles={{
-                          available: { border: "2px solid green" },
+                          available: { border: "2px solid #22c55e" },
                         }}
                         initialFocus
                       />
@@ -305,15 +253,14 @@ const NovaReserva = () => {
                 name="startTime"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Hora Inicial</FormLabel>
+                    <FormLabel>Hora Inicial *</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="HH:mm"
+                        placeholder="07:00"
                         maxLength={5}
                         onChange={(e) => {
-                          const formatted = autoCompleteTime(e.target.value);
-                          field.onChange(formatted);
+                          field.onChange(autoCompleteTime(e.target.value));
                         }}
                       />
                     </FormControl>
@@ -327,15 +274,14 @@ const NovaReserva = () => {
                 name="endTime"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Hora Final</FormLabel>
+                    <FormLabel>Hora Final *</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="HH:mm"
+                        placeholder="19:00"
                         maxLength={5}
                         onChange={(e) => {
-                          const formatted = autoCompleteTime(e.target.value);
-                          field.onChange(formatted);
+                          field.onChange(autoCompleteTime(e.target.value));
                         }}
                       />
                     </FormControl>
@@ -351,37 +297,30 @@ const NovaReserva = () => {
               render={({ field }) => (
                 <FormItem>
                   <div className="mb-4">
-                    <FormLabel className="text-base">Equipamentos</FormLabel>
+                    <FormLabel className="text-base">Equipamentos *</FormLabel>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                    {equipment
-                      .slice()
-                      .sort((a, b) => a.name.localeCompare(b.name))
-                      .map((item) => (
-                        <FormItem
-                          key={item.id}
-                          className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4"
-                        >
-                          <FormControl>
-                            <Checkbox
-                              id={`equipment-${item.id}`}
-                              checked={field.value.includes(item.id)}
-                              onCheckedChange={(checked) => {
-                                const newValue = checked
-                                  ? [...field.value, item.id]
-                                  : field.value.filter((id: string) => id !== item.id);
-                                field.onChange(newValue);
-                              }}
-                            />
-                          </FormControl>
-                          <FormLabel 
-                            htmlFor={`equipment-${item.id}`} 
-                            className="font-normal cursor-pointer"
-                          >
-                            {item.name} ({item.type})
-                          </FormLabel>
-                        </FormItem>
-                      ))}
+                    {equipment.map((item) => (
+                      <FormItem
+                        key={item.id}
+                        className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4"
+                      >
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value.includes(item.id)}
+                            onCheckedChange={(checked) => {
+                              const newValue = checked
+                                ? [...field.value, item.id]
+                                : field.value.filter(id => id !== item.id);
+                              field.onChange(newValue);
+                            }}
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal cursor-pointer">
+                          {item.name} ({item.type})
+                        </FormLabel>
+                      </FormItem>
+                    ))}
                   </div>
                   <FormMessage />
                 </FormItem>
@@ -393,16 +332,16 @@ const NovaReserva = () => {
               name="location"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Local de Uso</FormLabel>
+                  <FormLabel>Local de Uso *</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
-                      placeholder="Digite o local de uso"
+                      placeholder="Selecione o local"
                       list="locations-list"
                     />
                   </FormControl>
                   <datalist id="locations-list">
-                    {LOCATIONS.map((location) => (
+                    {LOCATIONS.map(location => (
                       <option key={location} value={location} />
                     ))}
                   </datalist>
@@ -416,11 +355,11 @@ const NovaReserva = () => {
               name="purpose"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Finalidade</FormLabel>
+                  <FormLabel>Finalidade *</FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
-                      placeholder="Descreva para que você precisa deste equipamento"
+                      placeholder="Descreva o propósito da reserva..."
                       className="min-h-[120px]"
                     />
                   </FormControl>
@@ -434,7 +373,7 @@ const NovaReserva = () => {
               className="w-full md:w-auto" 
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Enviando..." : "Enviar Solicitação"}
+              {isSubmitting ? "Enviando..." : "Solicitar Reserva"}
             </Button>
           </form>
         </Form>

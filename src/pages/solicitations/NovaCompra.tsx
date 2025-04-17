@@ -66,11 +66,12 @@ const NovaCompra = () => {
         createdAt: new Date(),
         hidden: false
       });
+      
       toast.success('Solicitação de compra enviada com sucesso!');
       form.reset();
     } catch (error) {
       toast.error('Erro ao enviar solicitação');
-      console.error("Erro:", error);
+      console.error("Erro detalhado:", error);
     }
   };
 
