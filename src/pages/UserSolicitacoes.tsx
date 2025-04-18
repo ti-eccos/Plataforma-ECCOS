@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -99,77 +99,51 @@ const UserSolicitacoes = () => {
   const [requestToCancel, setRequestToCancel] = useState<{ id: string; collectionName: string } | null>(null);
   const [selectedType, setSelectedType] = useState<RequestType | 'todos'>('todos');
   const [selectedStatus, setSelectedStatus] = useState<RequestStatus | 'todos'>('todos');
-  const [equipmentDetails, setEquipmentDetails] = useState<Record<string, {name: string, type: string}>>({});
+  const [equipmentCounts, setEquipmentCounts] = useState({ ipads: 0, chromebooks: 0, others: 0 });
 
   const { data: requests = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["userRequests", currentUser?.email],
     queryFn: () => getAllRequests(false)
   });
 
-  // Carregar detalhes dos equipamentos quando uma solicitação é selecionada
-  useEffect(() => {
-    const loadEquipmentDetails = async () => {
-      if (!selectedRequest?.equipmentIds) return;
-      
+  const countEquipment = async (equipmentIds: string[] = []) => {
+    let ipads = 0;
+    let chromebooks = 0;
+    let others = 0;
+
+    for (const id of equipmentIds) {
       try {
-        const details: Record<string, {name: string, type: string}> = {};
-        for (const id of selectedRequest.equipmentIds) {
-          const docRef = doc(db, 'equipment', id);
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            details[id] = {
-              name: docSnap.data().name,
-              type: docSnap.data().type
-            };
+        const docRef = doc(db, 'equipment', id);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          const type = docSnap.data().type.toLowerCase();
+          if (type.includes('ipad')) {
+            ipads++;
+          } else if (type.includes('chromebook')) {
+            chromebooks++;
+          } else {
+            others++;
           }
         }
-        setEquipmentDetails(details);
       } catch (error) {
-        console.error("Error loading equipment details:", error);
+        console.error("Error fetching equipment:", error);
       }
-    };
-    
-    if (selectedRequest?.type === 'reservation') {
-      loadEquipmentDetails();
     }
-  }, [selectedRequest]);
 
-  const countEquipmentTypes = (equipmentIds: string[] = []) => {
-    const counts = {
-      ipads: 0,
-      chromebooks: 0,
-      others: 0
-    };
-
-    equipmentIds.forEach(id => {
-      const equip = equipmentDetails[id];
-      if (equip) {
-        const typeLower = equip.type.toLowerCase();
-        if (typeLower.includes('ipad')) {
-          counts.ipads++;
-        } else if (typeLower.includes('chromebook')) {
-          counts.chromebooks++;
-        } else {
-          counts.others++;
-        }
-      }
-    });
-
-    return counts;
+    return { ipads, chromebooks, others };
   };
-
-  const userRequests = requests
-    .filter((req: RequestData) => req.userEmail === currentUser?.email)
-    .filter((req: RequestData) => req.status !== 'canceled');
-
-  const filteredRequests = userRequests
-    .filter(req => selectedType === 'todos' || req.type === selectedType)
-    .filter(req => selectedStatus === 'todos' || req.status === selectedStatus);
 
   const handleViewDetails = async (request: RequestData) => {
     try {
       const fullRequest = await getRequestById(request.id, request.collectionName);
       setSelectedRequest(fullRequest);
+      
+      if (fullRequest.type === 'reservation' && fullRequest.equipmentIds) {
+        const counts = await countEquipment(fullRequest.equipmentIds);
+        setEquipmentCounts(counts);
+      }
+      
       setIsDetailsOpen(true);
     } catch (error) {
       toast.error("Erro ao carregar detalhes");
@@ -227,12 +201,36 @@ const UserSolicitacoes = () => {
     }
   };
 
+  const userRequests = requests
+    .filter((req: RequestData) => req.userEmail === currentUser?.email)
+    .filter((req: RequestData) => req.status !== 'canceled');
+
+  const filteredRequests = userRequests
+    .filter(req => selectedType === 'todos' || req.type === selectedType)
+    .filter(req => selectedStatus === 'todos' || req.status === selectedStatus);
+
+  const renderEquipmentCounts = () => {
+    const { ipads, chromebooks, others } = equipmentCounts;
+    const items = [];
+    
+    if (ipads > 0) {
+      items.push(<li key="ipads">{ipads} iPad{ipads !== 1 ? 's' : ''}</li>);
+    }
+    if (chromebooks > 0) {
+      items.push(<li key="chromebooks">{chromebooks} Chromebook{chromebooks !== 1 ? 's' : ''}</li>);
+    }
+    if (others > 0) {
+      items.push(<li key="others">{others} Outro equipamento{others !== 1 ? 's' : ''}</li>);
+    }
+    
+    return items.length > 0 ? items : <li>Nenhum equipamento selecionado</li>;
+  };
+
   return (
     <AppLayout>
       <div className="space-y-8">
         <h1 className="text-3xl font-bold">Minhas Solicitações</h1>
         
-        {/* Filtros */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-sm font-medium">Filtrar por tipo</label>
@@ -313,7 +311,6 @@ const UserSolicitacoes = () => {
           </div>
         )}
 
-        {/* Modal de Detalhes */}
         <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
           <DialogContent className="max-w-3xl overflow-y-auto max-h-[90vh]">
             <DialogHeader>
@@ -373,22 +370,7 @@ const UserSolicitacoes = () => {
                       <div className="col-span-2">
                         <p className="text-sm font-medium text-muted-foreground">Equipamentos</p>
                         <ul className="list-disc pl-5">
-                          {(() => {
-                            const counts = countEquipmentTypes(selectedRequest.equipmentIds);
-                            const items = [];
-                            
-                            if (counts.ipads > 0) {
-                              items.push(<li key="ipads">{counts.ipads} iPad{counts.ipads !== 1 ? 's' : ''}</li>);
-                            }
-                            if (counts.chromebooks > 0) {
-                              items.push(<li key="chromebooks">{counts.chromebooks} Chromebook{counts.chromebooks !== 1 ? 's' : ''}</li>);
-                            }
-                            if (counts.others > 0) {
-                              items.push(<li key="others">{counts.others} Outro equipamento{counts.others !== 1 ? 's' : ''}</li>);
-                            }
-                            
-                            return items.length > 0 ? items : <li>Nenhum equipamento selecionado</li>;
-                          })()}
+                          {renderEquipmentCounts()}
                         </ul>
                       </div>
                     </div>
@@ -396,13 +378,53 @@ const UserSolicitacoes = () => {
 
                   {selectedRequest.type === "purchase" && (
                     <div className="grid grid-cols-1 gap-4">
-                      {/* ... conteúdo existente para compras ... */}
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Item Solicitado</p>
+                        <p>{selectedRequest.itemName}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Quantidade</p>
+                        <p>{selectedRequest.quantity}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Valor Unitário</p>
+                        <p>
+                          {new Intl.NumberFormat("pt-BR", {
+                            style: "currency",
+                            currency: "BRL"
+                          }).format(selectedRequest.unitPrice || 0)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Valor Total</p>
+                        <p>
+                          {new Intl.NumberFormat("pt-BR", {
+                            style: "currency",
+                            currency: "BRL"
+                          }).format((selectedRequest.quantity || 0) * (selectedRequest.unitPrice || 0))}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Justificativa</p>
+                        <p>{selectedRequest.justification}</p>
+                      </div>
                     </div>
                   )}
 
                   {selectedRequest.type === "support" && (
                     <div className="grid grid-cols-1 gap-4">
-                      {/* ... conteúdo existente para suporte ... */}
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Problema</p>
+                        <p>{selectedRequest.issueDescription}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Local</p>
+                        <p>{selectedRequest.location}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Urgência</p>
+                        <p className="capitalize">{selectedRequest.urgency}</p>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -463,7 +485,6 @@ const UserSolicitacoes = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Diálogo de confirmação de cancelamento */}
         <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
