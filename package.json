@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "homepage":"https://github.com/Dev-AI-Site/eccos-portal-digital.git",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -87,6 +88,5 @@
     "typescript-eslint": "^8.0.1",
     "vite": "^5.4.1",
     "vite-plugin-static-copy": "^2.3.1"
-  },
-  "homepage": "https://dev-ai-site.github.io/eccos-portal-digital/"
+  }
 }
