@@ -174,16 +174,13 @@ const NovaReserva = () => {
         values.endTime <= '19:00';
 
         await addReservation({
-          // Extrair campos obrigatórios explicitamente
           date: values.date,
           startTime: values.startTime,
           endTime: values.endTime,
           location: values.location,
           purpose: values.purpose,
           equipmentIds: values.selectedEquipment,
-          
-          // Campos adicionais
-          equipmentQuantities,
+          equipmentQuantities, // 👈 Campo novo
           userName: currentUser?.displayName || "Usuário",
           userEmail: currentUser?.email || "email@exemplo.com",
           userId: currentUser?.uid || "",
