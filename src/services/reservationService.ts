@@ -10,12 +10,10 @@ import {
   addDoc,
   deleteDoc,
   arrayUnion,
-  Timestamp,
-  DocumentData
+  Timestamp
 } from "firebase/firestore";
 import { notifyAdmins } from './emailService';
 
-// Tipos e Interfaces
 export type RequestStatus = "pending" | "approved" | "rejected" | "in-progress" | "completed" | "canceled";
 export type RequestType = "reservation" | "purchase" | "support";
 
@@ -35,10 +33,11 @@ export interface RequestData {
   userEmail: string;
   userId: string;
   createdAt: Timestamp;
+  equipmentNames: string[];
+  equipmentIds: string[];
   [key: string]: any;
 }
 
-// Funções Principais
 export const addReservation = async (data: {
   date: Date;
   startTime: string;
@@ -52,8 +51,17 @@ export const addReservation = async (data: {
   status?: RequestStatus;
 }): Promise<string> => {
   try {
+    const equipmentNames = await Promise.all(
+      data.equipmentIds.map(async (id) => {
+        const equipDoc = await getDoc(doc(db, 'equipment', id));
+        return equipDoc.exists() ? equipDoc.data().name : 'Equipamento desconhecido';
+      })
+    );
+
     const docRef = await addDoc(collection(db, 'reservations'), {
       ...data,
+      equipmentNames,
+      equipmentIds: data.equipmentIds,
       date: Timestamp.fromDate(data.date),
       type: 'reservation',
       status: data.status || 'pending',
@@ -100,7 +108,6 @@ export const checkConflicts = async (data: {
     const querySnapshot = await getDocs(reservationsQuery);
     const equipmentMap = new Map();
 
-    // Carregar nomes dos equipamentos
     for (const equipId of data.equipmentIds) {
       const equipDoc = await getDoc(doc(db, 'equipment', equipId));
       if (equipDoc.exists()) {
@@ -108,7 +115,6 @@ export const checkConflicts = async (data: {
       }
     }
 
-    // Verificar conflitos
     for (const docSnapshot of querySnapshot.docs) {
       const reservation = docSnapshot.data();
       const reservationDate = reservation.date.toDate();
@@ -172,6 +178,8 @@ export const getAllRequests = async (showHidden: boolean = false): Promise<Reque
           userEmail: data.userEmail,
           userId: data.userId,
           createdAt: data.createdAt,
+          equipmentNames: data.equipmentNames || [],
+          equipmentIds: data.equipmentIds || [],
           ...data
         });
       });
@@ -205,6 +213,8 @@ export const getRequestById = async (id: string, collectionName: string): Promis
       userEmail: data.userEmail,
       userId: data.userId,
       createdAt: data.createdAt,
+      equipmentNames: data.equipmentNames || [],
+      equipmentIds: data.equipmentIds || [],
       ...data
     };
   } catch (error) {
@@ -268,7 +278,6 @@ export const deleteRequest = async (id: string, collectionName: string): Promise
   }
 };
 
-// Funções Auxiliares
 export const getUserRequests = async (userId: string, userEmail?: string): Promise<RequestData[]> => {
   try {
     const collections = ["reservations", "purchases", "supports"];
@@ -300,6 +309,8 @@ export const getUserRequests = async (userId: string, userEmail?: string): Promi
           userEmail: data.userEmail,
           userId: data.userId,
           createdAt: data.createdAt,
+          equipmentNames: data.equipmentNames || [],
+          equipmentIds: data.equipmentIds || [],
           ...data
         });
       });
@@ -333,7 +344,6 @@ export const getEquipmentReservations = async (equipmentId: string): Promise<Req
   }
 };
 
-// Funções para Outros Tipos de Solicitação
 export const addPurchaseRequest = async (data: Omit<RequestData, 'id' | 'collectionName'>): Promise<string> => {
   try {
     const docRef = await addDoc(collection(db, 'purchases'), {

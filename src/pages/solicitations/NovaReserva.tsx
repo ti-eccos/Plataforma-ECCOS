@@ -119,7 +119,7 @@ const NovaReserva = () => {
         ]);
         
         setAvailableDates(dates.filter(date => 
-          date instanceof Date && !isNaN(date.getTime()) // Fechar parêntese corretamente
+          date instanceof Date && !isNaN(date.getTime())
         ));
         setEquipment(equipment.sort((a, b) => a.name.localeCompare(b.name)));
       } catch (error) {
@@ -165,18 +165,18 @@ const NovaReserva = () => {
         values.startTime >= '07:00' && 
         values.endTime <= '19:00';
 
-        await addReservation({
-          date: values.date, // Garantir que está presente
-          startTime: values.startTime,
-          endTime: values.endTime,
-          equipmentIds: values.selectedEquipment,
-          location: values.location,
-          purpose: values.purpose,
-          userName: currentUser?.displayName || "Usuário",
-          userEmail: currentUser?.email || "email@exemplo.com",
-          userId: currentUser?.uid || "",
-          status: autoApproved ? 'approved' : 'pending'
-        });
+      await addReservation({
+        date: values.date,
+        startTime: values.startTime,
+        endTime: values.endTime,
+        equipmentIds: values.selectedEquipment,
+        location: values.location,
+        purpose: values.purpose,
+        userName: currentUser?.displayName || "Usuário",
+        userEmail: currentUser?.email || "email@exemplo.com",
+        userId: currentUser?.uid || "",
+        status: autoApproved ? 'approved' : 'pending'
+      });
 
       toast.success(autoApproved 
         ? 'Reserva aprovada automaticamente!' 
