@@ -7,19 +7,23 @@ import { viteStaticCopy } from 'vite-plugin-static-copy';
 const repoName = "eccos-portal-digital";
 
 export default defineConfig(({ mode }) => ({
-  base: mode === 'production' ? `/${repoName}/` : '/',
+  base: mode === 'production' ? '/eccos-portal-digital/' : '/',
   
   server: {
     host: "::",
     port: 8080,
-  }, // <-- Vírgula adicionada aqui
+  },
   
   plugins: [
     react(),
     mode === "development" && componentTagger(),
     viteStaticCopy({
       targets: [
-        { src: 'public/_redirects', dest: '' }
+        { 
+          src: 'public/_redirects', 
+          dest: '',
+          rename: '_redirects' // Força a cópia do nome exato
+        }
       ]
     })
   ].filter(Boolean),
