@@ -12,7 +12,6 @@ import {
   arrayUnion,
   Timestamp
 } from "firebase/firestore";
-import { notifyAdmins } from './emailService';
 
 export type RequestStatus = "pending" | "approved" | "rejected" | "in-progress" | "completed" | "canceled";
 export type RequestType = "reservation" | "purchase" | "support";
@@ -35,6 +34,7 @@ export interface RequestData {
   createdAt: Timestamp;
   equipmentNames: string[];
   equipmentIds: string[];
+  equipmentQuantities: { [type: string]: number };
   [key: string]: any;
 }
 
@@ -49,6 +49,7 @@ export const addReservation = async (data: {
   userEmail: string;
   userId: string;
   status?: RequestStatus;
+  equipmentQuantities: { [type: string]: number };
 }): Promise<string> => {
   try {
     const equipmentNames = await Promise.all(
@@ -62,19 +63,13 @@ export const addReservation = async (data: {
       ...data,
       equipmentNames,
       equipmentIds: data.equipmentIds,
+      equipmentQuantities: data.equipmentQuantities,
       date: Timestamp.fromDate(data.date),
       type: 'reservation',
       status: data.status || 'pending',
       createdAt: Timestamp.now(),
       hidden: false
     });
-
-    await notifyAdmins(
-      'Nova Reserva', 
-      `<p><strong>Tipo:</strong> Reserva</p>
-       <p><strong>Solicitante:</strong> ${data.userName}</p>
-       <p><strong>Local:</strong> ${data.location}</p>`
-    );
 
     return docRef.id;
   } catch (error) {
@@ -180,6 +175,7 @@ export const getAllRequests = async (showHidden: boolean = false): Promise<Reque
           createdAt: data.createdAt,
           equipmentNames: data.equipmentNames || [],
           equipmentIds: data.equipmentIds || [],
+          equipmentQuantities: data.equipmentQuantities || {},
           ...data
         });
       });
@@ -215,33 +211,11 @@ export const getRequestById = async (id: string, collectionName: string): Promis
       createdAt: data.createdAt,
       equipmentNames: data.equipmentNames || [],
       equipmentIds: data.equipmentIds || [],
+      equipmentQuantities: data.equipmentQuantities || {},
       ...data
     };
   } catch (error) {
     console.error("Erro ao buscar solicitação:", error);
-    throw error;
-  }
-};
-
-export const updateRequestStatus = async (
-  id: string, 
-  status: RequestStatus, 
-  collectionName: string
-): Promise<void> => {
-  try {
-    const docRef = doc(db, collectionName, id);
-    await updateDoc(docRef, { status });
-
-    if (status === 'approved') {
-      const request = await getRequestById(id, collectionName);
-      await notifyAdmins(
-        'Status Atualizado', 
-        `<p><strong>Solicitação aprovada:</strong> ${request.type}</p>
-         <p><strong>ID:</strong> ${id}</p>`
-      );
-    }
-  } catch (error) {
-    console.error("Erro ao atualizar status:", error);
     throw error;
   }
 };
@@ -311,6 +285,7 @@ export const getUserRequests = async (userId: string, userEmail?: string): Promi
           createdAt: data.createdAt,
           equipmentNames: data.equipmentNames || [],
           equipmentIds: data.equipmentIds || [],
+          equipmentQuantities: data.equipmentQuantities || {},
           ...data
         });
       });
@@ -354,13 +329,6 @@ export const addPurchaseRequest = async (data: Omit<RequestData, 'id' | 'collect
       hidden: false
     });
 
-    await notifyAdmins(
-      'Nova Compra', 
-      `<p><strong>Tipo:</strong> Compra</p>
-       <p><strong>Solicitante:</strong> ${data.userName}</p>
-       <p><strong>Item:</strong> ${data.itemName}</p>`
-    );
-
     return docRef.id;
   } catch (error) {
     console.error("Erro ao criar solicitação de compra:", error);
@@ -377,13 +345,6 @@ export const addSupportRequest = async (data: Omit<RequestData, 'id' | 'collecti
       createdAt: Timestamp.now(),
       hidden: false
     });
-
-    await notifyAdmins(
-      'Novo Suporte', 
-      `<p><strong>Tipo:</strong> Suporte Técnico</p>
-       <p><strong>Solicitante:</strong> ${data.userName}</p>
-       <p><strong>Categoria:</strong> ${data.category}</p>`
-    );
 
     return docRef.id;
   } catch (error) {

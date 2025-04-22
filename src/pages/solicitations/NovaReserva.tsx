@@ -138,6 +138,14 @@ const NovaReserva = () => {
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
     try {
+      const equipmentQuantities = values.selectedEquipment.reduce((acc, equipId) => {
+        const equip = equipment.find(e => e.id === equipId);
+        if (equip) {
+          acc[equip.type] = (acc[equip.type] || 0) + 1;
+        }
+        return acc;
+      }, {} as Record<string, number>);
+
       const conflicts = await checkConflicts({
         date: values.date,
         startTime: values.startTime,
@@ -165,18 +173,22 @@ const NovaReserva = () => {
         values.startTime >= '07:00' && 
         values.endTime <= '19:00';
 
-      await addReservation({
-        date: values.date,
-        startTime: values.startTime,
-        endTime: values.endTime,
-        equipmentIds: values.selectedEquipment,
-        location: values.location,
-        purpose: values.purpose,
-        userName: currentUser?.displayName || "Usuário",
-        userEmail: currentUser?.email || "email@exemplo.com",
-        userId: currentUser?.uid || "",
-        status: autoApproved ? 'approved' : 'pending'
-      });
+        await addReservation({
+          // Extrair campos obrigatórios explicitamente
+          date: values.date,
+          startTime: values.startTime,
+          endTime: values.endTime,
+          location: values.location,
+          purpose: values.purpose,
+          equipmentIds: values.selectedEquipment,
+          
+          // Campos adicionais
+          equipmentQuantities,
+          userName: currentUser?.displayName || "Usuário",
+          userEmail: currentUser?.email || "email@exemplo.com",
+          userId: currentUser?.uid || "",
+          status: autoApproved ? 'approved' : 'pending'
+        });
 
       toast.success(autoApproved 
         ? 'Reserva aprovada automaticamente!' 

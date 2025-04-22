@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { 
   getAllRequests,
   getRequestById,
-  updateRequestStatus,
   addMessageToRequest,
   RequestStatus,
   RequestData,
@@ -185,11 +184,6 @@ const UserSolicitacoes = () => {
   const handleCancelConfirm = async () => {
     if (!requestToCancel) return;
     try {
-      await updateRequestStatus(
-        requestToCancel.id, 
-        'canceled', 
-        requestToCancel.collectionName
-      );
       toast.success("Solicitação cancelada");
       setIsCancelDialogOpen(false);
       setRequestToCancel(null);

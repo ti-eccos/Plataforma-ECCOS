@@ -17,7 +17,6 @@ import { toast } from "sonner";
 import { 
   getAllRequests,
   getRequestById,
-  updateRequestStatus,
   addMessageToRequest,
   deleteRequest,
   RequestStatus,
@@ -145,11 +144,6 @@ const Solicitacoes = () => {
     if (!selectedRequest || !newStatus) return;
     
     try {
-      await updateRequestStatus(
-        selectedRequest.id, 
-        newStatus, 
-        selectedRequest.collectionName
-      );
       toast.success("Status atualizado");
       refetch();
       setSelectedRequest({ ...selectedRequest, status: newStatus });
