@@ -107,6 +107,7 @@ const NovaReserva = () => {
       purpose: '',
       startTime: '',
       endTime: '',
+      location: '',
     },
   });
 

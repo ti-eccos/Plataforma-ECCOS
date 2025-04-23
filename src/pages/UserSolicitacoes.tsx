@@ -31,6 +31,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -86,6 +87,22 @@ const getReadableRequestType = (type: RequestType): string => {
       return "Suporte";
     default: 
       return "Desconhecido";
+  }
+};
+
+const getUrgencyBadge = (urgency?: string) => {
+  // Verificação de segurança
+  if (!urgency) return <Badge variant="outline">Não especificado</Badge>;
+
+  switch (urgency.toLowerCase()) {
+    case 'alta':
+      return <Badge variant="destructive">Alta</Badge>;
+    case 'média':
+      return <Badge className="bg-amber-500 text-white">Média</Badge>;
+    case 'baixa':
+      return <Badge className="bg-green-500 text-white">Baixa</Badge>;
+    default:
+      return <Badge variant="outline">{urgency}</Badge>;
   }
 };
 
@@ -319,16 +336,18 @@ const UserSolicitacoes = () => {
                 )}
               </DialogTitle>
               {selectedRequest && (
-                <div className="text-sm text-muted-foreground px-1 flex items-center justify-between">
-                  <div>
-                    {format(
-                      new Date(selectedRequest.createdAt.toMillis()),
-                      "dd 'de' MMMM 'de' yyyy 'às' HH:mm",
-                      { locale: ptBR }
-                    )}
+                <DialogDescription>
+                  <div className="px-1 flex items-center justify-between">
+                    <div>
+                      {format(
+                        new Date(selectedRequest.createdAt.toMillis()),
+                        "dd 'de' MMMM 'de' yyyy 'às' HH:mm",
+                        { locale: ptBR }
+                      )}
+                    </div>
+                    <div>{getStatusBadge(selectedRequest.status)}</div>
                   </div>
-                  <div>{getStatusBadge(selectedRequest.status)}</div>
-                </div>
+                </DialogDescription>
               )}
             </DialogHeader>
 
@@ -417,7 +436,9 @@ const UserSolicitacoes = () => {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-muted-foreground">Urgência</p>
-                        <p className="capitalize">{selectedRequest.urgency}</p>
+                        <div className="flex items-center gap-2">
+                          {getUrgencyBadge(selectedRequest.urgency /* Adicione ?. para segurança */)}
+                        </div>
                       </div>
                     </div>
                   )}

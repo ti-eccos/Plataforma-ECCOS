@@ -2,11 +2,16 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { 
+  createBrowserRouter,
+  RouterProvider,
+  Navigate,
+  useLocation,
+  useNavigate
+} from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
 
 // Pages
 import Login from "./pages/Login";
@@ -57,94 +62,111 @@ const RoutingHandler = () => {
   return null;
 };
 
+const router = createBrowserRouter(
+  [
+    {
+      path: "/login",
+      element: <Login />,
+    },
+    {
+      path: "/unauthorized",
+      element: <Unauthorized />,
+    },
+    {
+      path: "/404",
+      element: <NotFound />,
+    },
+    {
+      path: "/",
+      element: (
+        <ProtectedRoute>
+          <Dashboard />
+        </ProtectedRoute>
+      ),
+    },
+    // User routes
+    {
+      path: "/nova-solicitacao/reserva",
+      element: (
+        <ProtectedRoute>
+          <NovaReserva />
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: "/nova-solicitacao/compra",
+      element: (
+        <ProtectedRoute>
+          <NovaCompra />
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: "/nova-solicitacao/suporte",
+      element: (
+        <ProtectedRoute>
+          <NovaSuporte />
+        </ProtectedRoute>
+      ),
+    },
+    // Admin routes
+    {
+      path: "/equipamentos",
+      element: (
+        <ProtectedRoute requiresAdmin>
+          <Equipamentos />
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: "/disponibilidade",
+      element: (
+        <ProtectedRoute requiresAdmin>
+          <Disponibilidade />
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: "/usuarios",
+      element: (
+        <ProtectedRoute requiresAdmin>
+          <Usuarios />
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: "/solicitacoes",
+      element: (
+        <ProtectedRoute requiresAdmin>
+          <Solicitacoes />
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: "/index",
+      element: <Navigate to="/" replace />,
+    },
+    {
+      path: "/minhas-solicitacoes",
+      element: <UserSolicitacoes />,
+    },
+    {
+      path: "*",
+      element: <NotFound />,
+    },
+  ],
+  {
+    basename: import.meta.env.BASE_URL,
+  }
+);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter basename={import.meta.env.BASE_URL}>
-          <RoutingHandler />
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/unauthorized" element={<Unauthorized />} />
-            <Route path="/404" element={<NotFound />} />
-            <Route path="*" element={<RedirectToDashboard />} />
-
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Rotas protegidas para usuários */}
-            <Route
-              path="/nova-solicitacao/reserva"
-              element={
-                <ProtectedRoute>
-                  <NovaReserva />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/nova-solicitacao/compra"
-              element={
-                <ProtectedRoute>
-                  <NovaCompra />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/nova-solicitacao/suporte"
-              element={
-                <ProtectedRoute>
-                  <NovaSuporte />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Rotas administrativas */}
-            <Route
-              path="/equipamentos"
-              element={
-                <ProtectedRoute requiresAdmin>
-                  <Equipamentos />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/disponibilidade"
-              element={
-                <ProtectedRoute requiresAdmin>
-                  <Disponibilidade />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/usuarios"
-              element={
-                <ProtectedRoute requiresAdmin>
-                  <Usuarios />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/solicitacoes"
-              element={
-                <ProtectedRoute requiresAdmin>
-                  <Solicitacoes />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route path="/index" element={<Navigate to="/" replace />} />
-            <Route path="/minhas-solicitacoes" element={<UserSolicitacoes />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <RouterProvider router={router} />
       </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
