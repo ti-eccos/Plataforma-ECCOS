@@ -28,6 +28,7 @@ export interface RequestData {
   collectionName: string;
   type: RequestType;
   status: RequestStatus;
+  description?: string;
   userName: string;
   userEmail: string;
   userId: string;
