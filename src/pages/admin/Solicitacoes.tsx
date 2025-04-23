@@ -70,6 +70,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { RequestType } from "@/services/reservationService";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const getRequestTypeIcon = (type: RequestType) => {
   switch (type) {
@@ -101,6 +103,33 @@ const getReadableRequestType = (type: RequestType): string => {
   }
 };
 
+const getPriorityLevelBadge = (level?: string) => {
+  if (!level) return <Badge variant="outline">Não especificado</Badge>;
+  
+  const config = {
+    labels: {
+      critical: 'Crítica',
+      high: 'Alta',
+      medium: 'Média',
+      low: 'Baixa'
+    },
+    colors: {
+      critical: 'destructive',
+      high: 'bg-red-500 text-white',
+      medium: 'bg-amber-500 text-white',
+      low: 'bg-green-500 text-white'
+    }
+  };
+
+  const normalizedLevel = level.toLowerCase();
+  
+  return (
+    <Badge className={config.colors[normalizedLevel] || 'bg-gray-500'}>
+      {config.labels[normalizedLevel] || level}
+    </Badge>
+  );
+};
+
 const Solicitacoes = () => {
   const { currentUser: user, isAdmin } = useAuth();
   const [showHidden, setShowHidden] = useState(false);
@@ -109,6 +138,7 @@ const Solicitacoes = () => {
   const [selectedStatuses, setSelectedStatuses] = useState<RequestStatus[]>([
     "pending", "approved", "in-progress"
   ]);
+  const [equipmentCounts, setEquipmentCounts] = useState({ ipads: 0, chromebooks: 0, others: 0 });
   
   const [selectedRequest, setSelectedRequest] = useState<RequestData | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -128,16 +158,67 @@ const Solicitacoes = () => {
     enabled: isAdmin,
   });
 
+  const countEquipment = async (equipmentIds: string[] = []) => {
+    let ipads = 0;
+    let chromebooks = 0;
+    let others = 0;
+
+    for (const id of equipmentIds) {
+      try {
+        const docRef = doc(db, 'equipment', id);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          const type = docSnap.data().type.toLowerCase();
+          if (type.includes('ipad')) {
+            ipads++;
+          } else if (type.includes('chromebook')) {
+            chromebooks++;
+          } else {
+            others++;
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching equipment:", error);
+      }
+    }
+
+    return { ipads, chromebooks, others };
+  };
+
   const handleViewDetails = async (request: RequestData) => {
     try {
       const fullRequest = await getRequestById(request.id, request.collectionName);
       setSelectedRequest(fullRequest);
+      
+      if (fullRequest.type === 'reservation' && fullRequest.equipmentIds) {
+        const counts = await countEquipment(fullRequest.equipmentIds);
+        setEquipmentCounts(counts);
+      }
+      
       setNewStatus(fullRequest.status);
       setIsDetailsOpen(true);
     } catch (error) {
       toast.error("Erro ao carregar detalhes");
       console.error("Error:", error);
     }
+  };
+
+  const renderEquipmentCounts = () => {
+    const { ipads, chromebooks, others } = equipmentCounts;
+    const items = [];
+    
+    if (ipads > 0) {
+      items.push(<li key="ipads">{ipads} iPad{ipads !== 1 ? 's' : ''}</li>);
+    }
+    if (chromebooks > 0) {
+      items.push(<li key="chromebooks">{chromebooks} Chromebook{chromebooks !== 1 ? 's' : ''}</li>);
+    }
+    if (others > 0) {
+      items.push(<li key="others">{others} Outro equipamento{others !== 1 ? 's' : ''}</li>);
+    }
+    
+    return items.length > 0 ? items : <li>Nenhum equipamento selecionado</li>;
   };
 
   const handleStatusChange = async () => {
@@ -368,32 +449,35 @@ const Solicitacoes = () => {
         {/* Diálogo de Detalhes */}
         <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
           <DialogContent className="max-w-3xl overflow-y-auto max-h-[90vh]">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                {selectedRequest && (
-                  <>
-                    {getRequestTypeIcon(selectedRequest.type)}
-                    <span>
-                      {getReadableRequestType(selectedRequest.type)} - {selectedRequest.userName || selectedRequest.userEmail}
-                    </span>
-                  </>
-                )}
-              </DialogTitle>
-              <div className="text-sm text-muted-foreground px-1">
-                {selectedRequest && (
-                  <div className="flex items-center justify-between">
-                    <div>
-                      {format(
-                        new Date(selectedRequest.createdAt.toMillis()),
-                        "dd 'de' MMMM 'de' yyyy 'às' HH:mm",
-                        { locale: ptBR }
-                      )}
-                    </div>
-                    <div>{getStatusBadge(selectedRequest.status)}</div>
-                  </div>
-                )}
-              </div>
-            </DialogHeader>
+          <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+           {selectedRequest && (
+         <>
+         {getRequestTypeIcon(selectedRequest.type)}
+          <span>
+          {getReadableRequestType(selectedRequest.type)} - {selectedRequest.userName || selectedRequest.userEmail}
+        </span>
+      </>
+    )}
+  </DialogTitle>
+  
+  <DialogDescription asChild>
+    <div className="text-sm text-muted-foreground px-1">
+      {selectedRequest && (
+        <div className="flex items-center justify-between">
+          <div>
+            {format(
+              new Date(selectedRequest.createdAt.toMillis()),
+              "dd 'de' MMMM 'de' yyyy 'às' HH:mm",
+              { locale: ptBR }
+            )}
+          </div>
+          <div>{getStatusBadge(selectedRequest.status)}</div>
+        </div>
+      )}
+    </div>
+  </DialogDescription>
+</DialogHeader>
             
             {selectedRequest && (
               <div className="space-y-6 py-4">
@@ -407,7 +491,7 @@ const Solicitacoes = () => {
                         <p className="text-sm font-medium text-muted-foreground">Data</p>
                         <p>
                           {format(
-                            new Date(selectedRequest.createdAt.toMillis()),
+                            new Date(selectedRequest.date.toMillis()),
                             "dd/MM/yyyy",
                             { locale: ptBR }
                           )}
@@ -428,9 +512,7 @@ const Solicitacoes = () => {
                       <div className="col-span-2">
                         <p className="text-sm font-medium text-muted-foreground">Equipamentos</p>
                         <ul className="list-disc pl-5">
-                          {selectedRequest.equipmentIds?.map((id: string, index: number) => (
-                            <li key={index}>{id}</li>
-                          ))}
+                          {renderEquipmentCounts()}
                         </ul>
                       </div>
                     </div>
@@ -457,12 +539,20 @@ const Solicitacoes = () => {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-muted-foreground">Valor Total</p>
-                        <p>
-                          {new Intl.NumberFormat('pt-BR', {
-                            style: 'currency',
-                            currency: 'BRL'
-                          }).format((selectedRequest.quantity || 0) * (selectedRequest.unitPrice || 0))}
-                        </p>
+                        <div className="bg-primary/10 p-2 rounded-md">
+                          <p className="text-lg font-semibold text-primary">
+                            {new Intl.NumberFormat('pt-BR', {
+                              style: 'currency',
+                              currency: 'BRL'
+                            }).format((selectedRequest.quantity || 0) * (selectedRequest.unitPrice || 0))}
+                          </p>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Urgência</p>
+                        <div className="flex items-center gap-2">
+                          {getPriorityLevelBadge(selectedRequest.urgency)}
+                        </div>
                       </div>
                       <div>
                         <p className="text-sm font-medium text-muted-foreground">Justificativa</p>
@@ -471,22 +561,32 @@ const Solicitacoes = () => {
                     </div>
                   )}
 
-                  {selectedRequest.type === "support" && (
-                    <div className="grid grid-cols-1 gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Problema</p>
-                        <p>{selectedRequest.issueDescription}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Local</p>
-                        <p>{selectedRequest.location}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Urgência</p>
-                        <p className="capitalize">{selectedRequest.urgency}</p>
-                      </div>
-                    </div>
-                  )}
+{selectedRequest.type === "support" && (
+  <div className="grid grid-cols-1 gap-4">
+    <div>
+      <p className="text-sm font-medium text-muted-foreground">Descrição</p>
+      <div className="max-h-[200px] overflow-y-auto">
+  <pre className="whitespace-pre-wrap font-sans text-sm p-2">
+    {selectedRequest.description || "Nenhuma descrição fornecida"}
+  </pre>
+</div>
+    </div>
+    <div>
+      <p className="text-sm font-medium text-muted-foreground">Local</p>
+      <p>{selectedRequest.location}</p>
+    </div>
+    <div>
+      <p className="text-sm font-medium text-muted-foreground">Prioridade</p>
+      <div className="flex items-center gap-2">
+        {getPriorityLevelBadge(selectedRequest.priority)}
+      </div>
+    </div>
+    <div>
+      <p className="text-sm font-medium text-muted-foreground">Unidade</p>
+      <p>{selectedRequest.unit}</p>
+    </div>
+  </div>
+)}
                 </div>
 
                 {/* Alteração de Status */}

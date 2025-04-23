@@ -180,16 +180,22 @@ export const getUserById = async (uid: string): Promise<User | null> => {
 };
 export const getUserRequests = async (userId: string): Promise<any[]> => {
   try {
-    const q = query(
-      collection(db, "requests"),
-      where("userId", "==", userId)
-    );
+    const collections = ["reservations", "purchases", "supports"];
+    const requests = [];
     
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    for (const col of collections) {
+      const q = query(
+        collection(db, col),
+        where("userId", "==", userId)
+      );
+      const querySnapshot = await getDocs(q);
+      requests.push(...querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })));
+    }
+    
+    return requests;
   } catch (error) {
     console.error("Error fetching user requests:", error);
     throw error;

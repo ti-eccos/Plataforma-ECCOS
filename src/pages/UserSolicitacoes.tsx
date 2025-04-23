@@ -101,7 +101,7 @@ const getPriorityLevelBadge = (level?: string) => {
       low: 'Baixa'
     },
     colors: {
-      critical: 'bg-purple-600 text-white',
+      critical: 'destructive',
       high: 'bg-red-500 text-white',
       medium: 'bg-amber-500 text-white',
       low: 'bg-green-500 text-white'

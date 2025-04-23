@@ -148,7 +148,11 @@ const router = createBrowserRouter(
     },
     {
       path: "/minhas-solicitacoes",
-      element: <UserSolicitacoes />,
+      element: (
+        <ProtectedRoute>
+          <UserSolicitacoes />
+        </ProtectedRoute>
+      ),
     },
     {
       path: "*",
