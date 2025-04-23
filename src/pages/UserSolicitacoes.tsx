@@ -31,6 +31,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -86,6 +87,23 @@ const getReadableRequestType = (type: RequestType): string => {
       return "Suporte";
     default: 
       return "Desconhecido";
+  }
+};
+
+const getPriorityBadge = (priority?: string) => {
+  if (!priority) return <Badge variant="outline">Não especificado</Badge>;
+  
+  switch (priority.toLowerCase()) {
+    case 'critical':
+      return <Badge variant="destructive">Crítica</Badge>;
+    case 'high':
+      return <Badge className="bg-red-500 text-white">Alta</Badge>;
+    case 'medium':
+      return <Badge className="bg-amber-500 text-white">Média</Badge>;
+    case 'low':
+      return <Badge className="bg-green-500 text-white">Baixa</Badge>;
+    default:
+      return <Badge variant="outline">{priority}</Badge>;
   }
 };
 
@@ -319,16 +337,18 @@ const UserSolicitacoes = () => {
                 )}
               </DialogTitle>
               {selectedRequest && (
-                <div className="text-sm text-muted-foreground px-1 flex items-center justify-between">
-                  <div>
-                    {format(
-                      new Date(selectedRequest.createdAt.toMillis()),
-                      "dd 'de' MMMM 'de' yyyy 'às' HH:mm",
-                      { locale: ptBR }
-                    )}
+                <DialogDescription>
+                  <div className="px-1 flex items-center justify-between">
+                    <div>
+                      {format(
+                        new Date(selectedRequest.createdAt.toMillis()),
+                        "dd 'de' MMMM 'de' yyyy 'às' HH:mm",
+                        { locale: ptBR }
+                      )}
+                    </div>
+                    <div>{getStatusBadge(selectedRequest.status)}</div>
                   </div>
-                  <div>{getStatusBadge(selectedRequest.status)}</div>
-                </div>
+                </DialogDescription>
               )}
             </DialogHeader>
 
@@ -391,12 +411,14 @@ const UserSolicitacoes = () => {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-muted-foreground">Valor Total</p>
-                        <p>
-                          {new Intl.NumberFormat("pt-BR", {
-                            style: "currency",
-                            currency: "BRL"
-                          }).format((selectedRequest.quantity || 0) * (selectedRequest.unitPrice || 0))}
-                        </p>
+                        <div className="bg-primary/10 p-2 rounded-md">
+                          <p className="text-lg font-semibold text-primary">
+                            {new Intl.NumberFormat("pt-BR", {
+                              style: "currency",
+                              currency: "BRL"
+                            }).format((selectedRequest.quantity || 0) * (selectedRequest.unitPrice || 0))}
+                          </p>
+                        </div>
                       </div>
                       <div>
                         <p className="text-sm font-medium text-muted-foreground">Justificativa</p>
@@ -416,8 +438,10 @@ const UserSolicitacoes = () => {
                         <p>{selectedRequest.location}</p>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-muted-foreground">Urgência</p>
-                        <p className="capitalize">{selectedRequest.urgency}</p>
+                        <p className="text-sm font-medium text-muted-foreground">Prioridade</p>
+                        <div className="flex items-center gap-2">
+                          {getPriorityBadge(selectedRequest.priority)}
+                        </div>
                       </div>
                     </div>
                   )}
