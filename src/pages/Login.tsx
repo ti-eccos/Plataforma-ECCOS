@@ -1,11 +1,16 @@
-
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -17,31 +22,48 @@ const Login = () => {
   const { toast } = useToast();
   const [isRedirecting, setIsRedirecting] = useState(false);
 
+  // Efeito para redirecionamento pós-login
   useEffect(() => {
-    const updateLastActive = async () => {
-      if (currentUser && !isRedirecting) {
-        setIsRedirecting(true);
-        console.log("Login: Usuario autenticado, redirecionando...");
-  
-        // Atualiza o lastActive no Firestore
+    const handlePostLogin = async () => {
+      if (!currentUser || isRedirecting) return;
+
+      setIsRedirecting(true);
+      try {
+        // Atualizar última atividade
         const userRef = doc(db, "users", currentUser.uid);
         await updateDoc(userRef, {
           lastActive: serverTimestamp()
         });
-  
-        const from = location.state?.from?.pathname || "/";
-        navigate(from, { replace: true });
-  
+
+        // Determinar destino
+        const redirectPath = sessionStorage.getItem("redirectPath") || 
+                           location.state?.from?.pathname || 
+                           "/";
+        sessionStorage.removeItem("redirectPath");
+
+        // Navegar e mostrar feedback
+        navigate(redirectPath, { replace: true });
         toast({
           title: "Login bem-sucedido",
-          description: `Bem-vindo, ${currentUser.displayName}!`,
+          description: `Bem-vindo, ${currentUser.displayName || 'usuário'}!`,
         });
+      } catch (error) {
+        console.error("Erro no redirecionamento:", error);
+        toast({
+          title: "Erro",
+          description: "Ocorreu um problema durante o login",
+          variant: "destructive"
+        });
+        navigate("/", { replace: true });
+      } finally {
+        setIsRedirecting(false);
       }
     };
-  
-    updateLastActive();
+
+    if (currentUser) handlePostLogin();
   }, [currentUser, navigate, toast, location, isRedirecting]);
 
+  // Estados de carregamento
   if (loading || isRedirecting) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -50,11 +72,10 @@ const Login = () => {
     );
   }
 
-  // Não renderizar conteúdo se o usuário já estiver logado
-  if (currentUser) {
-    return null;
-  }
+  // Usuário já autenticado
+  if (currentUser) return null;
 
+  // Componente visual
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4 md:p-0">
       <div className="absolute inset-0 overflow-hidden">
@@ -65,14 +86,14 @@ const Login = () => {
       
       <Card className="w-full max-w-md glass-morphism">
         <CardHeader className="space-y-4 text-center">
-          
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5, duration: 0.5 }}
-          ><CardDescription className="text-2xl text-gradient">
-          Colégio
-        </CardDescription>  
+          >
+            <CardDescription className="text-2xl text-gradient">
+              Colégio
+            </CardDescription>  
             <CardTitle className="text-5xl text-gradient">ECCOS</CardTitle>
             <CardDescription className="text-muted-foreground text-base mt-1 text-2xl">
               Plataforma de Tecnologia
@@ -102,6 +123,7 @@ const Login = () => {
               className="w-full bg-gradient-to-r from-eccos-blue to-eccos-green hover:from-eccos-blue/90 hover:to-eccos-green/90 transition-all"
               size="lg"
               onClick={signInWithGoogle}
+              disabled={loading}
             >
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                 <path
@@ -121,7 +143,7 @@ const Login = () => {
                   fill="#EA4335"
                 />
               </svg>
-              Entrar com Google
+              {loading ? 'Carregando...' : 'Entrar com Google'}
             </Button>
           </motion.div>
         </CardFooter>

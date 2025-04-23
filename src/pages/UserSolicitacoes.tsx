@@ -90,21 +90,31 @@ const getReadableRequestType = (type: RequestType): string => {
   }
 };
 
-const getPriorityBadge = (priority?: string) => {
-  if (!priority) return <Badge variant="outline">Não especificado</Badge>;
+const getPriorityLevelBadge = (level?: string) => {
+  if (!level) return <Badge variant="outline">Não especificado</Badge>;
   
-  switch (priority.toLowerCase()) {
-    case 'critical':
-      return <Badge variant="destructive">Crítica</Badge>;
-    case 'high':
-      return <Badge className="bg-red-500 text-white">Alta</Badge>;
-    case 'medium':
-      return <Badge className="bg-amber-500 text-white">Média</Badge>;
-    case 'low':
-      return <Badge className="bg-green-500 text-white">Baixa</Badge>;
-    default:
-      return <Badge variant="outline">{priority}</Badge>;
-  }
+  const config = {
+    labels: {
+      critical: 'Crítica',
+      high: 'Alta',
+      medium: 'Média',
+      low: 'Baixa'
+    },
+    colors: {
+      critical: 'bg-purple-600 text-white',
+      high: 'bg-red-500 text-white',
+      medium: 'bg-amber-500 text-white',
+      low: 'bg-green-500 text-white'
+    }
+  };
+
+  const normalizedLevel = level.toLowerCase();
+  
+  return (
+    <Badge className={config.colors[normalizedLevel] || 'bg-gray-500'}>
+      {config.labels[normalizedLevel] || level}
+    </Badge>
+  );
 };
 
 const UserSolicitacoes = () => {
@@ -202,6 +212,7 @@ const UserSolicitacoes = () => {
   const handleCancelConfirm = async () => {
     if (!requestToCancel) return;
     try {
+      // Implementar lógica de cancelamento aqui
       toast.success("Solicitação cancelada");
       setIsCancelDialogOpen(false);
       setRequestToCancel(null);
@@ -421,6 +432,12 @@ const UserSolicitacoes = () => {
                         </div>
                       </div>
                       <div>
+                        <p className="text-sm font-medium text-muted-foreground">Urgência</p>
+                        <div className="flex items-center gap-2">
+                          {getPriorityLevelBadge(selectedRequest.urgency)}
+                        </div>
+                      </div>
+                      <div>
                         <p className="text-sm font-medium text-muted-foreground">Justificativa</p>
                         <p>{selectedRequest.justification}</p>
                       </div>
@@ -431,7 +448,11 @@ const UserSolicitacoes = () => {
                     <div className="grid grid-cols-1 gap-4">
                       <div>
                         <p className="text-sm font-medium text-muted-foreground">Problema</p>
-                        <p>{selectedRequest.issueDescription}</p>
+                        <div className="max-h-[200px] overflow-y-auto rounded-md bg-muted p-3">
+                          <pre className="whitespace-pre-wrap font-sans text-sm">
+                            {selectedRequest.description || "Nenhuma descrição fornecida"}
+                          </pre>
+                        </div>
                       </div>
                       <div>
                         <p className="text-sm font-medium text-muted-foreground">Local</p>
@@ -440,7 +461,7 @@ const UserSolicitacoes = () => {
                       <div>
                         <p className="text-sm font-medium text-muted-foreground">Prioridade</p>
                         <div className="flex items-center gap-2">
-                          {getPriorityBadge(selectedRequest.priority)}
+                          {getPriorityLevelBadge(selectedRequest.priority)}
                         </div>
                       </div>
                     </div>

@@ -1,5 +1,4 @@
-
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface ProtectedRouteProps {
@@ -9,8 +8,9 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute = ({ children, requiresAdmin = false }: ProtectedRouteProps) => {
   const { currentUser, loading, isAdmin } = useAuth();
+  const location = useLocation();
 
-  // Exibir o spinner enquanto estiver carregando
+  // Exibir spinner de carregamento
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -19,17 +19,17 @@ const ProtectedRoute = ({ children, requiresAdmin = false }: ProtectedRouteProps
     );
   }
 
-  // Redirecionar para login se não estiver autenticado
+  // Redirecionar para login se não autenticado
   if (!currentUser) {
+    sessionStorage.setItem("redirectPath", location.pathname);
     return <Navigate to="/login" replace />;
   }
 
-  // Redirecionar para página de não autorizado se for rota de admin e usuário não for admin
+  // Verificar privilégios de admin
   if (requiresAdmin && !isAdmin) {
     return <Navigate to="/unauthorized" replace />;
   }
 
-  // Renderizar o conteúdo protegido
   return <>{children}</>;
 };
 
