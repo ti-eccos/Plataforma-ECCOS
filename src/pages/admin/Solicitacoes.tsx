@@ -70,9 +70,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { RequestType } from "@/services/reservationService";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { sendUserNotification } from '@/lib/email';
+import { sendUserNotification, sendAdminNotification } from '@/lib/email';
 
 const getRequestTypeIcon = (type: RequestType) => {
   switch (type) {
@@ -226,7 +226,16 @@ const Solicitacoes = () => {
     if (!selectedRequest || !newStatus) return;
     
     try {
-      
+      const docRef = doc(db, selectedRequest.collectionName, selectedRequest.id);
+      await updateDoc(docRef, { status: newStatus });
+      if (['approved', 'rejected'].includes(newStatus)) {
+        await sendUserNotification(
+          selectedRequest.userEmail,
+          getReadableRequestType(selectedRequest.type),
+          newStatus
+        );
+      }
+
       toast.success("Status atualizado");
       refetch();
       setSelectedRequest({ ...selectedRequest, status: newStatus });

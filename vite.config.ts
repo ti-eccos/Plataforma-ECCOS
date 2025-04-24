@@ -22,7 +22,7 @@ export default defineConfig(({ mode }) => ({
         { 
           src: 'public/_redirects', 
           dest: '',
-          rename: '_redirects' // Força a cópia do nome exato
+          rename: '_redirects'
         }
       ]
     })
@@ -43,4 +43,4 @@ export default defineConfig(({ mode }) => ({
       }
     }
   }
-})); // <-- Parêntese final corrigido
+}));
