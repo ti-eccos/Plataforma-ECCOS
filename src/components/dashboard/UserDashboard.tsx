@@ -28,24 +28,20 @@ type Request = {
   userEmail?: string;
   userId?: string;
   
-  // Campos comuns
   location?: string;
-  
-  // Campos específicos para suporte
+ 
   category?: string;
   description?: string;
   deviceInfo?: string;
   priority?: string;
   unit?: string;
-  
-  // Campos específicos para reserva
+
   date?: Date;
   endTime?: string;
   equipmentIds?: string[];
   purpose?: string;
   startTime?: string;
-  
-  // Campos específicos para compra
+
   itemName?: string;
   justification?: string;
   quantity?: number;
@@ -64,7 +60,6 @@ const UserDashboard = () => {
       
       let normalizedStatus = ((data.status || '')).toLowerCase().trim();
 
-      // Normalização de status
       const statusMap: Record<string, RequestStatus> = {
         'hprongress': RequestStatus['in-progress'],
         'inprogress': RequestStatus['in-progress'],
@@ -90,7 +85,6 @@ const UserDashboard = () => {
         normalizedStatus = RequestStatus.pending;
       }
 
-      // Conversão de datas
       const convertFirebaseDate = (date: any): Date => {
         if (!date) return new Date();
         if (date instanceof Date) return date;
@@ -109,22 +103,19 @@ const UserDashboard = () => {
         userEmail: (data.userEmail || '').toLowerCase(),
         userId: data.userId || data.uid,
         location: data.location,
-        
-        // Suporte
+
         category: data.category,
         description: data.description,
         deviceInfo: data.deviceInfo,
         priority: data.priority,
         unit: data.unit,
-        
-        // Reserva
+
         date: data.date ? convertFirebaseDate(data.date) : undefined,
         endTime: data.endTime,
         equipmentIds: Array.isArray(data.equipmentIds) ? data.equipmentIds : [],
         purpose: data.purpose,
         startTime: data.startTime,
         
-        // Compra
         itemName: data.itemName,
         justification: data.justification,
         quantity: Number(data.quantity) || 0,
@@ -140,57 +131,40 @@ const UserDashboard = () => {
   const { data: requests = [], isLoading, isError, error } = useQuery<Request[]>({
     queryKey: ['userRequests', currentUser?.uid],
     queryFn: async () => {
-      console.log("Tentando buscar solicitações para:", currentUser?.uid);
       if (!currentUser) return [];
       try {
         const res = await getUserRequests(currentUser.uid,currentUser.email);
-        console.log("Dados brutos obtidos:", res);
         const processedData = res
-          .filter(item => item) // Garante que não há itens nulos
+          .filter(item => item) 
           .map((item) => {
             const processed = convertFirestoreData(item);
-            if (!processed) console.log("Item descartado durante conversão:", item);
             return processed;
           })
           .filter(Boolean) as Request[];
-        console.log("Dados processados finais:", processedData);
         return processedData;
       } catch (err) {
-        console.error("Erro durante busca ou processamento:", err);
         throw err;
       }
     },
     enabled: !!currentUser,
-    staleTime: 5 * 60 * 1000, // 5 minutos
+    staleTime: 5 * 60 * 1000, 
     retry: 1,
   });
-
-  // Log do estado de autenticação
-  useEffect(() => {
-    console.log("Estado do usuário atual:", currentUser);
-  }, [currentUser]);
-
-  // Log de erros
-  useEffect(() => {
-    if (isError) {
-      console.error("Erro na consulta:", error);
-    }
-  }, [isError, error]);
 
   const statusLabels: Record<RequestStatus, string> = {
     [RequestStatus.pending]: "Pendentes",
     [RequestStatus.approved]: "Aprovadas",
     [RequestStatus.rejected]: "Reprovadas",
-    [RequestStatus['in-progress']]: "Em Progresso", // Corrigido ortografia
+    [RequestStatus['in-progress']]: "Em Progresso", 
     [RequestStatus.completed]: "Concluídas",
   };
 
   const statusColors: Record<RequestStatus, string> = {
-    [RequestStatus.pending]: "#F59E0B",    // Amarelo-Âmbar (Pendentes)
-    [RequestStatus.approved]: "#10B981",   // Verde-Esmeralda (Aprovadas)
-    [RequestStatus['in-progress']]: "#3B82F6", // Azul (Em Progresso)
-    [RequestStatus.rejected]: "#EF4444",   // Vermelho (Mantido padrão)
-    [RequestStatus.completed]: "#8B5CF6",  // Roxo (Mantido padrão)
+    [RequestStatus.pending]: "#F59E0B",    
+    [RequestStatus.approved]: "#10B981",   
+    [RequestStatus['in-progress']]: "#3B82F6",
+    [RequestStatus.rejected]: "#EF4444",  
+    [RequestStatus.completed]: "#8B5CF6", 
   };
 
   const statusCounts = Object.values(RequestStatus).reduce((acc, status) => {

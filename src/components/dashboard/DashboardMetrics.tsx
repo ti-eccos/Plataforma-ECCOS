@@ -25,7 +25,6 @@ export function DashboardMetrics({
 }: DashboardMetricsProps) {
   const navigate = useNavigate();
 
-  // Navigate to other pages on click
   const handleNavigateToUsers = () => navigate('/usuarios');
   const handleNavigateToRequests = () => navigate('/solicitacoes');
   const handleNavigateToEquipment = () => navigate('/equipamentos');

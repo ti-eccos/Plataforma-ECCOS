@@ -21,7 +21,7 @@ export interface User {
   photoURL: string | null;
   role: UserRole;
   blocked?: boolean;
-  lastActive: string; // Alterado para obrigatório
+  lastActive: string;
   department?: string;
   pendingRoleChange?: {
     from: UserRole;
@@ -32,20 +32,19 @@ export interface User {
   };
 }
 
-// Collection reference
+
 const usersCollectionRef = collection(db, "users");
 
-// Alteração na função getAllUsers para converter o Timestamp
 export const getAllUsers = async (): Promise<User[]> => {
   try {
     const snapshot = await getDocs(usersCollectionRef);
     return snapshot.docs.map(doc => {
       const data = doc.data();
-      // Convertendo o Timestamp para ISO string
+
       const lastActive = data.lastActive ? data.lastActive.toDate().toISOString() : null;
       return {
         ...data,
-        lastActive // Atribuindo a versão convertida
+        lastActive 
       } as User;
     });
   } catch (error) {
@@ -54,7 +53,6 @@ export const getAllUsers = async (): Promise<User[]> => {
   }
 };
 
-// Block/unblock user
 export const toggleBlockUser = async (uid: string, blocked: boolean): Promise<boolean> => {
   try {
     const userRef = doc(db, "users", uid);
@@ -66,7 +64,6 @@ export const toggleBlockUser = async (uid: string, blocked: boolean): Promise<bo
   }
 };
 
-// Change user role (direct change - for superadmin)
 export const changeUserRole = async (uid: string, role: UserRole): Promise<boolean> => {
   try {
     const userRef = doc(db, "users", uid);
@@ -81,7 +78,6 @@ export const changeUserRole = async (uid: string, role: UserRole): Promise<boole
   }
 };
 
-// Request role change (for admin to admin)
 export const requestRoleChange = async (
   uid: string, 
   fromRole: UserRole, 
@@ -105,7 +101,6 @@ export const requestRoleChange = async (
   }
 };
 
-// Approve role change request
 export const approveRoleChange = async (
   uid: string, 
   adminUid: string
@@ -124,17 +119,14 @@ export const approveRoleChange = async (
       throw new Error("No pending role change");
     }
     
-    // Add approval
     await updateDoc(userRef, {
       "pendingRoleChange.approvals": arrayUnion(adminUid)
     });
-    
-    // Check if we have enough approvals
+
     const updatedDoc = await getDoc(userRef);
     const updatedData = updatedDoc.data() as User;
     
     if (updatedData.pendingRoleChange?.approvals.length >= 2) {
-      // Apply the role change
       await updateDoc(userRef, {
         role: updatedData.pendingRoleChange.to,
         pendingRoleChange: null
@@ -148,7 +140,6 @@ export const approveRoleChange = async (
   }
 };
 
-// Cancel role change request
 export const cancelRoleChange = async (uid: string): Promise<boolean> => {
   try {
     const userRef = doc(db, "users", uid);
@@ -162,7 +153,6 @@ export const cancelRoleChange = async (uid: string): Promise<boolean> => {
   }
 };
 
-// Get user by ID
 export const getUserById = async (uid: string): Promise<User | null> => {
   try {
     const userRef = doc(db, "users", uid);
@@ -203,9 +193,7 @@ export const getUserRequests = async (userId: string): Promise<any[]> => {
 };
 export const getAdminEmails = async (): Promise<string[]> => {
   try {
-    console.log('[Admins] Buscando todos os usuários...');
     const users = await getAllUsers();
-    console.log('[Admins] Total de usuários encontrados:', users.length);
 
     const filtered = users.filter(user => 
       (user.role === 'admin' || user.role === 'superadmin') && 
@@ -213,7 +201,6 @@ export const getAdminEmails = async (): Promise<string[]> => {
       user.email
     );
     
-    console.log('[Admins] Administradores válidos:', filtered.map(u => u.email));
     return filtered.map(user => user.email).filter(Boolean);
   } catch (error) {
     console.error("[Admins] Erro crítico:", error);

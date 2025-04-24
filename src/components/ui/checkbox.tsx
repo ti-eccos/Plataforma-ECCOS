@@ -10,8 +10,6 @@ const Checkbox = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>
 >(({ className, ...props }, ref) => {
   const handleClick = React.useCallback((event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-    // This component already handles its own click event through Radix UI
-    // No additional logic needed here
   }, [])
 
   return (

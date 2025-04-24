@@ -52,7 +52,6 @@ const EquipmentDetailsDialog = ({
   const [formData, setFormData] = useState<Partial<Equipment>>({});
   const { toast } = useToast();
 
-  // Reset form when equipment changes or dialog opens
   useState(() => {
     if (equipment && open) {
       setFormData({ ...equipment });

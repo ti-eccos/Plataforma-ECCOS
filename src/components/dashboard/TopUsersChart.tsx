@@ -17,7 +17,6 @@ export function TopUsersChart({ data, darkMode = false }: TopUsersChartProps) {
     color: COLORS[index % COLORS.length]
   }));
 
-  // Função para truncar nomes longos
   const truncateName = (name: string) => {
     return name.length > 12 
       ? `${name.substring(0, 10)}...`

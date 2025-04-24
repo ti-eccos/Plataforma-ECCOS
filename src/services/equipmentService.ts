@@ -37,18 +37,18 @@ export interface Equipment {
   warrantyUntil?: string;
   notes?: string;
   lastMaintenance?: string;
-  properties?: Record<string, string>; // For type-specific properties
+  properties?: Record<string, string>;
 }
 
-// Collection reference
+
 const equipmentCollectionRef = collection(db, "equipment");
 
-// Add new equipment
+
 export const addEquipment = async (equipment: Omit<Equipment, "id">) => {
   try {
     const docRef = await addDoc(equipmentCollectionRef, {
       ...equipment,
-      status: equipment.status || "disponível", // Default status
+      status: equipment.status || "disponível",
     });
     return { id: docRef.id, ...equipment };
   } catch (error) {
@@ -57,7 +57,7 @@ export const addEquipment = async (equipment: Omit<Equipment, "id">) => {
   }
 };
 
-// Get all equipment
+
 export const getAllEquipment = async (): Promise<Equipment[]> => {
   try {
     const snapshot = await getDocs(equipmentCollectionRef);
@@ -71,7 +71,6 @@ export const getAllEquipment = async (): Promise<Equipment[]> => {
   }
 };
 
-// Get sorted equipment for lending (Chromebooks first, then iPads, all alphabetically)
 export const getSortedEquipmentForLending = async (): Promise<Equipment[]> => {
   try {
     const snapshot = await getDocs(equipmentCollectionRef);
@@ -80,18 +79,14 @@ export const getSortedEquipmentForLending = async (): Promise<Equipment[]> => {
       ...doc.data()
     })) as Equipment[];
     
-    // Filter only Chromebooks and iPads
     const lendingEquipment = equipment.filter(
       item => item.type === "Chromebook" || item.type === "iPad"
     );
     
-    // Sort by type (Chromebooks first) and then by name alphabetically
     return lendingEquipment.sort((a, b) => {
-      // First sort by type (Chromebook first)
       if (a.type === "Chromebook" && b.type === "iPad") return -1;
       if (a.type === "iPad" && b.type === "Chromebook") return 1;
       
-      // If types are the same, sort alphabetically by name
       return a.name.localeCompare(b.name);
     });
   } catch (error) {
@@ -100,7 +95,6 @@ export const getSortedEquipmentForLending = async (): Promise<Equipment[]> => {
   }
 };
 
-// Get a single equipment by ID
 export const getEquipmentById = async (id: string): Promise<Equipment | null> => {
   try {
     const docRef = doc(db, "equipment", id);
@@ -117,7 +111,6 @@ export const getEquipmentById = async (id: string): Promise<Equipment | null> =>
   }
 };
 
-// Update equipment
 export const updateEquipment = async (id: string, updates: Partial<Equipment>) => {
   try {
     const equipmentRef = doc(db, "equipment", id);
@@ -129,7 +122,6 @@ export const updateEquipment = async (id: string, updates: Partial<Equipment>) =
   }
 };
 
-// Delete equipment
 export const deleteEquipment = async (id: string) => {
   try {
     await deleteDoc(doc(db, "equipment", id));
@@ -140,7 +132,6 @@ export const deleteEquipment = async (id: string) => {
   }
 };
 
-// Filter equipment by type
 export const filterEquipmentByType = async (type: EquipmentType): Promise<Equipment[]> => {
   try {
     const q = query(equipmentCollectionRef, where("type", "==", type));

@@ -182,7 +182,7 @@ const NovaReserva = () => {
           location: values.location,
           purpose: values.purpose,
           equipmentIds: values.selectedEquipment,
-          equipmentQuantities, // 👈 Campo novo
+          equipmentQuantities,
           userName: currentUser?.displayName || "Usuário",
           userEmail: currentUser?.email || "email@exemplo.com",
           userId: currentUser?.uid || "",
@@ -194,7 +194,6 @@ const NovaReserva = () => {
       : 'Solicitação enviada para aprovação');
     form.reset();
 
-    // Notificação para admins
     await sendAdminNotification('Reserva', currentUser?.displayName || 'Usuário');
   } catch (error) {
     toast.error("Erro ao processar reserva");
