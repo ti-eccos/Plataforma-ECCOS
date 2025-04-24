@@ -315,20 +315,26 @@ const Solicitacoes = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h1 className="text-3xl font-bold">Gerenciamento de Solicitações</h1>
           <Button
-            variant="outline"
-            onClick={() => setShowHidden(!showHidden)}
-            className="flex items-center gap-2"
-          >
-            {showHidden ? (
-              <>
-                <EyeOff className="h-4 w-4" /> Ocultar Finalizadas
-              </>
-            ) : (
-              <>
-                <Eye className="h-4 w-4" /> Mostrar Todas
-              </>
-            )}
-          </Button>
+  variant="outline"
+  onClick={() => {
+    setShowHidden(!showHidden);
+    // Resetar todos os filtros
+    setSelectedTypes(["reservation", "purchase", "support"]);
+    setSelectedStatuses(["pending", "approved", "rejected", "in-progress", "completed", "canceled"]);
+    setSearchTerm("");
+  }}
+  className="flex items-center gap-2"
+>
+  {showHidden ? (
+    <>
+      <EyeOff className="h-4 w-4" /> Ocultar Finalizadas
+    </>
+  ) : (
+    <>
+      <Eye className="h-4 w-4" /> Mostrar Todas
+    </>
+  )}
+</Button>
         </div>
 
         {/* Barra de Pesquisa e Filtros */}
