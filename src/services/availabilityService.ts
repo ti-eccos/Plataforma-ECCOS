@@ -1,4 +1,3 @@
-// src/services/availabilityService.ts
 import { db } from "@/lib/firebase";
 import { 
   collection, 

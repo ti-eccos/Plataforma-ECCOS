@@ -33,7 +33,6 @@ interface AddEquipmentFormDialogProps {
   onEquipmentAdded: () => void;
 }
 
-// Form schema
 const formSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
   type: z.string().min(1, "Tipo é obrigatório"),
@@ -58,7 +57,6 @@ const AddEquipmentFormDialog = ({
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  // Form definition
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -76,7 +74,6 @@ const AddEquipmentFormDialog = ({
     },
   });
 
-  // Reset form when dialog opens or closes
   useState(() => {
     if (open) {
       form.reset();
@@ -86,13 +83,12 @@ const AddEquipmentFormDialog = ({
   const onSubmit = async (values: FormValues) => {
     setLoading(true);
     try {
-      // Make sure name is required
       if (!values.name) {
         throw new Error("Nome é obrigatório");
       }
       
       await addEquipment({
-        name: values.name, // Explicitly include required field
+        name: values.name,
         type: values.type as EquipmentType,
         status: values.status as "disponível" | "em uso" | "em manutenção" | "obsoleto",
         serialNumber: values.serialNumber,

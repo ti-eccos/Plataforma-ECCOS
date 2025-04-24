@@ -84,7 +84,6 @@ const NovaSuporte = () => {
       form.reset();
       setSelectedUnit("");
   
-      // Notificação para admins
       await sendAdminNotification('Suporte', user?.displayName || 'Usuário não identificado');
     } catch (error) {
       toast.error('Erro ao enviar solicitação');

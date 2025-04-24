@@ -70,13 +70,10 @@ const NovaCompra = () => {
       
       toast.success('Solicitação de compra enviada com sucesso!');
       form.reset();
-  
-      console.log('[Solicitação] Compra registrada com sucesso');
+
       toast.success('Solicitação de compra enviada com sucesso!');
-      
-      console.log('[Notificação] Disparando notificação para admins');
+
       await sendAdminNotification('Compra', user?.displayName || 'Usuário não identificado');
-      console.log('[Notificação] Notificação enviada');
   
     } catch (error) {
       console.error('[Solicitação] Erro completo:', error);

@@ -10,7 +10,6 @@ const ProtectedRoute = ({ children, requiresAdmin = false }: ProtectedRouteProps
   const { currentUser, loading, isAdmin } = useAuth();
   const location = useLocation();
 
-  // Exibir spinner de carregamento
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -19,13 +18,11 @@ const ProtectedRoute = ({ children, requiresAdmin = false }: ProtectedRouteProps
     );
   }
 
-  // Redirecionar para login se não autenticado
   if (!currentUser) {
     sessionStorage.setItem("redirectPath", location.pathname);
     return <Navigate to="/login" replace />;
   }
 
-  // Verificar privilégios de admin
   if (requiresAdmin && !isAdmin) {
     return <Navigate to="/unauthorized" replace />;
   }

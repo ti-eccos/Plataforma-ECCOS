@@ -22,26 +22,23 @@ const Login = () => {
   const { toast } = useToast();
   const [isRedirecting, setIsRedirecting] = useState(false);
 
-  // Efeito para redirecionamento pós-login
+
   useEffect(() => {
     const handlePostLogin = async () => {
       if (!currentUser || isRedirecting) return;
 
       setIsRedirecting(true);
       try {
-        // Atualizar última atividade
         const userRef = doc(db, "users", currentUser.uid);
         await updateDoc(userRef, {
           lastActive: serverTimestamp()
         });
 
-        // Determinar destino
         const redirectPath = sessionStorage.getItem("redirectPath") || 
                            location.state?.from?.pathname || 
                            "/";
         sessionStorage.removeItem("redirectPath");
 
-        // Navegar e mostrar feedback
         navigate(redirectPath, { replace: true });
         toast({
           title: "Login bem-sucedido",
@@ -63,7 +60,6 @@ const Login = () => {
     if (currentUser) handlePostLogin();
   }, [currentUser, navigate, toast, location, isRedirecting]);
 
-  // Estados de carregamento
   if (loading || isRedirecting) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -72,10 +68,8 @@ const Login = () => {
     );
   }
 
-  // Usuário já autenticado
   if (currentUser) return null;
 
-  // Componente visual
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4 md:p-0">
       <div className="absolute inset-0 overflow-hidden">

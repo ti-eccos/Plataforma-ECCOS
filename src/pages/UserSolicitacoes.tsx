@@ -212,7 +212,6 @@ const UserSolicitacoes = () => {
   const handleCancelConfirm = async () => {
     if (!requestToCancel) return;
     try {
-      // Implementar lógica de cancelamento aqui
       toast.success("Solicitação cancelada");
       setIsCancelDialogOpen(false);
       setRequestToCancel(null);

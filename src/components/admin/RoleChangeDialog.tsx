@@ -36,7 +36,6 @@ export function RoleChangeDialog({
   
   React.useEffect(() => {
     if (!open) {
-      // Reset state when dialog closes
       setApprovalState('initial');
       setAdminCode('');
     }
@@ -47,8 +46,6 @@ export function RoleChangeDialog({
   const isCurrentlyAdmin = user.role === 'admin';
   
   const handleRequestApproval = async () => {
-    // In a real application, this would send a notification or email to another admin
-    // For this demo, we'll just simulate the approval flow
     setApprovalState('pending');
     
     toast({
@@ -56,7 +53,6 @@ export function RoleChangeDialog({
       description: "Aguardando aprovação de outro administrador.",
     });
     
-    // Simulate waiting for approval
     setTimeout(() => {
       setApprovalState('approved');
       toast({
@@ -88,8 +84,7 @@ export function RoleChangeDialog({
   };
   
   const handleSuperAdminApproval = () => {
-    // Check if the code is correct (in a real app, this would be a more secure process)
-    if (adminCode === '123456') { // Demo code
+    if (adminCode === '123456') {
       setApprovalState('approved');
       toast({
         title: "Código válido",

@@ -13,16 +13,14 @@ const firebaseConfig = {
   appId: "1:1083542320286:web:5c1a5b7203f050186e778f"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
-// Set auth persistence and domain restriction
 googleProvider.setCustomParameters({
-  hd: 'colegioeccos.com.br' // Restrict to specific domain
+  hd: 'colegioeccos.com.br'
 });
 
 export default app;

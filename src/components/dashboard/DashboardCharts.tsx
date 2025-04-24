@@ -18,13 +18,12 @@ interface TopUserData {
   requestCount: number;
 }
 
-// Atualizando a interface para incluir topUsersData
 interface DashboardChartsProps {
   requestStatusData?: PieData[];
   equipmentTypeData?: PieData[];
   requestTypeData?: PieData[];
-  statusData?: PieData[]; // Adicionado para compatibilidade
-  topUsersData?: TopUserData[]; // Adicionado para o novo gráfico de usuários ativos
+  statusData?: PieData[]; 
+  topUsersData?: TopUserData[];
   requests?: any[];
   hideOtherCharts?: boolean;
   darkMode?: boolean;
@@ -35,21 +34,19 @@ export function DashboardCharts({
   equipmentTypeData,
   requestTypeData,
   topUsersData,
-  statusData, // Para compatibilidade com o uso anterior
+  statusData,
   requests,
   hideOtherCharts = false,
   darkMode = false
 }: DashboardChartsProps) {
   const navigate = useNavigate();
   const handleNavigateToMyRequests = () => navigate('/minhas-solicitacoes');
-  // Usar statusData se requestStatusData não for fornecido (para compatibilidade)
   const statusChartData = requestStatusData || statusData;
 
   const handleNavigateToRequests = () => navigate('/solicitacoes');
   const handleNavigateToEquipment = () => navigate('/equipamentos');
   const handleNavigateToUsers = () => navigate('/usuarios');
 
-  // Classes condicionais baseadas no tema escuro
   const cardClass = darkMode 
     ? "bg-gray-800 border-gray-700 text-white shadow-md hover:shadow-lg transition-shadow cursor-pointer" 
     : "shadow-md hover:shadow-lg transition-shadow cursor-pointer";

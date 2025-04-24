@@ -1,5 +1,3 @@
-
-// src/pages/Disponibilidade.tsx
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar } from "@/components/ui/calendar";
@@ -16,7 +14,6 @@ import AppLayout from "@/components/AppLayout";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-// Objeto de estilos para o calendário
 const calendarStyles = {
   availableDate: {
     border: "2px solid #22c55e",
@@ -49,13 +46,10 @@ export default function Disponibilidade() {
       try {
         const dates = await getAvailableDates();
         
-        // Filtrar datas passadas ou hoje
         const datesToRemove = dates.filter(date => isDateInPastOrToday(date));
         
         if (datesToRemove.length > 0) {
-          // Remover do backend
           await removeAvailableDates(datesToRemove);
-          // Manter apenas datas futuras no estado
           const futureDates = dates.filter(date => !isDateInPastOrToday(date));
           setAvailableDates(futureDates);
         } else {

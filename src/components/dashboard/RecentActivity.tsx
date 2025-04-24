@@ -41,7 +41,7 @@ export const RecentActivity = ({ requests, showType = false }: RecentActivityPro
   new Date(
     typeof request.createdAt === 'string' 
       ? request.createdAt 
-      : Number(request.createdAt) * 1000 // Convert to number and handle Unix timestamp
+      : Number(request.createdAt) * 1000 
   ), 
   "dd/MM/yy HH:mm", 
   { locale: ptBR }

@@ -44,37 +44,30 @@ const Usuarios = () => {
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
 
-  // Fetch users with React Query
   const { data: users = [], refetch } = useQuery({
     queryKey: ["users"],
     queryFn: getAllUsers
   });
 
-  // Handle search
   useEffect(() => {
     const term = searchTerm.toLowerCase();
     
     if (term === "") {
-      // Sort users: admins first, then users, all in alphabetical order
       const sortedUsers = [...users].sort((a, b) => {
-        // Role priority order (superadmin > admin > user)
         const rolePriority = { 
           "superadmin": 0, 
           "admin": 1, 
           "user": 2 
         };
         
-        // First sort by role priority
         const roleDiff = (rolePriority[a.role] ?? 3) - (rolePriority[b.role] ?? 3);
         if (roleDiff !== 0) return roleDiff;
         
-        // Then sort alphabetically
         return a.displayName.localeCompare(b.displayName);
       });
       
       setFilteredUsers(sortedUsers);
     } else {
-      // Filter and then sort
       const filtered = users.filter(
         (user) =>
           user.displayName.toLowerCase().includes(term) ||
@@ -114,7 +107,6 @@ const Usuarios = () => {
   };
 
   const getRoleBadge = (user: User) => {
-    // Check if there's a pending role change request
     if (user.pendingRoleChange) {
       return (
         <Badge variant="outline" className="bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30">
@@ -146,36 +138,24 @@ const Usuarios = () => {
     }
   };
 
-  // Can edit role if:
-  // 1. Current user is superadmin (can edit anyone except other superadmins)
-  // 2. Current user is admin and target is not admin or superadmin
   const canEditRole = (user: User): boolean => {
-    // Can't edit self
+
     if (currentUser?.uid === user.uid) return false;
     
-    // Superadmin can edit anyone except other superadmins
     if (isSuperAdmin && user.role !== "superadmin") return true;
     
-    // Admin can promote regular users to admin
     if (currentUser?.role === "admin" && user.role === "user") return true;
     
-    // Admin can request to demote other admins
     if (currentUser?.role === "admin" && user.role === "admin") return true;
     
     return false;
   };
   
-  // Can block if:
-  // 1. Current user is superadmin (can block anyone except other superadmins)
-  // 2. Current user is admin and target is a regular user
   const canBlock = (user: User): boolean => {
-    // Can't block self
     if (currentUser?.uid === user.uid) return false;
     
-    // Superadmin can block anyone except other superadmins
     if (isSuperAdmin && user.role !== "superadmin") return true;
     
-    // Admin can block regular users
     if (currentUser?.role === "admin" && user.role === "user") return true;
     
     return false;
@@ -196,7 +176,7 @@ const Usuarios = () => {
     });
   };
 
-  // Check if user should have actions button visible
+
   const showActionsButton = (user: User): boolean => {
     return user.role !== "superadmin";
   };

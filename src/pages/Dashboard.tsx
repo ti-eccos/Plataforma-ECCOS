@@ -12,8 +12,7 @@ import { DashboardLoading } from "@/components/dashboard/DashboardLoading";
 
 export const Dashboard = () => {
   const { currentUser, isAdmin } = useAuth();
-  
-  // Fetch all requests
+
   const { 
     data: requests = [], 
     isLoading: requestsLoading, 
@@ -24,7 +23,6 @@ export const Dashboard = () => {
     enabled: isAdmin,
   });
 
-  // Fetch users
   const {
     data: users = [],
     isLoading: usersLoading,
@@ -35,7 +33,6 @@ export const Dashboard = () => {
     enabled: isAdmin,
   });
 
-  // Fetch equipment
   const {
     data: equipment = [],
     isLoading: equipmentLoading,
@@ -46,7 +43,6 @@ export const Dashboard = () => {
     enabled: isAdmin,
   });
 
-  // If user is not an admin, show another dashboard
   if (!isAdmin) {
     return <UserDashboard />;
   }
@@ -54,65 +50,54 @@ export const Dashboard = () => {
   const isLoading = requestsLoading || usersLoading || equipmentLoading;
   const isError = requestsError || usersError || equipmentError;
 
-  // Count active users (not blocked)
   const activeUsers = users.filter((user: any) => !user.blocked).length;
-  
-  // Count request types
+
   const requestTypes = requests.reduce((acc: Record<string, number>, req: any) => {
     const type = req.type || 'unknown';
     acc[type] = (acc[type] || 0) + 1;
     return acc;
   }, {});
 
-  // Count request statuses
   const requestStatuses = requests.reduce((acc: Record<string, number>, req: any) => {
     const status = req.status || 'unknown';
     acc[status] = (acc[status] || 0) + 1;
     return acc;
   }, {});
 
-  // Count equipment by type
   const equipmentByType = equipment.reduce((acc: Record<string, number>, equip: any) => {
     const type = equip.type || 'unknown';
     acc[type] = (acc[type] || 0) + 1;
     return acc;
   }, {});
 
-  // Count pending, approved and in-progress requests
   const pendingRequests = requests.filter((req: any) => req.status === 'pending').length;
   const approvedRequests = requests.filter((req: any) => req.status === 'approved').length;
   const inProgressRequests = requests.filter((req: any) => req.status === 'in-progress').length;
-  
-  // Count Chromebooks and iPads
+
   const chromebooks = equipment.filter((equip: any) => equip.type === 'Chromebook').length;
   const ipads = equipment.filter((equip: any) => equip.type === 'iPad').length;
 
-  // Data for request status pie chart
   const requestStatusData = [
     { name: 'Pendentes', value: pendingRequests, color: '#eab308' },
     { name: 'Aprovadas', value: approvedRequests, color: '#22c55e' },
     { name: 'Em Progresso', value: inProgressRequests, color: '#3b82f6' },
   ];
 
-  // Data for equipment type pie chart
   const equipmentTypeData = [
     { name: 'Chromebooks', value: chromebooks, color: '#3b82f6' },
     { name: 'iPads', value: ipads, color: '#8b5cf6' },
   ];
 
-  // Count request by type
   const reservationRequests = requests.filter((req: any) => req.type === 'reservation').length;
   const purchaseRequests = requests.filter((req: any) => req.type === 'purchase').length;
   const supportRequests = requests.filter((req: any) => req.type === 'support').length;
 
-  // Data for request types pie chart
   const requestTypeData = [
     { name: 'Reservas', value: reservationRequests, color: '#3b82f6' },
     { name: 'Compras', value: purchaseRequests, color: '#8b5cf6' },
     { name: 'Suporte', value: supportRequests, color: '#ec4899' }
   ];
 
-  // Get top users by request count
   const userRequestCounts = requests.reduce((acc: Record<string, any>, req: any) => {
     const userName = req.userName || 'Usuário Desconhecido';
     const userId = req.userId || 'unknown';
@@ -128,13 +113,12 @@ export const Dashboard = () => {
     acc[userId].requestCount++;
     return acc;
   }, {});
-  
-  // Convert to array, sort by count, and take top 5
+
   const topUsersData = Object.values(userRequestCounts)
   .sort((a: any, b: any) => b.requestCount - a.requestCount)
   .slice(0, 5)
   .map((user: any) => ({
-    userId: user.userId,       // Add userId here
+    userId: user.userId,      
     userName: user.userName,
     requestCount: user.requestCount,
   }));
@@ -172,5 +156,4 @@ export const Dashboard = () => {
   );
 };
 
-// Adicione esta linha para exportar como padrão
 export default Dashboard;

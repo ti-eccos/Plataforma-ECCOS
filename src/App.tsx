@@ -13,20 +13,17 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useEffect } from 'react';
 
-// Pages
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 import UserSolicitacoes from "@/pages/UserSolicitacoes";
 
-// Admin Pages
 import Equipamentos from "./pages/admin/Equipamentos";
 import Disponibilidade from "./pages/admin/Disponibilidade";
 import Usuarios from "./pages/admin/Usuarios";
 import Solicitacoes from "./pages/admin/Solicitacoes";
 
-// Solicitation Pages
 import NovaReserva from "./pages/solicitations/NovaReserva";
 import NovaCompra from "./pages/solicitations/NovaCompra";
 import NovaSuporte from "./pages/solicitations/NovaSuporte";
@@ -84,7 +81,6 @@ const router = createBrowserRouter(
         </ProtectedRoute>
       ),
     },
-    // User routes
     {
       path: "/nova-solicitacao/reserva",
       element: (
@@ -109,7 +105,6 @@ const router = createBrowserRouter(
         </ProtectedRoute>
       ),
     },
-    // Admin routes
     {
       path: "/equipamentos",
       element: (
