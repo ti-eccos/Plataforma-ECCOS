@@ -72,6 +72,7 @@ import {
 import { RequestType } from "@/services/reservationService";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { sendUserNotification } from '@/lib/email';
 
 const getRequestTypeIcon = (type: RequestType) => {
   switch (type) {
@@ -225,6 +226,7 @@ const Solicitacoes = () => {
     if (!selectedRequest || !newStatus) return;
     
     try {
+      
       toast.success("Status atualizado");
       refetch();
       setSelectedRequest({ ...selectedRequest, status: newStatus });

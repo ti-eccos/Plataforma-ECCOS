@@ -201,3 +201,22 @@ export const getUserRequests = async (userId: string): Promise<any[]> => {
     throw error;
   }
 };
+export const getAdminEmails = async (): Promise<string[]> => {
+  try {
+    console.log('[Admins] Buscando todos os usuários...');
+    const users = await getAllUsers();
+    console.log('[Admins] Total de usuários encontrados:', users.length);
+
+    const filtered = users.filter(user => 
+      (user.role === 'admin' || user.role === 'superadmin') && 
+      !user.blocked &&
+      user.email
+    );
+    
+    console.log('[Admins] Administradores válidos:', filtered.map(u => u.email));
+    return filtered.map(user => user.email).filter(Boolean);
+  } catch (error) {
+    console.error("[Admins] Erro crítico:", error);
+    return [];
+  }
+};

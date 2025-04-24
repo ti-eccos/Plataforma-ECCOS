@@ -30,6 +30,7 @@ import { getAvailableDates, isDateInPastOrToday } from '@/services/availabilityS
 import { getAllEquipment } from '@/services/equipmentService';
 import { addReservation, checkConflicts } from '@/services/reservationService';
 import { useAuth } from '@/contexts/AuthContext';
+import { sendAdminNotification } from '@/lib/email';
 
 const LOCATIONS = [
   'Recepção', 'Secretaria', 'Sala de atendimento', 
@@ -188,17 +189,19 @@ const NovaReserva = () => {
           status: autoApproved ? 'approved' : 'pending'
         });
 
-      toast.success(autoApproved 
-        ? 'Reserva aprovada automaticamente!' 
-        : 'Solicitação enviada para aprovação');
-      form.reset();
-    } catch (error) {
-      toast.error("Erro ao processar reserva");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+       toast.success(autoApproved 
+      ? 'Reserva aprovada automaticamente!' 
+      : 'Solicitação enviada para aprovação');
+    form.reset();
 
+    // Notificação para admins
+    await sendAdminNotification('Reserva', currentUser?.displayName || 'Usuário');
+  } catch (error) {
+    toast.error("Erro ao processar reserva");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
   return (
     <AppLayout>
       <div className="space-y-6">

@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { useAuth } from '@/contexts/AuthContext';
 import { addSupportRequest } from '@/services/reservationService';
 import { Timestamp } from 'firebase/firestore';
+import { sendAdminNotification } from '@/lib/email';
 
 const locationsByUnit = {
   'Berçário e Educação Infantil': [
@@ -82,6 +83,9 @@ const NovaSuporte = () => {
       toast.success('Solicitação enviada com sucesso!');
       form.reset();
       setSelectedUnit("");
+  
+      // Notificação para admins
+      await sendAdminNotification('Suporte', user?.displayName || 'Usuário não identificado');
     } catch (error) {
       toast.error('Erro ao enviar solicitação');
       console.error("Erro detalhado:", error);
@@ -89,7 +93,6 @@ const NovaSuporte = () => {
       setIsSubmitting(false);
     }
   };
-
   return (
     <AppLayout>
       <motion.div
