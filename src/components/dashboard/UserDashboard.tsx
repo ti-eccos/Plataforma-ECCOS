@@ -201,17 +201,17 @@ const UserDashboard = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-8 bg-black text-white p-4 rounded-lg">
+      <div className="space-y-8 bg-black text-foreground p-4 rounded-lg">
         <h1 className="text-2xl font-bold">Dashboard</h1>
 
         {isLoading ? (
           <DashboardLoading isLoading={true} isError={false} />
         ) : isError ? (
-          <div className="p-6 bg-red-900 rounded-lg text-white">
+          <div className="p-6 bg-red-900 rounded-lg text-foreground">
             <h3 className="text-xl font-bold mb-2">Erro ao carregar dados</h3>
             <p>Ocorreu um erro ao buscar suas solicitações. Por favor, tente novamente mais tarde ou entre em contato com o suporte.</p>
             <button 
-              className="mt-4 px-4 py-2 bg-white text-red-900 rounded-md font-medium"
+              className="mt-4 px-4 py-2 bg-foreground text-red-900 rounded-md font-medium"
               onClick={() => window.location.reload()}
             >
               Tentar novamente
@@ -229,7 +229,7 @@ const UserDashboard = () => {
               {Object.values(RequestStatus).map((status) => (
   <Card 
     key={status} 
-    className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700 transition-colors cursor-pointer"
+    className="bg-gray-800 border-gray-700 text-foreground hover:bg-gray-700 transition-colors cursor-pointer"
     onClick={handleNavigateToRequests}
   >
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

@@ -246,7 +246,7 @@ const NovaCompra = () => {
               </Button>
               <Button 
                 type="submit" 
-                className="bg-primary hover:bg-primary/90 text-white"
+                className="bg-primary hover:bg-primary/90 text-foreground"
               >
                 Enviar Solicitação
               </Button>

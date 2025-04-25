@@ -302,7 +302,7 @@ const NovaSuporte = () => {
                     <Button 
                       type="submit" 
                       disabled={isSubmitting}
-                      className="bg-primary hover:bg-primary/90 text-white"
+                      className="bg-primary hover:bg-primary/90 text-foreground"
                     >
                       {isSubmitting ? (
                         <span className="flex items-center">

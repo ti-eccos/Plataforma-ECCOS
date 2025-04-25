@@ -48,7 +48,7 @@ export function DashboardCharts({
   const handleNavigateToUsers = () => navigate('/usuarios');
 
   const cardClass = darkMode 
-    ? "bg-gray-800 border-gray-700 text-white shadow-md hover:shadow-lg transition-shadow cursor-pointer" 
+    ? "bg-gray-800 border-gray-700 text-foreground shadow-md hover:shadow-lg transition-shadow cursor-pointer" 
     : "shadow-md hover:shadow-lg transition-shadow cursor-pointer";
   
   const descriptionClass = darkMode ? "text-gray-400" : "";

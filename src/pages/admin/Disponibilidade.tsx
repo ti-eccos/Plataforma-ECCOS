@@ -76,7 +76,7 @@ export default function Disponibilidade() {
     toast({
       title: "Sucesso",
       description,
-      className: "bg-green-500 text-white",
+      className: "bg-green-500 text-foreground",
     });
   };
 

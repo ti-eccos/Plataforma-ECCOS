@@ -31,8 +31,8 @@ const SidebarItem = ({ icon: Icon, label, href, active, expanded }: SidebarItemP
     <Link
       to={href}
       className={cn(
-        "flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-300 group hover:bg-white/10",
-        active ? "bg-white/10 text-eccos-green" : "text-white"
+        "flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-300 group hover:bg-foreground/10",
+        active ? "bg-[hsl(var(--sidebar-background))] text-eccos-green" : "text-background"
       )}
       tabIndex={0}
     >
@@ -63,7 +63,7 @@ const SidebarSubMenu = ({ label, icon: Icon, children, expanded }: SidebarSubMen
     <div className="space-y-1">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between w-full px-3 py-2 rounded-md transition-colors text-white hover:bg-white/10"
+        className="flex items-center justify-between w-full px-3 py-2 rounded-md transition-colors text-background hover:bg-foreground/10"
       >
         <div className="flex items-center gap-3">
           <Icon className="h-5 w-5 shrink-0" />
@@ -125,7 +125,7 @@ export const AppSidebar = () => {
   return (
     <div
       className={cn(
-        "h-screen bg-background border-r border-border flex flex-col transition-all duration-300 z-10",
+        "h-screen bg-[hsl(var(--sidebar-background))] border-r border-border flex flex-col transition-all duration-300 z-10",
         expanded ? "w-64" : "w-16",
       )}
     >
@@ -133,7 +133,7 @@ export const AppSidebar = () => {
         <div className="flex items-center gap-3 overflow-hidden">
           <span 
             className={cn(
-              "text-xl font-bold text-white transition-all duration-300",
+              "text-xl font-bold text-background transition-all duration-300",
               expanded ? "opacity-100" : "opacity-0 w-0"
             )}
           >
@@ -160,7 +160,7 @@ export const AppSidebar = () => {
                       "block py-2 px-3 rounded-md transition-colors",
                       location.pathname === subItem.href 
                         ? "text-eccos-green" 
-                        : "text-white/70 hover:text-white"
+                        : "text-background hover:text-background"
                     )}
                   >
                     {subItem.label}
@@ -187,7 +187,7 @@ export const AppSidebar = () => {
             <div className="h-px bg-border my-4"></div>
             <div 
               className={cn(
-                "px-3 mb-2 text-xs uppercase text-muted-foreground font-semibold transition-all duration-300",
+                "px-3 mb-2 uppercase text-background font-semibold transition-all duration-300",
                 expanded ? "opacity-100" : "opacity-0"
               )}
             >
@@ -207,12 +207,12 @@ export const AppSidebar = () => {
         )}
       </div>
 
-      <div className="p-4 border-t border-border mt-auto">
+      <div className="p-4 border-t border-border mt-auto bg-[hsl(var(--sidebar-foreground))]">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button 
               className={cn(
-                "w-full flex items-center gap-3 hover:bg-white/10 p-2 rounded-md transition-all",
+                "w-full flex items-center gap-3 hover:bg-[hsl(var(--sidebar-background))] p-2 rounded-md transition-all",
                 expanded ? "" : "justify-center"
               )}
             >
@@ -222,10 +222,10 @@ export const AppSidebar = () => {
                   {currentUser?.displayName?.charAt(0) || "U"}
                 </AvatarFallback>
               </Avatar>
-              {expanded && (
-                <div className="flex-1 text-left overflow-hidden">
-                  <p className="text-sm font-medium truncate">{currentUser?.displayName}</p>
-                  <p className="text-xs text-muted-foreground truncate">{currentUser?.email}</p>
+              {expanded && ( 
+                <div className="flex-1 text-left overflow-hidden text-foreground">
+                  <p className="text-sm font-medium truncate ">{currentUser?.displayName}</p>
+                  <p className="text-xs text-foreground truncate">{currentUser?.email}</p>
                 </div>
               )}
             </button>

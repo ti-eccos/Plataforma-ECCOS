@@ -235,7 +235,7 @@ const Usuarios = () => {
                           <div className="flex items-center gap-3">
                             <Avatar>
                               <AvatarImage src={user.photoURL || ""} />
-                              <AvatarFallback className="bg-gradient-to-br from-eccos-blue to-eccos-purple text-white">
+                              <AvatarFallback className="bg-gradient-to-br from-eccos-blue to-eccos-purple text-foreground">
                                 {user.displayName.split(' ').map(n => n[0]).join('').toUpperCase()}
                               </AvatarFallback>
                             </Avatar>

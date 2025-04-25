@@ -72,35 +72,35 @@ const Login = () => {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4 md:p-0">
-      <div className="absolute inset-0 overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute left-1/3 top-1/4 h-[300px] w-[300px] rounded-full bg-eccos-blue opacity-20 blur-[100px]" />
-        <div className="absolute right-1/3 bottom-1/4 h-[250px] w-[250px] rounded-full bg-eccos-green opacity-20 blur-[100px]" />
+        <div className="absolute right-1/3 bottom-1/4 h-[250px] w-[250px] rounded-full bg-eccos-blue opacity-20 blur-[100px]" />
         <div className="absolute left-1/4 bottom-1/3 h-[350px] w-[350px] rounded-full bg-eccos-purple opacity-20 blur-[100px]" />
       </div>
       
-      <Card className="w-full max-w-md glass-morphism">
+      <Card className="w-full max-w-md bg-[hsl(var(--sidebar-background))] relative z-10">
         <CardHeader className="space-y-4 text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5, duration: 0.5 }}
           >
-            <CardDescription className="text-2xl text-gradient">
+            <CardDescription className="text-2xl text-gradient text-background">
               Colégio
             </CardDescription>  
-            <CardTitle className="text-5xl text-gradient">ECCOS</CardTitle>
-            <CardDescription className="text-muted-foreground text-base mt-1 text-2xl">
+            <CardTitle className="text-5xl text-gradient text-background">ECCOS</CardTitle>
+            <CardDescription className="text-muted-foreground text-base mt-1 text-2xl text-background">
               Plataforma de Tecnologia
             </CardDescription>
           </motion.div>
         </CardHeader>
         
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 text-background">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.8, duration: 0.5 }}
-            className="text-center text-muted-foreground mb-6"
+            className="text-center text-background mb-6 "
           >
             Para acessar a plataforma, faça login com sua conta institucional do Google (@colegioeccos.com.br).
           </motion.div>

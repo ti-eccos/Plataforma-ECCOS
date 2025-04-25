@@ -63,15 +63,15 @@ const getStatusBadge = (status: RequestStatus) => {
     case "pending": 
       return <Badge variant="outline">Pendente</Badge>;
     case "approved": 
-      return <Badge className="bg-green-500 text-white">Aprovada</Badge>;
+      return <Badge className="bg-green-500 text-foreground">Aprovada</Badge>;
     case "rejected": 
       return <Badge variant="destructive">Reprovada</Badge>;
     case "in-progress": 
-      return <Badge className="bg-blue-500 text-white">Em Andamento</Badge>;
+      return <Badge className="bg-blue-500 text-foregrounde">Em Andamento</Badge>;
     case "completed": 
-      return <Badge className="bg-slate-500 text-white">Concluída</Badge>;
+      return <Badge className="bg-slate-500 text-foreground">Concluída</Badge>;
     case "canceled": 
-      return <Badge className="bg-amber-500 text-white">Cancelada</Badge>;
+      return <Badge className="bg-amber-500 text-foreground">Cancelada</Badge>;
     default: 
       return <Badge variant="outline">Desconhecido</Badge>;
   }
@@ -102,9 +102,9 @@ const getPriorityLevelBadge = (level?: string) => {
     },
     colors: {
       critical: 'destructive',
-      high: 'bg-red-500 text-white',
-      medium: 'bg-amber-500 text-white',
-      low: 'bg-green-500 text-white'
+      high: 'bg-red-500 text-foreground',
+      medium: 'bg-amber-500 text-foreground',
+      low: 'bg-green-500 text-foreground'
     }
   };
 
