@@ -10,8 +10,8 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "predeploy": "npm run build && cp public/_redirects public/.nojekyll public/404.html dist/",
-    "deploy": "gh-pages -d dist -b gh-pages"
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build -b gh-pages"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
