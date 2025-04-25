@@ -4,10 +4,10 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 
-const repoName = "eccos-portal-digital";
+const repoName = "Tecnologia-ECCOS";
 
 export default defineConfig(({ mode }) => ({
-  base: '/', 
+  base: '/Tecnologia-ECCOS/', 
   
   server: {
     host: "::",
@@ -19,11 +19,8 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     viteStaticCopy({
       targets: [
-        { 
-          src: 'public/_redirects', 
-          dest: '',
-          rename: '_redirects'
-        }
+        { src: 'public/_redirects', dest: '', rename: '_redirects' },
+        { src: 'public/404.html', dest: '', rename: '404.html' }
       ]
     })
   ].filter(Boolean),
