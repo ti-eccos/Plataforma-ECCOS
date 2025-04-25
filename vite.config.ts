@@ -7,7 +7,7 @@ import { viteStaticCopy } from 'vite-plugin-static-copy';
 const repoName = "eccos-portal-digital";
 
 export default defineConfig(({ mode }) => ({
-  base: mode === 'production' ? '/eccos-portal-digital/' : '/',
+  base: '/eccos-portal-digital/', 
   
   server: {
     host: "::",

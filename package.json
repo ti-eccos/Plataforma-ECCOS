@@ -3,14 +3,14 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://dev-ai-site.github.io/eccos-portal-digital",
+  "homepage": "https://dev-ai-site.github.io/Tecnologia-ECCOS",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "predeploy": "vite build && cp build/index.html build/404.html",
+    "predeploy": "vite build && shx cp build/index.html build/404.html && echo. > build/.nojekyll",
     "deploy": "gh-pages -d build"
   },
   "dependencies": {
@@ -84,6 +84,7 @@
     "globals": "^15.9.0",
     "lovable-tagger": "^1.1.7",
     "postcss": "^8.4.47",
+    "shx": "^0.4.0",
     "tailwindcss": "^3.4.11",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",
