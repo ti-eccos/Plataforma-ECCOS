@@ -201,7 +201,7 @@ const UserDashboard = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-8 bg-black text-foreground p-4 rounded-lg">
+      <div className="space-y-8 bg-background text-foreground p-4 rounded-lg">
         <h1 className="text-2xl font-bold">Dashboard</h1>
 
         {isLoading ? (
@@ -218,7 +218,7 @@ const UserDashboard = () => {
             </button>
           </div>
         ) : requests.length === 0 ? (
-          <div className="p-6 bg-gray-800 rounded-lg text-center">
+          <div className="p-6 bg-border rounded-lg text-center">
             <h3 className="text-xl font-bold mb-2">Nenhuma solicitação encontrada</h3>
             <p className="text-gray-400">Você ainda não fez nenhuma solicitação ou todas foram canceladas.</p>
           </div>

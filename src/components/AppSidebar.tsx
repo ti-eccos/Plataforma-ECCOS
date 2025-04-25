@@ -1,14 +1,12 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
-  Home, Menu, X, Laptop, Calendar, Users, 
-  PlusCircle, ShoppingCart, Wrench, PackageOpen, 
-  LogOut, ChevronDown, ChevronUp, FileText
+  Home, Laptop, Calendar, Users, 
+  PlusCircle, LogOut, ChevronDown, 
+  ChevronUp, FileText
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -17,6 +15,7 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
+import Logo from '@/images/logo-eccos.png';
 
 interface SidebarItemProps {
   icon: React.ElementType;
@@ -31,19 +30,43 @@ const SidebarItem = ({ icon: Icon, label, href, active, expanded }: SidebarItemP
     <Link
       to={href}
       className={cn(
-        "flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-300 group hover:bg-foreground/10",
-        active ? "bg-[hsl(var(--sidebar-background))] text-eccos-green" : "text-background"
+        "flex items-center gap-2 px-2 py-1.5 rounded-md transition-all duration-300 group hover:bg-foreground/10 text-sm",
+        active ? "bg-white text-eccos-blue" : "text-background"
       )}
       tabIndex={0}
     >
-      <Icon className="h-5 w-5 shrink-0" />
+      <Icon className="h-4 w-4 shrink-0" />
+      <span className={cn("transition-all duration-300", expanded ? "opacity-100" : "opacity-0 w-0 overflow-hidden")}>
+        {label}
+      </span>
+    </Link>
+  );
+};
+
+interface SubMenuItemProps {
+  href: string;
+  active: boolean;
+  expanded: boolean;
+  children: React.ReactNode;
+}
+
+const SubMenuItem = ({ href, active, expanded, children }: SubMenuItemProps) => {
+  return (
+    <Link
+      to={href}
+      className={cn(
+        "flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-300 group hover:bg-foreground/10",
+        active ? "bg-white text-eccos-blue" : "text-background",
+        !expanded && "justify-center"
+      )}
+    >
       <span 
         className={cn(
           "transition-all duration-300", 
           expanded ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
         )}
       >
-        {label}
+        {children}
       </span>
     </Link>
   );
@@ -58,6 +81,7 @@ interface SidebarSubMenuProps {
 
 const SidebarSubMenu = ({ label, icon: Icon, children, expanded }: SidebarSubMenuProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const location = useLocation();
 
   return (
     <div className="space-y-1">
@@ -86,11 +110,16 @@ const SidebarSubMenu = ({ label, icon: Icon, children, expanded }: SidebarSubMen
       </button>
       <div 
         className={cn(
-          "space-y-1 pl-8 transition-all duration-300",
+          "space-y-1 transition-all duration-300",
           isOpen && expanded ? "block" : "hidden"
         )}
       >
-        {children}
+        {React.Children.map(children, child => 
+          React.cloneElement(child as React.ReactElement, {
+            active: location.pathname === (child as React.ReactElement).props.href,
+            expanded
+          })
+        )}
       </div>
     </div>
   );
@@ -99,7 +128,7 @@ const SidebarSubMenu = ({ label, icon: Icon, children, expanded }: SidebarSubMen
 export const AppSidebar = () => {
   const [expanded, setExpanded] = useState(true);
   const location = useLocation();
-  const { currentUser, isAdmin, signOut } = useAuth();
+  const { isAdmin, signOut } = useAuth();
   
   const userMenuItems = [
     { icon: Home, label: "Página Inicial", href: "/" },
@@ -129,18 +158,18 @@ export const AppSidebar = () => {
         expanded ? "w-64" : "w-16",
       )}
     >
-      <div className="flex items-center justify-between p-4 h-16">
-        <div className="flex items-center gap-3 overflow-hidden">
-          <span 
+      <div className="flex items-center justify-between p-1 h-24">
+        <div className="flex items-center justify-center overflow-hidden px-4 py-0 w-full">
+          <img 
+            src={Logo} 
+            alt="Logo ECCOS" 
             className={cn(
-              "text-xl font-bold text-background transition-all duration-300",
-              expanded ? "opacity-100" : "opacity-0 w-0"
+              "h-32 w-32 object-contain transition-all duration-300 shrink-0",
+              expanded ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
             )}
-          >
-            ECCOS
-          </span>
+          />
         </div>
-              </div>
+      </div>
 
       <div className="flex-1 overflow-y-auto px-2 py-4 space-y-4 scrollbar-none">
         {userMenuItems.map((item, index) => {
@@ -153,18 +182,14 @@ export const AppSidebar = () => {
                 expanded={expanded}
               >
                 {item.items.map((subItem, subIndex) => (
-                  <Link
+                  <SubMenuItem
                     key={subIndex}
-                    to={subItem.href}
-                    className={cn(
-                      "block py-2 px-3 rounded-md transition-colors",
-                      location.pathname === subItem.href 
-                        ? "text-eccos-green" 
-                        : "text-background hover:text-background"
-                    )}
+                    href={subItem.href}
+                    active={location.pathname === subItem.href}
+                    expanded={expanded}
                   >
                     {subItem.label}
-                  </Link>
+                  </SubMenuItem>
                 ))}
               </SidebarSubMenu>
             );
@@ -205,40 +230,44 @@ export const AppSidebar = () => {
             ))}
           </>
         )}
-      </div>
 
-      <div className="p-4 border-t border-border mt-auto bg-[hsl(var(--sidebar-foreground))]">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button 
-              className={cn(
-                "w-full flex items-center gap-3 hover:bg-[hsl(var(--sidebar-background))] p-2 rounded-md transition-all",
-                expanded ? "" : "justify-center"
-              )}
+<div className="mt-auto pt-4">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button 
+                className={cn(
+                  "w-full p-2 hover:bg-border rounded-md text-background transition-colors focus:outline-none flex items-center gap-2",
+                  expanded ? "px-3 justify-start" : "justify-center"
+                )}
+                aria-label="Menu de logout"
+              >
+                <LogOut className="h-5 w-5 shrink-0" />
+                {expanded && (
+                  <span className="text-sm transition-all duration-300">
+                    Sair
+                  </span>
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            
+            <DropdownMenuContent 
+              align={expanded ? "start" : "center"} 
+              className="w-48"
             >
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={currentUser?.photoURL || ""} />
-                <AvatarFallback className="bg-eccos-blue">
-                  {currentUser?.displayName?.charAt(0) || "U"}
-                </AvatarFallback>
-              </Avatar>
-              {expanded && ( 
-                <div className="flex-1 text-left overflow-hidden text-foreground">
-                  <p className="text-sm font-medium truncate ">{currentUser?.displayName}</p>
-                  <p className="text-xs text-foreground truncate">{currentUser?.email}</p>
-                </div>
-              )}
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="center" className="w-56">
-            <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={signOut} className="text-destructive cursor-pointer">
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Sair</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <DropdownMenuLabel className="text-xs font-semibold">
+                Ações da Conta
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={signOut} 
+                className="text-destructive cursor-pointer focus:bg-destructive/10"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                <span className="text-sm">Confirmar Saída</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </div>
   );

@@ -64,8 +64,8 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				},
 				eccos: {
-					blue: '#0074E0',
-					green: '#00E676',
+					blue: '#0157A7',
+					green: '#0157A7',
 					purple: '#8B5CF6',
 					pink: '#F472B6',
 					orange: '#F97316',
