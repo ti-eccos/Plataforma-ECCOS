@@ -1,4 +1,3 @@
-
 import { db } from "@/lib/firebase";
 import { 
   collection, 
@@ -10,25 +9,26 @@ import {
   where,
   updateDoc,
   getDoc,
-  orderBy
+  orderBy,
+  writeBatch
 } from "firebase/firestore";
 
 export type EquipmentType = 
   | "Chromebook" 
-  | "iPad" 
-  | "Projetor" 
-  | "Cabo" 
-  | "Desktop" 
+  | "iPad"
+  | "Projetor"
+  | "Cabo"
+  | "Desktop"
   | "Periférico"
   | "Áudio"
   | "Rede"
   | "Outro";
 
+
 export interface Equipment {
   id?: string;
   name: string;
   type: EquipmentType;
-  status: "disponível" | "em uso" | "em manutenção" | "obsoleto";
   location?: string;
   serialNumber?: string;
   model?: string;
@@ -40,16 +40,11 @@ export interface Equipment {
   properties?: Record<string, string>;
 }
 
-
 const equipmentCollectionRef = collection(db, "equipment");
-
 
 export const addEquipment = async (equipment: Omit<Equipment, "id">) => {
   try {
-    const docRef = await addDoc(equipmentCollectionRef, {
-      ...equipment,
-      status: equipment.status || "disponível",
-    });
+    const docRef = await addDoc(equipmentCollectionRef, equipment);
     return { id: docRef.id, ...equipment };
   } catch (error) {
     console.error("Error adding equipment:", error);
@@ -57,6 +52,20 @@ export const addEquipment = async (equipment: Omit<Equipment, "id">) => {
   }
 };
 
+export const addMultipleEquipment = async (equipments: Omit<Equipment, "id">[]) => {
+  try {
+    const batch = writeBatch(db);
+    equipments.forEach(equipment => {
+      const docRef = doc(equipmentCollectionRef);
+      batch.set(docRef, equipment);
+    });
+    await batch.commit();
+    return equipments;
+  } catch (error) {
+    console.error("Error adding multiple equipment:", error);
+    throw error;
+  }
+};
 
 export const getAllEquipment = async (): Promise<Equipment[]> => {
   try {
@@ -91,6 +100,21 @@ export const getSortedEquipmentForLending = async (): Promise<Equipment[]> => {
     });
   } catch (error) {
     console.error("Error getting sorted equipment:", error);
+    throw error;
+  }
+};
+
+export const deleteMultipleEquipment = async (ids: string[]) => {
+  try {
+    const batch = writeBatch(db);
+    ids.forEach(id => {
+      const docRef = doc(db, "equipment", id);
+      batch.delete(docRef);
+    });
+    await batch.commit();
+    return true;
+  } catch (error) {
+    console.error("Error deleting multiple equipment:", error);
     throw error;
   }
 };

@@ -2,16 +2,16 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { 
+import {
   createBrowserRouter,
   RouterProvider,
   Navigate,
-  useLocation,
-  useNavigate
 } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { useEffect } from 'react';
+
+// Layout com redirecionamento automático via sessionStorage
+import AppWrapper from "@/components/AppWrapper";
 
 // Páginas
 import Login from "./pages/Login";
@@ -33,22 +33,6 @@ import NovaSuporte from "./pages/solicitations/NovaSuporte";
 
 const queryClient = new QueryClient();
 
-// Componente para tratamento de redirecionamento
-const RoutingHandler = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  useEffect(() => {
-    const savedPath = sessionStorage.getItem('redirectPath');
-    if (savedPath && savedPath !== '/') {
-      sessionStorage.removeItem('redirectPath');
-      navigate(savedPath);
-    }
-  }, [navigate, location]);
-
-  return null;
-};
-
 // Configuração de rotas
 const router = createBrowserRouter(
   [
@@ -66,83 +50,89 @@ const router = createBrowserRouter(
     },
     {
       path: "/",
-      element: (
-        <ProtectedRoute>
-          <Dashboard />
-        </ProtectedRoute>
-      ),
-    },
-    {
-      path: "/nova-solicitacao/reserva",
-      element: (
-        <ProtectedRoute>
-          <NovaReserva />
-        </ProtectedRoute>
-      ),
-    },
-    {
-      path: "/nova-solicitacao/compra",
-      element: (
-        <ProtectedRoute>
-          <NovaCompra />
-        </ProtectedRoute>
-      ),
-    },
-    {
-      path: "/nova-solicitacao/suporte",
-      element: (
-        <ProtectedRoute>
-          <NovaSuporte />
-        </ProtectedRoute>
-      ),
-    },
-    {
-      path: "/equipamentos",
-      element: (
-        <ProtectedRoute requiresAdmin>
-          <Equipamentos />
-        </ProtectedRoute>
-      ),
-    },
-    {
-      path: "/disponibilidade",
-      element: (
-        <ProtectedRoute requiresAdmin>
-          <Disponibilidade />
-        </ProtectedRoute>
-      ),
-    },
-    {
-      path: "/usuarios",
-      element: (
-        <ProtectedRoute requiresAdmin>
-          <Usuarios />
-        </ProtectedRoute>
-      ),
-    },
-    {
-      path: "/solicitacoes",
-      element: (
-        <ProtectedRoute requiresAdmin>
-          <Solicitacoes />
-        </ProtectedRoute>
-      ),
+      element: <AppWrapper />, // <- agora o wrapper com useNavigate
+      children: [
+        {
+          index: true,
+          element: (
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "nova-solicitacao/reserva",
+          element: (
+            <ProtectedRoute>
+              <NovaReserva />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "nova-solicitacao/compra",
+          element: (
+            <ProtectedRoute>
+              <NovaCompra />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "nova-solicitacao/suporte",
+          element: (
+            <ProtectedRoute>
+              <NovaSuporte />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "equipamentos",
+          element: (
+            <ProtectedRoute requiresAdmin>
+              <Equipamentos />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "disponibilidade",
+          element: (
+            <ProtectedRoute requiresAdmin>
+              <Disponibilidade />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "usuarios",
+          element: (
+            <ProtectedRoute requiresAdmin>
+              <Usuarios />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "solicitacoes",
+          element: (
+            <ProtectedRoute requiresAdmin>
+              <Solicitacoes />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "minhas-solicitacoes",
+          element: (
+            <ProtectedRoute>
+              <UserSolicitacoes />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "*",
+          element: <Navigate to="/404" replace />,
+        },
+      ],
     },
     {
       path: "/index",
       element: <Navigate to="/" replace />,
-    },
-    {
-      path: "/minhas-solicitacoes",
-      element: (
-        <ProtectedRoute>
-          <UserSolicitacoes />
-        </ProtectedRoute>
-      ),
-    },
-    {
-      path: "*",
-      element: <Navigate to="/404" replace />,
     },
   ],
   {
@@ -157,7 +147,6 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <RoutingHandler />
         <RouterProvider router={router} />
       </TooltipProvider>
     </AuthProvider>

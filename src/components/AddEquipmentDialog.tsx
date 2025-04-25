@@ -1,27 +1,16 @@
-
 import { useState } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage
-} from "@/components/ui/form";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -29,13 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { addEquipment, EquipmentType } from "@/services/equipmentService";
-
-const formSchema = z.object({
-  name: z.string().min(3, { message: "O nome deve ter pelo menos 3 caracteres" }),
-  type: z.enum(["Chromebook", "iPad"]),
-  status: z.enum(["disponível", "em uso", "em manutenção", "obsoleto"]).default("disponível")
-});
+import { Loader2, Plus } from "lucide-react";
+import { Equipment, EquipmentType, addMultipleEquipment } from "@/services/equipmentService";
 
 interface AddEquipmentDialogProps {
   open: boolean;
@@ -43,132 +27,130 @@ interface AddEquipmentDialogProps {
   onEquipmentAdded: () => void;
 }
 
-const AddEquipmentDialog = ({ open, onOpenChange, onEquipmentAdded }: AddEquipmentDialogProps) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
-  
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      type: "Chromebook",
-      status: "disponível"
-    },
-  });
+const equipmentTypes: EquipmentType[] = [
+  "Chromebook",
+  "iPad",
+];
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    setIsSubmitting(true);
+export default function AddEquipmentDialog({
+  open,
+  onOpenChange,
+  onEquipmentAdded,
+}: AddEquipmentDialogProps) {
+  const [loading, setLoading] = useState(false);
+  const [equipments, setEquipments] = useState<Array<Partial<Omit<Equipment, "id">>>>([{}]);
+  const { toast } = useToast();
+
+  const resetForm = () => {
+    setEquipments([{}]);
+  };
+
+  const handleSubmit = async () => {
+    setLoading(true);
     try {
-      await addEquipment({
-        name: values.name,
-        type: values.type,
-        status: values.status
-      });
+      // Converter explicitamente o tipo para EquipmentType
+      const validatedEquipments = equipments.map(equipment => ({
+        ...equipment,
+        type: equipment.type as EquipmentType,
+        name: equipment.name || "Sem nome",
+      }));
+
+      await addMultipleEquipment(validatedEquipments as Omit<Equipment, "id">[]);
       
       toast({
-        title: "Equipamento adicionado",
-        description: "O equipamento foi adicionado com sucesso.",
+        title: "Sucesso",
+        description: "Equipamentos adicionados com sucesso!",
       });
-      form.reset();
-      onOpenChange(false);
       onEquipmentAdded();
+      resetForm();
+      onOpenChange(false);
     } catch (error) {
       toast({
         title: "Erro",
-        description: "Ocorreu um erro ao adicionar o equipamento.",
+        description: "Falha ao adicionar equipamentos",
         variant: "destructive",
       });
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
+  };
+
+  const addNewEquipmentField = () => {
+    setEquipments([...equipments, {}]);
+  };
+
+  const updateEquipmentField = (index: number, field: string, value: string) => {
+    const newEquipments = [...equipments];
+    newEquipments[index] = { ...newEquipments[index], [field]: value };
+    setEquipments(newEquipments);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Adicionar Novo Equipamento</DialogTitle>
+          <DialogTitle>Adicionar Equipamentos</DialogTitle>
           <DialogDescription>
-            Preencha as informações do novo equipamento.
+            Preencha os detalhes dos novos equipamentos. Você pode adicionar vários de uma vez.
           </DialogDescription>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Nome do equipamento" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        <div className="space-y-4">
+          {equipments.map((equipment, index) => (
+            <div key={index} className="space-y-4 border p-4 rounded-lg">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor={`name-${index}`}>Nome *</Label>
+                  <Input
+                    id={`name-${index}`}
+                    value={equipment.name || ""}
+                    onChange={(e) => updateEquipmentField(index, "name", e.target.value)}
+                  />
+                </div>
 
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tipo</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o tipo" />
-                      </SelectTrigger>
-                    </FormControl>
+                <div>
+                  <Label htmlFor={`type-${index}`}>Tipo *</Label>
+                  <Select
+                    value={equipment.type || ""}
+                    onValueChange={(value) => updateEquipmentField(index, "type", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Chromebook">Chromebook</SelectItem>
-                      <SelectItem value="iPad">iPad</SelectItem>
+                      {equipmentTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                </div>
+              </div>
 
-            <FormField
-              control={form.control}
-              name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o status" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="disponível">Disponível</SelectItem>
-                      <SelectItem value="em uso">Em uso</SelectItem>
-                      <SelectItem value="em manutenção">Em manutenção</SelectItem>
-                      <SelectItem value="obsoleto">Obsoleto</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <div className="grid grid-cols-2 gap-4">
+              </div>
+            </div>
+          ))}
 
-            <DialogFooter>
-              <Button 
-                type="submit" 
-                className="bg-eccos-blue hover:bg-eccos-blue/80"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "Adicionando..." : "Adicionar"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={addNewEquipmentField}
+            className="w-full"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Adicionar outro equipamento
+          </Button>
+        </div>
+
+        <DialogFooter>
+          <Button onClick={handleSubmit} disabled={loading}>
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Salvar equipamentos
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-};
-
-export default AddEquipmentDialog;
+}

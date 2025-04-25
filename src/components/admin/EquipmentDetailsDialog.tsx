@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Equipment, updateEquipment, deleteEquipment } from "@/services/equipmentService";
@@ -176,27 +175,6 @@ const EquipmentDetailsDialog = ({
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="status">Status</Label>
-                {editMode ? (
-                  <Select
-                    value={formData.status || ""}
-                    onValueChange={(value) => handleSelectChange("status", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="disponível">Disponível</SelectItem>
-                      <SelectItem value="em uso">Em uso</SelectItem>
-                      <SelectItem value="em manutenção">Em manutenção</SelectItem>
-                      <SelectItem value="obsoleto">Obsoleto</SelectItem>
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <div className="p-2 border rounded-md">{equipment.status}</div>
-                )}
-              </div>
 
               <div>
                 <Label htmlFor="serialNumber">Número de Série</Label>
