@@ -30,12 +30,12 @@ const SidebarItem = ({ icon: Icon, label, href, active, expanded }: SidebarItemP
     <Link
       to={href}
       className={cn(
-        "flex items-center gap-2 px-2 py-1.5 rounded-md transition-all duration-300 group hover:bg-foreground/10 text-sm",
+        "flex items-center gap-3 px-3 py-3 rounded-md transition-all duration-300 group hover:bg-foreground/10 text-base",
         active ? "bg-white text-eccos-blue" : "text-background"
       )}
       tabIndex={0}
     >
-      <Icon className="h-4 w-4 shrink-0" />
+      <Icon className="h-5 w-5 shrink-0" />
       <span className={cn("transition-all duration-300", expanded ? "opacity-100" : "opacity-0 w-0 overflow-hidden")}>
         {label}
       </span>
@@ -55,7 +55,7 @@ const SubMenuItem = ({ href, active, expanded, children }: SubMenuItemProps) => 
     <Link
       to={href}
       className={cn(
-        "flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-300 group hover:bg-foreground/10",
+        "flex items-center gap-3 px-4 py-3 rounded-md transition-all duration-300 group hover:bg-foreground/10 text-base",
         active ? "bg-white text-eccos-blue" : "text-background",
         !expanded && "justify-center"
       )}
@@ -155,7 +155,7 @@ export const AppSidebar = () => {
     <div
       className={cn(
         "h-screen bg-[hsl(var(--sidebar-background))] border-r border-border flex flex-col transition-all duration-300 z-10",
-        expanded ? "w-64" : "w-16",
+        expanded ? "w-72" : "w-20",
       )}
     >
       <div className="flex items-center justify-between p-1 h-24">
@@ -171,7 +171,7 @@ export const AppSidebar = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-2 py-4 space-y-4 scrollbar-none">
+      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-2 scrollbar-none">
         {userMenuItems.map((item, index) => {
           if ('items' in item) {
             return (
@@ -212,7 +212,7 @@ export const AppSidebar = () => {
             <div className="h-px bg-border my-4"></div>
             <div 
               className={cn(
-                "px-3 mb-2 uppercase text-background font-semibold transition-all duration-300",
+                "px-4 mb-2 uppercase text-background font-semibold transition-all duration-300 text-sm",
                 expanded ? "opacity-100" : "opacity-0"
               )}
             >
@@ -231,7 +231,7 @@ export const AppSidebar = () => {
           </>
         )}
 
-<div className="mt-auto pt-4">
+        <div className="mt-auto pt-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button 
