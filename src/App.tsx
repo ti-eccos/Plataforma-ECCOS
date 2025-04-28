@@ -9,8 +9,7 @@ import {
 } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
-
-// Layout com redirecionamento automático via sessionStorage
+import Notificacao from "@/pages/admin/Notificacoes";
 import AppWrapper from "@/components/AppWrapper";
 
 // Páginas
@@ -113,6 +112,14 @@ const router = createBrowserRouter(
           element: (
             <ProtectedRoute requiresAdmin>
               <Solicitacoes />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "notificacoes",
+          element: (
+            <ProtectedRoute requiresAdmin>
+              <Notificacao />
             </ProtectedRoute>
           ),
         },

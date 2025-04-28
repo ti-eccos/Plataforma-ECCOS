@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
@@ -72,7 +72,8 @@ import {
 import { RequestType } from "@/services/reservationService";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { sendUserNotification, sendAdminNotification } from '@/lib/email';
+import { sendUserNotification } from '@/lib/email';
+import { createNotification } from '@/services/notificationService';
 
 const getRequestTypeIcon = (type: RequestType) => {
   switch (type) {
@@ -132,6 +133,7 @@ const getPriorityLevelBadge = (level?: string) => {
 };
 
 const Solicitacoes = () => {
+  const queryClient = useQueryClient();
   const { currentUser: user, isAdmin } = useAuth();
   const [showHidden, setShowHidden] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -228,6 +230,16 @@ const Solicitacoes = () => {
     try {
       const docRef = doc(db, selectedRequest.collectionName, selectedRequest.id);
       await updateDoc(docRef, { status: newStatus });
+      
+      // Notificação com link
+      await createNotification({
+        title: 'Alteração de Status',
+        message: `Status de solicitação alterado para: ${newStatus}`,
+        link: '/minhas-solicitacoes',
+        createdAt: new Date(),
+        read: false,
+      });
+  
       if (['approved', 'rejected'].includes(newStatus)) {
         await sendUserNotification(
           selectedRequest.userEmail,
@@ -235,16 +247,18 @@ const Solicitacoes = () => {
           newStatus
         );
       }
-
+  
       toast.success("Status atualizado");
       refetch();
       setSelectedRequest({ ...selectedRequest, status: newStatus });
+      
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+  
     } catch (error) {
       toast.error("Erro ao atualizar");
       console.error("Error:", error);
     }
   };
-
   const handleSendMessage = async () => {
     if (!selectedRequest || !newMessage.trim()) return;
     
@@ -315,26 +329,25 @@ const Solicitacoes = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h1 className="text-3xl font-bold">Gerenciamento de Solicitações</h1>
           <Button
-  variant="outline"
-  onClick={() => {
-    setShowHidden(!showHidden);
-    // Resetar todos os filtros
-    setSelectedTypes(["reservation", "purchase", "support"]);
-    setSelectedStatuses(["pending", "approved", "rejected", "in-progress", "completed", "canceled"]);
-    setSearchTerm("");
-  }}
-  className="flex items-center gap-2"
->
-  {showHidden ? (
-    <>
-      <EyeOff className="h-4 w-4" /> Ocultar Finalizadas
-    </>
-  ) : (
-    <>
-      <Eye className="h-4 w-4" /> Mostrar Todas
-    </>
-  )}
-</Button>
+            variant="outline"
+            onClick={() => {
+              setShowHidden(!showHidden);
+              setSelectedTypes(["reservation", "purchase", "support"]);
+              setSelectedStatuses(["pending", "approved", "rejected", "in-progress", "completed", "canceled"]);
+              setSearchTerm("");
+            }}
+            className="flex items-center gap-2"
+          >
+            {showHidden ? (
+              <>
+                <EyeOff className="h-4 w-4" /> Ocultar Finalizadas
+              </>
+            ) : (
+              <>
+                <Eye className="h-4 w-4" /> Mostrar Todas
+              </>
+            )}
+          </Button>
         </div>
 
         {/* Barra de Pesquisa e Filtros */}
@@ -466,35 +479,35 @@ const Solicitacoes = () => {
         {/* Diálogo de Detalhes */}
         <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
           <DialogContent className="max-w-3xl overflow-y-auto max-h-[90vh]">
-          <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-           {selectedRequest && (
-         <>
-         {getRequestTypeIcon(selectedRequest.type)}
-          <span>
-          {getReadableRequestType(selectedRequest.type)} - {selectedRequest.userName || selectedRequest.userEmail}
-        </span>
-      </>
-    )}
-  </DialogTitle>
-  
-  <DialogDescription asChild>
-    <div className="text-sm text-muted-foreground px-1">
-      {selectedRequest && (
-        <div className="flex items-center justify-between">
-          <div>
-            {format(
-              new Date(selectedRequest.createdAt.toMillis()),
-              "dd 'de' MMMM 'de' yyyy 'às' HH:mm",
-              { locale: ptBR }
-            )}
-          </div>
-          <div>{getStatusBadge(selectedRequest.status)}</div>
-        </div>
-      )}
-    </div>
-  </DialogDescription>
-</DialogHeader>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                {selectedRequest && (
+                  <>
+                    {getRequestTypeIcon(selectedRequest.type)}
+                    <span>
+                      {getReadableRequestType(selectedRequest.type)} - {selectedRequest.userName || selectedRequest.userEmail}
+                    </span>
+                  </>
+                )}
+              </DialogTitle>
+              
+              <DialogDescription asChild>
+                <div className="text-sm text-muted-foreground px-1">
+                  {selectedRequest && (
+                    <div className="flex items-center justify-between">
+                      <div>
+                        {format(
+                          new Date(selectedRequest.createdAt.toMillis()),
+                          "dd 'de' MMMM 'de' yyyy 'às' HH:mm",
+                          { locale: ptBR }
+                        )}
+                      </div>
+                      <div>{getStatusBadge(selectedRequest.status)}</div>
+                    </div>
+                  )}
+                </div>
+              </DialogDescription>
+            </DialogHeader>
             
             {selectedRequest && (
               <div className="space-y-6 py-4">
@@ -578,32 +591,32 @@ const Solicitacoes = () => {
                     </div>
                   )}
 
-{selectedRequest.type === "support" && (
-  <div className="grid grid-cols-1 gap-4">
-    <div>
-      <p className="text-sm font-medium text-muted-foreground">Descrição</p>
-      <div className="max-h-[200px] overflow-y-auto">
-  <pre className="whitespace-pre-wrap font-sans text-sm p-2">
-    {selectedRequest.description || "Nenhuma descrição fornecida"}
-  </pre>
-</div>
-    </div>
-    <div>
-      <p className="text-sm font-medium text-muted-foreground">Local</p>
-      <p>{selectedRequest.location}</p>
-    </div>
-    <div>
-      <p className="text-sm font-medium text-muted-foreground">Prioridade</p>
-      <div className="flex items-center gap-2">
-        {getPriorityLevelBadge(selectedRequest.priority)}
-      </div>
-    </div>
-    <div>
-      <p className="text-sm font-medium text-muted-foreground">Unidade</p>
-      <p>{selectedRequest.unit}</p>
-    </div>
-  </div>
-)}
+                  {selectedRequest.type === "support" && (
+                    <div className="grid grid-cols-1 gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Descrição</p>
+                        <div className="max-h-[200px] overflow-y-auto">
+                          <pre className="whitespace-pre-wrap font-sans text-sm p-2">
+                            {selectedRequest.description || "Nenhuma descrição fornecida"}
+                          </pre>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Local</p>
+                        <p>{selectedRequest.location}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Prioridade</p>
+                        <div className="flex items-center gap-2">
+                          {getPriorityLevelBadge(selectedRequest.priority)}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Unidade</p>
+                        <p>{selectedRequest.unit}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Alteração de Status */}

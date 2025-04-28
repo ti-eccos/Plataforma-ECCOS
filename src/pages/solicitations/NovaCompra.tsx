@@ -48,8 +48,8 @@ const NovaCompra = () => {
     resolver: zodResolver(formSchema),
     defaultValues: {
       itemName: '',
-      quantity: undefined,
-      unitPrice: undefined,
+      quantity: 0,
+      unitPrice: 0,
       urgency: '',
       justification: '',
       additionalInfo: '',
@@ -71,8 +71,6 @@ const NovaCompra = () => {
       toast.success('Solicitação de compra enviada com sucesso!');
       form.reset();
 
-      toast.success('Solicitação de compra enviada com sucesso!');
-
       await sendAdminNotification('Compra', user?.displayName || 'Usuário não identificado');
   
     } catch (error) {
@@ -80,6 +78,7 @@ const NovaCompra = () => {
       toast.error('Erro ao enviar solicitação');
     }
   };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -119,14 +118,11 @@ const NovaCompra = () => {
                     <FormControl>
                       <Input
                         type="number"
-                        min="1"
-                        step="1"
+                        step="0.01"
+                        min="0.01"
                         placeholder="Ex: 5"
-                        {...field}
-                        onChange={(e) => {
-                          const value = parseInt(e.target.value);
-                          field.onChange(isNaN(value) ? 0 : value);
-                        }}
+                        value={field.value === 0 ? '' : field.value}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
                     <FormMessage />
@@ -143,13 +139,14 @@ const NovaCompra = () => {
                   <FormItem>
                     <FormLabel>Valor Unitário (R$) *</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        placeholder="Ex: 4500.00"
-                        {...field}
-                      />
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      placeholder="Ex: 4500.00"
+                      value={field.value === 0 ? '' : field.value}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                    />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -204,11 +201,7 @@ const NovaCompra = () => {
                   <FormLabel>Justificativa *</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Descreva detalhadamente a necessidade desta compra, incluindo:
-- Finalidade do item
-- Benefícios esperados
-- Impacto da não aquisição
-- Alternativas consideradas"
+                      placeholder="Descreva detalhadamente a necessidade desta compra..."
                       className="min-h-[120px]"
                       {...field}
                     />
@@ -226,7 +219,7 @@ const NovaCompra = () => {
                   <FormLabel>Informações Adicionais</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Links de referência, especificações técnicas, observações relevantes..."
+                      placeholder="Links de referência, especificações técnicas..."
                       className="min-h-[100px]"
                       {...field}
                     />

@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { 
   Home, Laptop, Calendar, Users, 
   PlusCircle, LogOut, ChevronDown, 
-  ChevronUp, FileText
+  ChevronUp, FileText, Bell
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -148,7 +148,8 @@ export const AppSidebar = () => {
     { icon: Laptop, label: "Equipamentos", href: "/equipamentos" },
     { icon: Calendar, label: "Disponibilidade", href: "/disponibilidade" },
     { icon: Users, label: "Usuários", href: "/usuarios" },
-    { icon: FileText, label: "Solicitações", href: "/solicitacoes" }
+    { icon: FileText, label: "Solicitações", href: "/solicitacoes" },
+    { icon: Bell, label: "Notificações", href: "/notificacoes" }
   ];
 
   return (
