@@ -230,14 +230,14 @@ const Solicitacoes = () => {
     try {
       const docRef = doc(db, selectedRequest.collectionName, selectedRequest.id);
       await updateDoc(docRef, { status: newStatus });
-      
-      // Notificação com link
+  
       await createNotification({
         title: 'Alteração de Status',
-        message: `Status de solicitação alterado para: ${newStatus}`,
-        link: '/minhas-solicitacoes',
+        message: `Status da sua solicitação foi alterado para: ${newStatus}`,
+        link: 'minhas-solicitacoes',
         createdAt: new Date(),
-        read: false,
+        readBy: [],
+        userEmail: selectedRequest.userEmail
       });
   
       if (['approved', 'rejected'].includes(newStatus)) {
