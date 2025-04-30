@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -67,7 +67,7 @@ const getStatusBadge = (status: RequestStatus) => {
     case "rejected": 
       return <Badge variant="destructive">Reprovada</Badge>;
     case "in-progress": 
-      return <Badge className="bg-blue-500 text-foregrounde">Em Andamento</Badge>;
+      return <Badge className="bg-blue-500 text-foreground">Em Andamento</Badge>;
     case "completed": 
       return <Badge className="bg-slate-500 text-foreground">Concluída</Badge>;
     case "canceled": 
@@ -127,41 +127,91 @@ const UserSolicitacoes = () => {
   const [selectedType, setSelectedType] = useState<RequestType | 'todos'>('todos');
   const [selectedStatus, setSelectedStatus] = useState<RequestStatus | 'todos'>('todos');
   const [equipmentCounts, setEquipmentCounts] = useState({ ipads: 0, chromebooks: 0, others: 0 });
+  const [equipmentCache, setEquipmentCache] = useState<Record<string, {type: string}>>({});
+  const [isDetailsLoading, setIsDetailsLoading] = useState(false);
 
   const { data: requests = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["userRequests", currentUser?.email],
     queryFn: () => getAllRequests(false)
   });
 
-  const countEquipment = async (equipmentIds: string[] = []) => {
-    let ipads = 0;
-    let chromebooks = 0;
-    let others = 0;
+  // Pré-carrega os dados dos equipamentos quando as solicitações são carregadas
+  useEffect(() => {
+    const fetchEquipmentData = async () => {
+      const equipmentIds = requests
+        .filter(req => req.type === 'reservation' && req.equipmentIds)
+        .flatMap(req => req.equipmentIds)
+        .filter((id, index, self) => self.indexOf(id) === index); // Remove duplicados
 
-    for (const id of equipmentIds) {
-      try {
-        const docRef = doc(db, 'equipment', id);
-        const docSnap = await getDoc(docRef);
-        
-        if (docSnap.exists()) {
-          const type = docSnap.data().type.toLowerCase();
-          if (type.includes('ipad')) {
-            ipads++;
-          } else if (type.includes('chromebook')) {
-            chromebooks++;
-          } else {
-            others++;
-          }
+      if (equipmentIds.length > 0) {
+        try {
+          const equipmentDocs = await Promise.all(
+            equipmentIds.map(id => getDoc(doc(db, 'equipment', id)))
+          );
+          
+          const newCache = {...equipmentCache};
+          equipmentDocs.forEach((docSnap, index) => {
+            if (docSnap.exists()) {
+              newCache[equipmentIds[index]] = {type: docSnap.data().type};
+            }
+          });
+          setEquipmentCache(newCache);
+        } catch (error) {
+          console.error("Error pre-fetching equipment:", error);
         }
+      }
+    };
+
+    fetchEquipmentData();
+  }, [requests]);
+
+  const countEquipment = async (equipmentIds: string[] = []) => {
+    const counts = { ipads: 0, chromebooks: 0, others: 0 };
+    const idsToFetch: string[] = [];
+    
+    // Verificar cache primeiro
+    equipmentIds.forEach(id => {
+      if (equipmentCache[id]) {
+        const type = equipmentCache[id].type.toLowerCase();
+        if (type.includes('ipad')) counts.ipads++;
+        else if (type.includes('chromebook')) counts.chromebooks++;
+        else counts.others++;
+      } else {
+        idsToFetch.push(id);
+      }
+    });
+    
+    if (idsToFetch.length > 0) {
+      try {
+        const equipmentDocs = await Promise.all(
+          idsToFetch.map(id => getDoc(doc(db, 'equipment', id)))
+        );
+        
+        const newCache = {...equipmentCache};
+        
+        equipmentDocs.forEach((docSnap, index) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            newCache[idsToFetch[index]] = {type: data.type};
+            
+            const type = data.type.toLowerCase();
+            if (type.includes('ipad')) counts.ipads++;
+            else if (type.includes('chromebook')) counts.chromebooks++;
+            else counts.others++;
+          }
+        });
+        
+        setEquipmentCache(newCache);
       } catch (error) {
         console.error("Error fetching equipment:", error);
       }
     }
-
-    return { ipads, chromebooks, others };
+    
+    return counts;
   };
 
   const handleViewDetails = async (request: RequestData) => {
+    setIsDetailsLoading(true);
     try {
       const fullRequest = await getRequestById(request.id, request.collectionName);
       setSelectedRequest(fullRequest);
@@ -175,6 +225,8 @@ const UserSolicitacoes = () => {
     } catch (error) {
       toast.error("Erro ao carregar detalhes");
       console.error("Error:", error);
+    } finally {
+      setIsDetailsLoading(false);
     }
   };
 
@@ -335,191 +387,199 @@ const UserSolicitacoes = () => {
 
         <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
           <DialogContent className="max-w-3xl overflow-y-auto max-h-[90vh]">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                {selectedRequest && (
-                  <>
-                    {getRequestTypeIcon(selectedRequest.type)}
-                    <span>
-                      {getReadableRequestType(selectedRequest.type)} - {selectedRequest.userName || selectedRequest.userEmail}
-                    </span>
-                  </>
-                )}
-              </DialogTitle>
-              {selectedRequest && (
-                <DialogDescription>
-                  <div className="px-1 flex items-center justify-between">
-                    <div>
-                      {format(
-                        new Date(selectedRequest.createdAt.toMillis()),
-                        "dd 'de' MMMM 'de' yyyy 'às' HH:mm",
-                        { locale: ptBR }
-                      )}
-                    </div>
-                    <div>{getStatusBadge(selectedRequest.status)}</div>
-                  </div>
-                </DialogDescription>
-              )}
-            </DialogHeader>
-
-            {selectedRequest && (
-              <div className="space-y-6 py-4">
-                <div className="space-y-4 border-b pb-4">
-                  <h3 className="text-lg font-medium">Detalhes da Solicitação</h3>
-
-                  {selectedRequest.type === "reservation" && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Data</p>
-                        <p>
+            {isDetailsLoading ? (
+              <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    {selectedRequest && (
+                      <>
+                        {getRequestTypeIcon(selectedRequest.type)}
+                        <span>
+                          {getReadableRequestType(selectedRequest.type)} - {selectedRequest.userName || selectedRequest.userEmail}
+                        </span>
+                      </>
+                    )}
+                  </DialogTitle>
+                  {selectedRequest && (
+                    <DialogDescription>
+                      <div className="px-1 flex items-center justify-between">
+                        <div>
                           {format(
-                            new Date(selectedRequest.date.toMillis()),
-                            "dd/MM/yyyy",
+                            new Date(selectedRequest.createdAt.toMillis()),
+                            "dd 'de' MMMM 'de' yyyy 'às' HH:mm",
                             { locale: ptBR }
                           )}
-                        </p>
+                        </div>
+                        <div>{getStatusBadge(selectedRequest.status)}</div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Horário</p>
-                        <p>{selectedRequest.startTime} - {selectedRequest.endTime}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Local</p>
-                        <p>{selectedRequest.location}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Finalidade</p>
-                        <p>{selectedRequest.purpose}</p>
-                      </div>
-                      <div className="col-span-2">
-                        <p className="text-sm font-medium text-muted-foreground">Equipamentos</p>
-                        <ul className="list-disc pl-5">
-                          {renderEquipmentCounts()}
-                        </ul>
-                      </div>
-                    </div>
+                    </DialogDescription>
                   )}
+                </DialogHeader>
 
-                  {selectedRequest.type === "purchase" && (
-                    <div className="grid grid-cols-1 gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Item Solicitado</p>
-                        <p>{selectedRequest.itemName}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Quantidade</p>
-                        <p>{selectedRequest.quantity}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Valor Unitário</p>
-                        <p>
-                          {new Intl.NumberFormat("pt-BR", {
-                            style: "currency",
-                            currency: "BRL"
-                          }).format(selectedRequest.unitPrice || 0)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Valor Total</p>
-                        <div className="bg-primary/10 p-2 rounded-md">
-                          <p className="text-lg font-semibold text-primary">
-                            {new Intl.NumberFormat("pt-BR", {
-                              style: "currency",
-                              currency: "BRL"
-                            }).format((selectedRequest.quantity || 0) * (selectedRequest.unitPrice || 0))}
-                          </p>
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Urgência</p>
-                        <div className="flex items-center gap-2">
-                          {getPriorityLevelBadge(selectedRequest.urgency)}
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Justificativa</p>
-                        <p>{selectedRequest.justification}</p>
-                      </div>
-                    </div>
-                  )}
+                {selectedRequest && (
+                  <div className="space-y-6 py-4">
+                    <div className="space-y-4 border-b pb-4">
+                      <h3 className="text-lg font-medium">Detalhes da Solicitação</h3>
 
-                  {selectedRequest.type === "support" && (
-                    <div className="grid grid-cols-1 gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Problema</p>
-                        <div className="max-h-[200px] overflow-y-auto rounded-md bg-muted p-3">
-                          <pre className="whitespace-pre-wrap font-sans text-sm">
-                            {selectedRequest.description || "Nenhuma descrição fornecida"}
-                          </pre>
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Local</p>
-                        <p>{selectedRequest.location}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Prioridade</p>
-                        <div className="flex items-center gap-2">
-                          {getPriorityLevelBadge(selectedRequest.priority)}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium">Mensagens</h3>
-                  <div className="space-y-4 max-h-[200px] overflow-y-auto p-2 border rounded-md">
-                    {selectedRequest.messages?.length > 0 ? (
-                      selectedRequest.messages.map((msg: MessageData, index: number) => (
-                        <div 
-                          key={index} 
-                          className={`p-3 rounded-lg ${msg.isAdmin ? 'bg-primary text-primary-foreground ml-8' : 'bg-muted mr-8'}`}
-                        >
-                          <div className="flex justify-between text-xs mb-1">
-                            <span className="font-medium">{msg.userName}</span>
-                            <span>
+                      {selectedRequest.type === "reservation" && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">Data</p>
+                            <p>
                               {format(
-                                new Date(msg.timestamp.toMillis()),
-                                "dd/MM HH:mm",
+                                new Date(selectedRequest.date.toMillis()),
+                                "dd/MM/yyyy",
                                 { locale: ptBR }
                               )}
-                            </span>
+                            </p>
                           </div>
-                          <p>{msg.message}</p>
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">Horário</p>
+                            <p>{selectedRequest.startTime} - {selectedRequest.endTime}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">Local</p>
+                            <p>{selectedRequest.location}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">Finalidade</p>
+                            <p>{selectedRequest.purpose}</p>
+                          </div>
+                          <div className="col-span-2">
+                            <p className="text-sm font-medium text-muted-foreground">Equipamentos</p>
+                            <ul className="list-disc pl-5">
+                              {renderEquipmentCounts()}
+                            </ul>
+                          </div>
                         </div>
-                      ))
-                    ) : (
-                      <p className="text-center text-muted-foreground py-8">Nenhuma mensagem ainda</p>
-                    )}
+                      )}
+
+                      {selectedRequest.type === "purchase" && (
+                        <div className="grid grid-cols-1 gap-4">
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">Item Solicitado</p>
+                            <p>{selectedRequest.itemName}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">Quantidade</p>
+                            <p>{selectedRequest.quantity}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">Valor Unitário</p>
+                            <p>
+                              {new Intl.NumberFormat("pt-BR", {
+                                style: "currency",
+                                currency: "BRL"
+                              }).format(selectedRequest.unitPrice || 0)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">Valor Total</p>
+                            <div className="bg-primary/10 p-2 rounded-md">
+                              <p className="text-lg font-semibold text-primary">
+                                {new Intl.NumberFormat("pt-BR", {
+                                  style: "currency",
+                                  currency: "BRL"
+                                }).format((selectedRequest.quantity || 0) * (selectedRequest.unitPrice || 0))}
+                              </p>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">Urgência</p>
+                            <div className="flex items-center gap-2">
+                              {getPriorityLevelBadge(selectedRequest.urgency)}
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">Justificativa</p>
+                            <p>{selectedRequest.justification}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {selectedRequest.type === "support" && (
+                        <div className="grid grid-cols-1 gap-4">
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">Problema</p>
+                            <div className="max-h-[200px] overflow-y-auto rounded-md bg-muted p-3">
+                              <pre className="whitespace-pre-wrap font-sans text-sm">
+                                {selectedRequest.description || "Nenhuma descrição fornecida"}
+                              </pre>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">Local</p>
+                            <p>{selectedRequest.location}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">Prioridade</p>
+                            <div className="flex items-center gap-2">
+                              {getPriorityLevelBadge(selectedRequest.priority)}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-medium">Mensagens</h3>
+                      <div className="space-y-4 max-h-[200px] overflow-y-auto p-2 border rounded-md">
+                        {selectedRequest.messages?.length > 0 ? (
+                          selectedRequest.messages.map((msg: MessageData, index: number) => (
+                            <div 
+                              key={index} 
+                              className={`p-3 rounded-lg ${msg.isAdmin ? 'bg-primary text-primary-foreground ml-8' : 'bg-muted mr-8'}`}
+                            >
+                              <div className="flex justify-between text-xs mb-1">
+                                <span className="font-medium">{msg.userName}</span>
+                                <span>
+                                  {format(
+                                    new Date(msg.timestamp.toMillis()),
+                                    "dd/MM HH:mm",
+                                    { locale: ptBR }
+                                  )}
+                                </span>
+                              </div>
+                              <p>{msg.message}</p>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-center text-muted-foreground py-8">Nenhuma mensagem ainda</p>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <Textarea 
+                          placeholder="Digite uma mensagem..." 
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          className="resize-none"
+                        />
+                        <Button onClick={handleSendMessage} className="flex-shrink-0">
+                          <Send className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Textarea 
-                      placeholder="Digite uma mensagem..." 
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      className="resize-none"
-                    />
-                    <Button onClick={handleSendMessage} className="flex-shrink-0">
-                      <Send className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
+                )}
+                
+                <DialogFooter className="gap-2">
+                  <Button 
+                    variant="destructive" 
+                    onClick={() => selectedRequest && handleCancelRequest(selectedRequest)}
+                    disabled={selectedRequest?.status === 'canceled'}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" /> Cancelar Solicitação
+                  </Button>
+                  <Button variant="outline" onClick={() => setIsDetailsOpen(false)}>
+                    Fechar
+                  </Button>
+                </DialogFooter>
+              </>
             )}
-            
-            <DialogFooter className="gap-2">
-              <Button 
-                variant="destructive" 
-                onClick={() => selectedRequest && handleCancelRequest(selectedRequest)}
-                disabled={selectedRequest?.status === 'canceled'}
-              >
-                <Trash2 className="h-4 w-4 mr-2" /> Cancelar Solicitação
-              </Button>
-              <Button variant="outline" onClick={() => setIsDetailsOpen(false)}>
-                Fechar
-              </Button>
-            </DialogFooter>
           </DialogContent>
         </Dialog>
 
