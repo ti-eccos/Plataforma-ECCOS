@@ -259,6 +259,7 @@ const Solicitacoes = () => {
       console.error("Error:", error);
     }
   };
+
   const handleSendMessage = async () => {
     if (!selectedRequest || !newMessage.trim()) return;
     

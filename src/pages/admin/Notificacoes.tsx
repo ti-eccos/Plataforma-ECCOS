@@ -14,6 +14,7 @@ import {
   getNotifications
 } from "@/services/notificationService";
 import { Badge } from "@/components/ui/badge";
+import { Globe, User } from "lucide-react";
 
 const AdminNotificacoes = () => {
   const { isAdmin } = useAuth();
@@ -44,8 +45,11 @@ const AdminNotificacoes = () => {
         userEmail: ""
       });
       
-      toast.success("Notificação global enviada!");
+      toast.success("Notificação enviada!");
       queryClient.invalidateQueries({ queryKey: ['allNotifications'] });
+      setTitle("");
+      setMessage("");
+      setLink("");
     } finally {
       setIsUploading(false);
     }
@@ -86,7 +90,7 @@ const AdminNotificacoes = () => {
               type="url"
             />
             <Button type="submit" disabled={isUploading}>
-              {isUploading ? "Enviando..." : "Enviar Notificação Global"}
+              {isUploading ? "Enviando..." : "Enviar Notificação"}
             </Button>
           </form>
         </div>
@@ -100,8 +104,18 @@ const AdminNotificacoes = () => {
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <h3 className="font-medium">{notification.title}</h3>
-                      <Badge variant={notification.userEmail ? "outline" : "secondary"}>
-                        {notification.userEmail ? `Para: ${notification.userEmail}` : "Global"}
+                      <Badge className={notification.userEmail ? "bg-emerald-500 hover:bg-emerald-600" : "bg-blue-500 hover:bg-blue-600"}>
+                        {notification.userEmail ? (
+                          <div className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            <span>Pessoal</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <Globe className="h-3 w-3" />
+                            <span>Global</span>
+                          </div>
+                        )}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
