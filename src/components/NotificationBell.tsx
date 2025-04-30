@@ -25,9 +25,6 @@ export const NotificationBell = () => {
     queryKey: ['notifications', currentUser?.email],
     queryFn: () => getNotifications(currentUser?.email || ''),
     enabled: !!currentUser,
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: true,
-    refetchInterval: 2 * 60 * 1000,
   });
 
   const unreadCount = notifications.filter(notification => 
@@ -109,29 +106,27 @@ export const NotificationBell = () => {
                   className={`p-3 rounded-lg mb-2 cursor-pointer transition-colors relative
                     ${!notification.readBy?.includes(currentUser?.email || '') 
                       ? 'bg-blue-100 border-2 border-blue-500 shadow-sm' 
-                      : 'bg-muted opacity-75'}
-                    ${notification.userEmail === '' ? 'border-l-4 border-blue-500' : 
-                    notification.title === 'Alteração de Status' ? 'border-l-4 border-green-500' : ''}`}
+                      : 'bg-muted opacity-75'}`}
                 >
                   {!notification.readBy?.includes(currentUser?.email || '') && (
                     <div className="absolute top-2 right-2 w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
                   )}
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-2">
-                      {notification.userEmail === '' ? (
+                      {notification.title === 'Alteração de Status' ? (
+                        <Badge className="self-start bg-purple-500 hover:bg-purple-600 flex items-center gap-1">
+                          <RefreshCw className="h-3 w-3" />
+                          <span>Status</span>
+                        </Badge>
+                      ) : notification.recipients.length === 0 ? (
                         <Badge className="self-start bg-blue-500 hover:bg-blue-600 flex items-center gap-1">
                           <Globe className="h-3 w-3" />
                           <span>Global</span>
                         </Badge>
-                      ) : notification.title === 'Alteração de Status' ? (
-                        <Badge className="self-start bg-green-500 hover:bg-green-600 flex items-center gap-1">
-                          <RefreshCw className="h-3 w-3" />
-                          <span>Status</span>
-                        </Badge>
                       ) : (
                         <Badge className="self-start bg-emerald-500 hover:bg-emerald-600 flex items-center gap-1">
                           <User className="h-3 w-3" />
-                          <span>Pessoal</span>
+                          <span>Individual</span>
                         </Badge>
                       )}
                     </div>

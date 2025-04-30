@@ -253,12 +253,12 @@ const NovaSuporte = () => {
                           <FormLabel>Identificação do Equipamento</FormLabel>
                           <FormControl>
                             <Input 
-                              placeholder="Ex: Notebook Dell Latitude 3420, Nº Patrimônio 1234" 
+                              placeholder="Ex: Notebook Dell Latitude 3420, Mouse bluetooth" 
                               {...field} 
                             />
                           </FormControl>
                           <FormDescription className="text-muted-foreground">
-                            Forneça número de patrimônio, modelo ou identificação completa
+                            Forneça modelo ou identificação completa
                           </FormDescription>
                           <FormMessage />
                         </FormItem>

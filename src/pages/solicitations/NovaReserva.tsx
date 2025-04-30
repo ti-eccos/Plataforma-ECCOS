@@ -311,11 +311,11 @@ const NovaReserva = () => {
                   <div className="mb-4">
                     <FormLabel className="text-base">Equipamentos *</FormLabel>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] md:grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-2">
                     {equipment.map((item) => (
                       <FormItem
                         key={item.id}
-                        className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4"
+                        className="flex items-start space-x-3 space-y-0 rounded-md border p-4"
                       >
                         <FormControl>
                           <Checkbox
@@ -328,8 +328,8 @@ const NovaReserva = () => {
                             }}
                           />
                         </FormControl>
-                        <FormLabel className="font-normal cursor-pointer">
-                          {item.name} ({item.type})
+                        <FormLabel className="font-normal cursor-pointer flex-1 whitespace-normal">
+                          {item.name}
                         </FormLabel>
                       </FormItem>
                     ))}

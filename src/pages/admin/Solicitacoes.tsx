@@ -237,16 +237,9 @@ const Solicitacoes = () => {
         link: 'minhas-solicitacoes',
         createdAt: new Date(),
         readBy: [],
-        userEmail: selectedRequest.userEmail
+        recipients: [selectedRequest.userEmail],
+        isBatch: false
       });
-  
-      if (['approved', 'rejected'].includes(newStatus)) {
-        await sendUserNotification(
-          selectedRequest.userEmail,
-          getReadableRequestType(selectedRequest.type),
-          newStatus
-        );
-      }
   
       toast.success("Status atualizado");
       refetch();
