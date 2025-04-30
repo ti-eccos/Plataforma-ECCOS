@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -153,6 +153,11 @@ const Solicitacoes = () => {
   const [newMessage, setNewMessage] = useState("");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<{id: string, collectionName: string} | null>(null);
+  const [unreadMessages, setUnreadMessages] = useState<Record<string, number>>({});
+  const [viewedRequests, setViewedRequests] = useState<Set<string>>(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('adminViewedRequests') : null;
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
 
   const { 
     data: requests = [], 
@@ -164,6 +169,27 @@ const Solicitacoes = () => {
     queryFn: () => getAllRequests(showHidden),
     enabled: isAdmin,
   });
+
+  useEffect(() => {
+    const checkUnreadMessages = () => {
+      const newUnread: Record<string, number> = {};
+      
+      requests.forEach(req => {
+        if (req.messages) {
+          const unreadCount = req.messages.filter(msg => 
+            !msg.isAdmin && !viewedRequests.has(`${req.id}-${msg.timestamp.toMillis()}`)
+          ).length;
+          if (unreadCount > 0) {
+            newUnread[req.id] = unreadCount;
+          }
+        }
+      });
+      
+      setUnreadMessages(newUnread);
+    };
+
+    checkUnreadMessages();
+  }, [requests, viewedRequests]);
 
   const countEquipment = async (equipmentIds: string[] = []) => {
     try {
@@ -205,6 +231,27 @@ const Solicitacoes = () => {
       let counts = { ipads: 0, chromebooks: 0, others: 0 };
       if (fullRequest.type === 'reservation' && fullRequest.equipmentIds) {
         counts = await countEquipment(fullRequest.equipmentIds);
+      }
+      
+      // Mark messages as read
+      if (fullRequest.messages) {
+        setViewedRequests(prev => {
+          const newSet = new Set(prev);
+          fullRequest.messages.forEach(msg => {
+            if (!msg.isAdmin) {
+              newSet.add(`${fullRequest.id}-${msg.timestamp.toMillis()}`);
+            }
+          });
+          localStorage.setItem('adminViewedRequests', JSON.stringify(Array.from(newSet)));
+          return newSet;
+        });
+        
+        // Remove unread badge
+        setUnreadMessages(prev => {
+          const newUnread = {...prev};
+          delete newUnread[fullRequest.id];
+          return newUnread;
+        });
       }
       
       setSelectedRequest(fullRequest);
@@ -511,8 +558,14 @@ const Solicitacoes = () => {
                         variant="outline" 
                         size="sm"
                         onClick={() => handleViewDetails(request)}
+                        className="relative"
                       >
                         Detalhes
+                        {unreadMessages[request.id] && (
+                          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                            {unreadMessages[request.id]}
+                          </span>
+                        )}
                       </Button>
                     </TableCell>
                   </TableRow>

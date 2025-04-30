@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -45,51 +45,40 @@ import {
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
+// Icon mapping for request types
 const getRequestTypeIcon = (type: RequestType) => {
   switch (type) {
-    case "reservation": 
-      return <Calendar className="h-4 w-4" />;
-    case "purchase": 
-      return <ShoppingCart className="h-4 w-4" />;
-    case "support": 
-      return <Wrench className="h-4 w-4" />;
-    default: 
-      return <Calendar className="h-4 w-4" />;
+    case "reservation": return <Calendar className="h-4 w-4" />;
+    case "purchase": return <ShoppingCart className="h-4 w-4" />;
+    case "support": return <Wrench className="h-4 w-4" />;
+    default: return <Calendar className="h-4 w-4" />;
   }
 };
 
+// Status badge styling
 const getStatusBadge = (status: RequestStatus) => {
   switch (status) {
-    case "pending": 
-      return <Badge variant="outline">Pendente</Badge>;
-    case "approved": 
-      return <Badge className="bg-green-500 text-foreground">Aprovada</Badge>;
-    case "rejected": 
-      return <Badge variant="destructive">Reprovada</Badge>;
-    case "in-progress": 
-      return <Badge className="bg-blue-500 text-foreground">Em Andamento</Badge>;
-    case "completed": 
-      return <Badge className="bg-slate-500 text-foreground">Concluída</Badge>;
-    case "canceled": 
-      return <Badge className="bg-amber-500 text-foreground">Cancelada</Badge>;
-    default: 
-      return <Badge variant="outline">Desconhecido</Badge>;
+    case "pending": return <Badge variant="outline">Pendente</Badge>;
+    case "approved": return <Badge className="bg-green-500 text-foreground">Aprovada</Badge>;
+    case "rejected": return <Badge variant="destructive">Reprovada</Badge>;
+    case "in-progress": return <Badge className="bg-blue-500 text-foreground">Em Andamento</Badge>;
+    case "completed": return <Badge className="bg-slate-500 text-foreground">Concluída</Badge>;
+    case "canceled": return <Badge className="bg-amber-500 text-foreground">Cancelada</Badge>;
+    default: return <Badge variant="outline">Desconhecido</Badge>;
   }
 };
 
+// Request type labels
 const getReadableRequestType = (type: RequestType): string => {
   switch (type) {
-    case "reservation": 
-      return "Reserva";
-    case "purchase": 
-      return "Compra";
-    case "support": 
-      return "Suporte";
-    default: 
-      return "Desconhecido";
+    case "reservation": return "Reserva";
+    case "purchase": return "Compra";
+    case "support": return "Suporte";
+    default: return "Desconhecido";
   }
 };
 
+// Priority level badges
 const getPriorityLevelBadge = (level?: string) => {
   if (!level) return <Badge variant="outline">Não especificado</Badge>;
   
@@ -109,7 +98,6 @@ const getPriorityLevelBadge = (level?: string) => {
   };
 
   const normalizedLevel = level.toLowerCase();
-  
   return (
     <Badge className={config.colors[normalizedLevel] || 'bg-gray-500'}>
       {config.labels[normalizedLevel] || level}
@@ -119,6 +107,8 @@ const getPriorityLevelBadge = (level?: string) => {
 
 const UserSolicitacoes = () => {
   const { currentUser } = useAuth();
+  
+  // State management
   const [selectedRequest, setSelectedRequest] = useState<RequestData | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [newMessage, setNewMessage] = useState("");
@@ -129,19 +119,42 @@ const UserSolicitacoes = () => {
   const [equipmentCounts, setEquipmentCounts] = useState({ ipads: 0, chromebooks: 0, others: 0 });
   const [equipmentCache, setEquipmentCache] = useState<Record<string, {type: string}>>({});
   const [isDetailsLoading, setIsDetailsLoading] = useState(false);
-
-  const { data: requests = [], isLoading, isError, refetch } = useQuery({
-    queryKey: ["userRequests", currentUser?.email],
-    queryFn: () => getAllRequests(false)
+  const [unreadMessages, setUnreadMessages] = useState<Record<string, boolean>>({});
+  const [viewedRequests, setViewedRequests] = useState<Set<string>>(() => {
+    // Initialize from localStorage if available
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('viewedRequests') : null;
+    return saved ? new Set(JSON.parse(saved)) : new Set();
   });
 
-  // Pré-carrega os dados dos equipamentos quando as solicitações são carregadas
+  // Data fetching with caching
+  const { data: requests = [], isLoading, isError, refetch } = useQuery({
+    queryKey: ["userRequests", currentUser?.email],
+    queryFn: () => getAllRequests(false),
+    staleTime: 1000 * 60 * 5 // 5 minutes cache
+  });
+
+  // Memoized filtered requests
+  const userRequests = useMemo(() => 
+    requests
+      .filter((req: RequestData) => req.userEmail === currentUser?.email)
+      .filter((req: RequestData) => req.status !== 'canceled'),
+    [requests, currentUser?.email]
+  );
+
+  const filteredRequests = useMemo(() => 
+    userRequests
+      .filter(req => selectedType === 'todos' || req.type === selectedType)
+      .filter(req => selectedStatus === 'todos' || req.status === selectedStatus),
+    [userRequests, selectedType, selectedStatus]
+  );
+
+  // Equipment data loading
   useEffect(() => {
     const fetchEquipmentData = async () => {
       const equipmentIds = requests
         .filter(req => req.type === 'reservation' && req.equipmentIds)
         .flatMap(req => req.equipmentIds)
-        .filter((id, index, self) => self.indexOf(id) === index); // Remove duplicados
+        .filter((id, index, self) => self.indexOf(id) === index);
 
       if (equipmentIds.length > 0) {
         try {
@@ -165,11 +178,29 @@ const UserSolicitacoes = () => {
     fetchEquipmentData();
   }, [requests]);
 
-  const countEquipment = async (equipmentIds: string[] = []) => {
+  // Unread messages tracking
+  useEffect(() => {
+    const checkUnreadMessages = () => {
+      const newUnread: Record<string, boolean> = {};
+      
+      userRequests.forEach(req => {
+        if (!viewedRequests.has(req.id)) {
+          const hasUnread = req.messages?.some(msg => msg.isAdmin);
+          if (hasUnread) newUnread[req.id] = true;
+        }
+      });
+      
+      setUnreadMessages(newUnread);
+    };
+
+    checkUnreadMessages();
+  }, [userRequests, viewedRequests]);
+
+  // Equipment counting with caching
+  const countEquipment = useCallback(async (equipmentIds: string[] = []) => {
     const counts = { ipads: 0, chromebooks: 0, others: 0 };
     const idsToFetch: string[] = [];
     
-    // Verificar cache primeiro
     equipmentIds.forEach(id => {
       if (equipmentCache[id]) {
         const type = equipmentCache[id].type.toLowerCase();
@@ -208,14 +239,30 @@ const UserSolicitacoes = () => {
     }
     
     return counts;
-  };
+  }, [equipmentCache]);
 
-  const handleViewDetails = async (request: RequestData) => {
+  // View details handler
+  const handleViewDetails = useCallback(async (request: RequestData) => {
     setIsDetailsLoading(true);
     try {
       const fullRequest = await getRequestById(request.id, request.collectionName);
       setSelectedRequest(fullRequest);
       
+      // Mark as viewed and update localStorage
+      setViewedRequests(prev => {
+        const newSet = new Set(prev);
+        newSet.add(request.id);
+        localStorage.setItem('viewedRequests', JSON.stringify(Array.from(newSet)));
+        return newSet;
+      });
+      
+      // Remove unread highlight
+      setUnreadMessages(prev => {
+        const newUnread = {...prev};
+        delete newUnread[request.id];
+        return newUnread;
+      });
+
       if (fullRequest.type === 'reservation' && fullRequest.equipmentIds) {
         const counts = await countEquipment(fullRequest.equipmentIds);
         setEquipmentCounts(counts);
@@ -228,8 +275,9 @@ const UserSolicitacoes = () => {
     } finally {
       setIsDetailsLoading(false);
     }
-  };
+  }, [countEquipment]);
 
+  // Message sending handler
   const handleSendMessage = async () => {
     if (!selectedRequest || !newMessage.trim()) return;
     
@@ -256,6 +304,7 @@ const UserSolicitacoes = () => {
     }
   };
 
+  // Request cancellation handlers
   const handleCancelRequest = (request: RequestData) => {
     setRequestToCancel({ id: request.id, collectionName: request.collectionName });
     setIsCancelDialogOpen(true);
@@ -275,27 +324,14 @@ const UserSolicitacoes = () => {
     }
   };
 
-  const userRequests = requests
-    .filter((req: RequestData) => req.userEmail === currentUser?.email)
-    .filter((req: RequestData) => req.status !== 'canceled');
-
-  const filteredRequests = userRequests
-    .filter(req => selectedType === 'todos' || req.type === selectedType)
-    .filter(req => selectedStatus === 'todos' || req.status === selectedStatus);
-
+  // Equipment count display
   const renderEquipmentCounts = () => {
     const { ipads, chromebooks, others } = equipmentCounts;
     const items = [];
     
-    if (ipads > 0) {
-      items.push(<li key="ipads">{ipads} iPad{ipads !== 1 ? 's' : ''}</li>);
-    }
-    if (chromebooks > 0) {
-      items.push(<li key="chromebooks">{chromebooks} Chromebook{chromebooks !== 1 ? 's' : ''}</li>);
-    }
-    if (others > 0) {
-      items.push(<li key="others">{others} Outro equipamento{others !== 1 ? 's' : ''}</li>);
-    }
+    if (ipads > 0) items.push(<li key="ipads">{ipads} iPad{ipads !== 1 ? 's' : ''}</li>);
+    if (chromebooks > 0) items.push(<li key="chromebooks">{chromebooks} Chromebook{chromebooks !== 1 ? 's' : ''}</li>);
+    if (others > 0) items.push(<li key="others">{others} Outro equipamento{others !== 1 ? 's' : ''}</li>);
     
     return items.length > 0 ? items : <li>Nenhum equipamento selecionado</li>;
   };
@@ -374,8 +410,14 @@ const UserSolicitacoes = () => {
                         variant="outline" 
                         size="sm"
                         onClick={() => handleViewDetails(request)}
+                        className="relative"
                       >
                         Detalhes
+                        {unreadMessages[request.id] && (
+                          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                            {request.messages?.filter(msg => msg.isAdmin).length}
+                          </span>
+                        )}
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -405,7 +447,7 @@ const UserSolicitacoes = () => {
                     )}
                   </DialogTitle>
                   {selectedRequest && (
-                    <DialogDescription>
+                    <DialogDescription asChild>
                       <div className="px-1 flex items-center justify-between">
                         <div>
                           {format(
