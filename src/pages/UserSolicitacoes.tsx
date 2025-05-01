@@ -2,15 +2,20 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, ShoppingCart, Wrench, Trash2, Send } from "lucide-react";
+import { 
+  Calendar, 
+  ShoppingCart, 
+  Wrench, 
+  Trash2, 
+  MessageSquare,
+  Info
+} from "lucide-react";
 import { toast } from "sonner";
 import { 
   getAllRequests,
   getRequestById,
-  addMessageToRequest,
   RequestStatus,
   RequestData,
-  MessageData,
   RequestType
 } from "@/services/reservationService";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,7 +38,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,8 +48,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import ChatUser from "@/components/ChatUser";
 
-// Icon mapping for request types
 const getRequestTypeIcon = (type: RequestType) => {
   switch (type) {
     case "reservation": return <Calendar className="h-4 w-4" />;
@@ -55,7 +59,6 @@ const getRequestTypeIcon = (type: RequestType) => {
   }
 };
 
-// Status badge styling
 const getStatusBadge = (status: RequestStatus) => {
   switch (status) {
     case "pending": return <Badge variant="outline">Pendente</Badge>;
@@ -68,7 +71,6 @@ const getStatusBadge = (status: RequestStatus) => {
   }
 };
 
-// Request type labels
 const getReadableRequestType = (type: RequestType): string => {
   switch (type) {
     case "reservation": return "Reserva";
@@ -78,7 +80,6 @@ const getReadableRequestType = (type: RequestType): string => {
   }
 };
 
-// Priority level badges
 const getPriorityLevelBadge = (level?: string) => {
   if (!level) return <Badge variant="outline">Não especificado</Badge>;
   
@@ -107,11 +108,8 @@ const getPriorityLevelBadge = (level?: string) => {
 
 const UserSolicitacoes = () => {
   const { currentUser } = useAuth();
-  
-  // State management
   const [selectedRequest, setSelectedRequest] = useState<RequestData | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [newMessage, setNewMessage] = useState("");
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [requestToCancel, setRequestToCancel] = useState<{ id: string; collectionName: string } | null>(null);
   const [selectedType, setSelectedType] = useState<RequestType | 'todos'>('todos');
@@ -119,21 +117,20 @@ const UserSolicitacoes = () => {
   const [equipmentCounts, setEquipmentCounts] = useState({ ipads: 0, chromebooks: 0, others: 0 });
   const [equipmentCache, setEquipmentCache] = useState<Record<string, {type: string}>>({});
   const [isDetailsLoading, setIsDetailsLoading] = useState(false);
-  const [unreadMessages, setUnreadMessages] = useState<Record<string, boolean>>({});
+  const [unreadMessages, setUnreadMessages] = useState<Record<string, number>>({});
   const [viewedRequests, setViewedRequests] = useState<Set<string>>(() => {
-    // Initialize from localStorage if available
     const saved = typeof window !== 'undefined' ? localStorage.getItem('viewedRequests') : null;
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatRequest, setChatRequest] = useState<RequestData | null>(null);
 
-  // Data fetching with caching
   const { data: requests = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["userRequests", currentUser?.email],
     queryFn: () => getAllRequests(false),
-    staleTime: 1000 * 60 * 5 // 5 minutes cache
+    staleTime: 1000 * 60 * 5
   });
 
-  // Memoized filtered requests
   const userRequests = useMemo(() => 
     requests
       .filter((req: RequestData) => req.userEmail === currentUser?.email)
@@ -148,7 +145,6 @@ const UserSolicitacoes = () => {
     [userRequests, selectedType, selectedStatus]
   );
 
-  // Equipment data loading
   useEffect(() => {
     const fetchEquipmentData = async () => {
       const equipmentIds = requests
@@ -159,8 +155,8 @@ const UserSolicitacoes = () => {
       if (equipmentIds.length > 0) {
         try {
           const equipmentDocs = await Promise.all(
-            equipmentIds.map(id => getDoc(doc(db, 'equipment', id)))
-          );
+            equipmentIds.map(id => getDoc(doc(db, 'equipment', id))
+          ));
           
           const newCache = {...equipmentCache};
           equipmentDocs.forEach((docSnap, index) => {
@@ -178,15 +174,17 @@ const UserSolicitacoes = () => {
     fetchEquipmentData();
   }, [requests]);
 
-  // Unread messages tracking
   useEffect(() => {
     const checkUnreadMessages = () => {
-      const newUnread: Record<string, boolean> = {};
+      const newUnread: Record<string, number> = {};
       
       userRequests.forEach(req => {
-        if (!viewedRequests.has(req.id)) {
-          const hasUnread = req.messages?.some(msg => msg.isAdmin);
-          if (hasUnread) newUnread[req.id] = true;
+        const unreadCount = req.messages?.filter(msg => 
+          msg.isAdmin && !viewedRequests.has(`${req.id}-${msg.timestamp.toMillis()}`)
+        ).length || 0;
+        
+        if (unreadCount > 0) {
+          newUnread[req.id] = unreadCount;
         }
       });
       
@@ -196,7 +194,6 @@ const UserSolicitacoes = () => {
     checkUnreadMessages();
   }, [userRequests, viewedRequests]);
 
-  // Equipment counting with caching
   const countEquipment = useCallback(async (equipmentIds: string[] = []) => {
     const counts = { ipads: 0, chromebooks: 0, others: 0 };
     const idsToFetch: string[] = [];
@@ -215,8 +212,8 @@ const UserSolicitacoes = () => {
     if (idsToFetch.length > 0) {
       try {
         const equipmentDocs = await Promise.all(
-          idsToFetch.map(id => getDoc(doc(db, 'equipment', id)))
-        );
+          idsToFetch.map(id => getDoc(doc(db, 'equipment', id))
+        ));
         
         const newCache = {...equipmentCache};
         
@@ -241,14 +238,12 @@ const UserSolicitacoes = () => {
     return counts;
   }, [equipmentCache]);
 
-  // View details handler
   const handleViewDetails = useCallback(async (request: RequestData) => {
     setIsDetailsLoading(true);
     try {
       const fullRequest = await getRequestById(request.id, request.collectionName);
       setSelectedRequest(fullRequest);
       
-      // Mark as viewed and update localStorage
       setViewedRequests(prev => {
         const newSet = new Set(prev);
         newSet.add(request.id);
@@ -256,7 +251,6 @@ const UserSolicitacoes = () => {
         return newSet;
       });
       
-      // Remove unread highlight
       setUnreadMessages(prev => {
         const newUnread = {...prev};
         delete newUnread[request.id];
@@ -277,34 +271,35 @@ const UserSolicitacoes = () => {
     }
   }, [countEquipment]);
 
-  // Message sending handler
-  const handleSendMessage = async () => {
-    if (!selectedRequest || !newMessage.trim()) return;
-    
+  const handleOpenChat = async (request: RequestData) => {
     try {
-      await addMessageToRequest(
-        selectedRequest.id, 
-        newMessage, 
-        false,
-        selectedRequest.collectionName,
-        currentUser?.displayName || "Usuário"
-      );
+      const fullRequest = await getRequestById(request.id, request.collectionName);
+      setChatRequest(fullRequest);
       
-      const updatedRequest = await getRequestById(
-        selectedRequest.id, 
-        selectedRequest.collectionName
-      );
+      setViewedRequests(prev => {
+        const newSet = new Set(prev);
+        fullRequest.messages?.forEach(msg => {
+          if (msg.isAdmin) {
+            newSet.add(`${fullRequest.id}-${msg.timestamp.toMillis()}`);
+          }
+        });
+        localStorage.setItem('viewedRequests', JSON.stringify(Array.from(newSet)));
+        return newSet;
+      });
       
-      setSelectedRequest(updatedRequest);
-      setNewMessage("");
-      toast.success("Mensagem enviada");
+      setUnreadMessages(prev => {
+        const newUnread = {...prev};
+        delete newUnread[request.id];
+        return newUnread;
+      });
+      
+      setIsChatOpen(true);
     } catch (error) {
-      toast.error("Erro ao enviar");
+      toast.error("Erro ao abrir chat");
       console.error("Error:", error);
     }
   };
 
-  // Request cancellation handlers
   const handleCancelRequest = (request: RequestData) => {
     setRequestToCancel({ id: request.id, collectionName: request.collectionName });
     setIsCancelDialogOpen(true);
@@ -313,6 +308,7 @@ const UserSolicitacoes = () => {
   const handleCancelConfirm = async () => {
     if (!requestToCancel) return;
     try {
+      // Implementar lógica de cancelamento aqui
       toast.success("Solicitação cancelada");
       setIsCancelDialogOpen(false);
       setRequestToCancel(null);
@@ -324,7 +320,6 @@ const UserSolicitacoes = () => {
     }
   };
 
-  // Equipment count display
   const renderEquipmentCounts = () => {
     const { ipads, chromebooks, others } = equipmentCounts;
     const items = [];
@@ -386,39 +381,57 @@ const UserSolicitacoes = () => {
             Nenhuma solicitação encontrada
           </div>
         ) : (
-          <div className="rounded-md border overflow-hidden">
+          <div className="rounded-md border overflow-hidden bg-background shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px transition-all duration-300 relative border-0 border-l-4 border-blue-500 before:content-[''] before:absolute before:left-0 before:top-0 before:w-[2px] before:h-full before:bg-gradient-to-b before:from-transparent before:via-white/10 before:to-transparent before:opacity-30">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Detalhes</TableHead>
+                  <TableHead className="text-center align-middle w-[40%] sm:w-[35%]">Tipo</TableHead>
+                  <TableHead className="text-center align-middle w-[35%] sm:w-[30%]">Status</TableHead>
+                  <TableHead className="text-center align-middle w-[25%] sm:w-[35%]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredRequests.map((request: RequestData) => (
                   <TableRow key={`${request.collectionName}-${request.id}`}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
+                    <TableCell className="text-center align-middle">
+                      <div className="flex items-center justify-center gap-2">
                         {getRequestTypeIcon(request.type)}
-                        <span>{getReadableRequestType(request.type)}</span>
+                        <span className="truncate">{getReadableRequestType(request.type)}</span>
                       </div>
                     </TableCell>
-                    <TableCell>{getStatusBadge(request.status)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleViewDetails(request)}
-                        className="relative"
-                      >
-                        Detalhes
-                        {unreadMessages[request.id] && (
-                          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                            {request.messages?.filter(msg => msg.isAdmin).length}
-                          </span>
-                        )}
-                      </Button>
+                    
+                    <TableCell className="text-center align-middle">
+                      <div className="flex justify-center">
+                        {getStatusBadge(request.status)}
+                      </div>
+                    </TableCell>
+                    
+                    <TableCell className="text-center align-middle">
+                      <div className="flex justify-center items-center space-x-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleViewDetails(request)}
+                          title="Detalhes"
+                        >
+                          <Info className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 relative"
+                          onClick={() => handleOpenChat(request)}
+                          title="Chat"
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                          {unreadMessages[request.id] > 0 && (
+                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                              {unreadMessages[request.id]}
+                            </span>
+                          )}
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -566,45 +579,6 @@ const UserSolicitacoes = () => {
                         </div>
                       )}
                     </div>
-
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-medium">Mensagens</h3>
-                      <div className="space-y-4 max-h-[200px] overflow-y-auto p-2 border rounded-md">
-                        {selectedRequest.messages?.length > 0 ? (
-                          selectedRequest.messages.map((msg: MessageData, index: number) => (
-                            <div 
-                              key={index} 
-                              className={`p-3 rounded-lg ${msg.isAdmin ? 'bg-primary text-primary-foreground ml-8' : 'bg-muted mr-8'}`}
-                            >
-                              <div className="flex justify-between text-xs mb-1">
-                                <span className="font-medium">{msg.userName}</span>
-                                <span>
-                                  {format(
-                                    new Date(msg.timestamp.toMillis()),
-                                    "dd/MM HH:mm",
-                                    { locale: ptBR }
-                                  )}
-                                </span>
-                              </div>
-                              <p>{msg.message}</p>
-                            </div>
-                          ))
-                        ) : (
-                          <p className="text-center text-muted-foreground py-8">Nenhuma mensagem ainda</p>
-                        )}
-                      </div>
-                      <div className="flex gap-2">
-                        <Textarea 
-                          placeholder="Digite uma mensagem..." 
-                          value={newMessage}
-                          onChange={(e) => setNewMessage(e.target.value)}
-                          className="resize-none"
-                        />
-                        <Button onClick={handleSendMessage} className="flex-shrink-0">
-                          <Send className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
                   </div>
                 )}
                 
@@ -624,6 +598,13 @@ const UserSolicitacoes = () => {
             )}
           </DialogContent>
         </Dialog>
+
+        <ChatUser 
+          request={chatRequest} 
+          isOpen={isChatOpen} 
+          onOpenChange={setIsChatOpen}
+          onMessageSent={refetch}
+        />
 
         <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
           <AlertDialogContent>

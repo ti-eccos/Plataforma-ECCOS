@@ -5,10 +5,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getAllRequests } from "@/services/reservationService";
 import { getAllUsers } from "@/services/userService";
 import { getAllEquipment } from "@/services/equipmentService";
-import { DashboardMetrics } from "@/components/dashboard/DashboardMetrics";
 import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
 import UserDashboard from "../components/dashboard/UserDashboard";
 import { DashboardLoading } from "@/components/dashboard/DashboardLoading";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 export const Dashboard = () => {
   const { currentUser, isAdmin } = useAuth();
@@ -132,15 +134,139 @@ export const Dashboard = () => {
         
         {!isLoading && !isError && (
           <div className="space-y-8">
-            <DashboardMetrics 
-              activeUsers={activeUsers}
-              chromebooks={chromebooks}
-              ipads={ipads}
-              pendingRequests={pendingRequests}
-              approvedRequests={approvedRequests}
-              inProgressRequests={inProgressRequests}
-              isLoading={isLoading}
-            />
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+              <Card className={cn(
+                "bg-background text-card-foreground hover:bg-accent/20 cursor-pointer",
+                "border-0 border-l-4 border-blue-500 hover:border-blue-600",
+                "shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px",
+                "transition-all duration-300 relative w-full h-full flex flex-col",
+                "before:content-[''] before:absolute before:left-0 before:top-0",
+                "before:w-[2px] before:h-full before:bg-gradient-to-b",
+                "before:from-transparent before:via-white/10 before:to-transparent before:opacity-30"
+              )}>
+                <CardHeader className="pb-2 flex-1 flex items-center justify-center">
+                  <CardTitle className="text-sm font-medium text-center">
+                    Usuários Ativos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="flex-1 flex flex-col items-center justify-center text-center">
+                  <div className="text-2xl font-bold">{activeUsers}</div>
+                  <Badge variant="outline" className="mt-2">
+                    Contas
+                  </Badge>
+                </CardContent>
+              </Card>
+
+              <Card className={cn(
+                "bg-background text-card-foreground hover:bg-accent/20 cursor-pointer",
+                "border-0 border-l-4 border-blue-500 hover:border-blue-600",
+                "shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px",
+                "transition-all duration-300 relative w-full h-full flex flex-col",
+                "before:content-[''] before:absolute before:left-0 before:top-0",
+                "before:w-[2px] before:h-full before:bg-gradient-to-b",
+                "before:from-transparent before:via-white/10 before:to-transparent before:opacity-30"
+              )}>
+                <CardHeader className="pb-2 flex-1 flex items-center justify-center">
+                  <CardTitle className="text-sm font-medium text-center">
+                    Chromebooks
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="flex-1 flex flex-col items-center justify-center text-center">
+                  <div className="text-2xl font-bold">{chromebooks}</div>
+                  <Badge variant="outline" className="mt-2">
+                    Disponíveis
+                  </Badge>
+                </CardContent>
+              </Card>
+
+              <Card className={cn(
+                "bg-background text-card-foreground hover:bg-accent/20 cursor-pointer",
+                "border-0 border-l-4 border-blue-500 hover:border-blue-600",
+                "shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px",
+                "transition-all duration-300 relative w-full h-full flex flex-col",
+                "before:content-[''] before:absolute before:left-0 before:top-0",
+                "before:w-[2px] before:h-full before:bg-gradient-to-b",
+                "before:from-transparent before:via-white/10 before:to-transparent before:opacity-30"
+              )}>
+                <CardHeader className="pb-2 flex-1 flex items-center justify-center">
+                  <CardTitle className="text-sm font-medium text-center">
+                    iPads
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="flex-1 flex flex-col items-center justify-center text-center">
+                  <div className="text-2xl font-bold">{ipads}</div>
+                  <Badge variant="outline" className="mt-2">
+                    Disponíveis
+                  </Badge>
+                </CardContent>
+              </Card>
+
+              <Card className={cn(
+                "bg-background text-card-foreground hover:bg-accent/20 cursor-pointer",
+                "border-0 border-l-4 border-blue-500 hover:border-blue-600",
+                "shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px",
+                "transition-all duration-300 relative w-full h-full flex flex-col",
+                "before:content-[''] before:absolute before:left-0 before:top-0",
+                "before:w-[2px] before:h-full before:bg-gradient-to-b",
+                "before:from-transparent before:via-white/10 before:to-transparent before:opacity-30"
+              )}>
+                <CardHeader className="pb-2 flex-1 flex items-center justify-center">
+                  <CardTitle className="text-sm font-medium text-center">
+                    Pendentes
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="flex-1 flex flex-col items-center justify-center text-center">
+                  <div className="text-2xl font-bold">{pendingRequests}</div>
+                  <Badge variant="outline" className="mt-2">
+                    Solicitações
+                  </Badge>
+                </CardContent>
+              </Card>
+
+              <Card className={cn(
+                "bg-background text-card-foreground hover:bg-accent/20 cursor-pointer",
+                "border-0 border-l-4 border-blue-500 hover:border-blue-600",
+                "shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px",
+                "transition-all duration-300 relative w-full h-full flex flex-col",
+                "before:content-[''] before:absolute before:left-0 before:top-0",
+                "before:w-[2px] before:h-full before:bg-gradient-to-b",
+                "before:from-transparent before:via-white/10 before:to-transparent before:opacity-30"
+              )}>
+                <CardHeader className="pb-2 flex-1 flex items-center justify-center">
+                  <CardTitle className="text-sm font-medium text-center">
+                    Aprovadas
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="flex-1 flex flex-col items-center justify-center text-center">
+                  <div className="text-2xl font-bold">{approvedRequests}</div>
+                  <Badge variant="outline" className="mt-2">
+                    Solicitações
+                  </Badge>
+                </CardContent>
+              </Card>
+
+              <Card className={cn(
+                "bg-background text-card-foreground hover:bg-accent/20 cursor-pointer",
+                "border-0 border-l-4 border-blue-500 hover:border-blue-600",
+                "shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px",
+                "transition-all duration-300 relative w-full h-full flex flex-col",
+                "before:content-[''] before:absolute before:left-0 before:top-0",
+                "before:w-[2px] before:h-full before:bg-gradient-to-b",
+                "before:from-transparent before:via-white/10 before:to-transparent before:opacity-30"
+              )}>
+                <CardHeader className="pb-2 flex-1 flex items-center justify-center">
+                  <CardTitle className="text-sm font-medium text-center">
+                    Em Progresso
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="flex-1 flex flex-col items-center justify-center text-center">
+                  <div className="text-2xl font-bold">{inProgressRequests}</div>
+                  <Badge variant="outline" className="mt-2">
+                    Solicitações
+                  </Badge>
+                </CardContent>
+              </Card>
+            </div>
             
             <DashboardCharts 
               requestStatusData={requestStatusData}

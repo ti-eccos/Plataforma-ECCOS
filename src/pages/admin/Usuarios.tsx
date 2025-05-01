@@ -3,13 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -21,8 +14,6 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Search, ShieldCheck, Edit, Lock, Unlock } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { motion } from "framer-motion";
 import { getAllUsers, User } from "@/services/userService";
 import { RoleChangeDialog } from "@/components/admin/RoleChangeDialog";
 import { BlockUserDialog } from "@/components/admin/BlockUserDialog";
@@ -32,8 +23,8 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 const Usuarios = () => {
   const { currentUser, isSuperAdmin } = useAuth();
@@ -46,55 +37,8 @@ const Usuarios = () => {
 
   const { data: users = [], refetch } = useQuery({
     queryKey: ["users"],
-    queryFn: getAllUsers
+    queryFn: getAllUsers,
   });
-
-  useEffect(() => {
-    const term = searchTerm.toLowerCase();
-    
-    if (term === "") {
-      const sortedUsers = [...users].sort((a, b) => {
-        const rolePriority = { 
-          "superadmin": 0, 
-          "admin": 1, 
-          "user": 2 
-        };
-        
-        const roleDiff = (rolePriority[a.role] ?? 3) - (rolePriority[b.role] ?? 3);
-        if (roleDiff !== 0) return roleDiff;
-        
-        return a.displayName.localeCompare(b.displayName);
-      });
-      
-      setFilteredUsers(sortedUsers);
-    } else {
-      const filtered = users.filter(
-        (user) =>
-          user.displayName.toLowerCase().includes(term) ||
-          user.email.toLowerCase().includes(term) ||
-          user.role.toLowerCase().includes(term)
-      );
-      
-      const sortedFiltered = [...filtered].sort((a, b) => {
-        const rolePriority = { 
-          "superadmin": 0, 
-          "admin": 1, 
-          "user": 2 
-        };
-        
-        const roleDiff = (rolePriority[a.role] ?? 3) - (rolePriority[b.role] ?? 3);
-        if (roleDiff !== 0) return roleDiff;
-        
-        return a.displayName.localeCompare(b.displayName);
-      });
-      
-      setFilteredUsers(sortedFiltered);
-    }
-  }, [users, searchTerm]);
-
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-  };
 
   const handleRoleChangeClick = (user: User) => {
     setSelectedUser(user);
@@ -106,10 +50,28 @@ const Usuarios = () => {
     setBlockDialogOpen(true);
   };
 
+  useEffect(() => {
+    const term = searchTerm.toLowerCase();
+    
+    const sortedUsers = users
+      .filter(user => term === "" ? true : 
+        user.displayName.toLowerCase().includes(term) ||
+        user.email.toLowerCase().includes(term) ||
+        user.role.toLowerCase().includes(term)
+      )
+      .sort((a, b) => {
+        const rolePriority = { "superadmin": 0, "admin": 1, "user": 2 };
+        const roleDiff = (rolePriority[a.role] ?? 3) - (rolePriority[b.role] ?? 3);
+        return roleDiff !== 0 ? roleDiff : a.displayName.localeCompare(b.displayName);
+      });
+
+    setFilteredUsers(sortedUsers);
+  }, [users, searchTerm]);
+
   const getRoleBadge = (user: User) => {
     if (user.pendingRoleChange) {
       return (
-        <Badge variant="outline" className="bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30">
+        <Badge className="bg-yellow-500 text-foreground">
           <span className="animate-pulse">Pendente</span>
         </Badge>
       );
@@ -118,20 +80,20 @@ const Usuarios = () => {
     switch (user.role) {
       case "superadmin":
         return (
-          <Badge variant="outline" className="bg-purple-500/20 text-purple-500 hover:bg-purple-500/30">
-            <ShieldCheck className="mr-1 h-3 w-3" />
+          <Badge className="bg-purple-500 text-foreground">
+            <ShieldCheck className="mr-1 h-4 w-4" />
             Super Admin
           </Badge>
         );
       case "admin":
         return (
-          <Badge variant="outline" className="bg-blue-500/20 text-blue-500 hover:bg-blue-500/30">
+          <Badge className="bg-blue-500 text-foreground">
             Admin
           </Badge>
         );
       default:
         return (
-          <Badge variant="outline" className="bg-green-500/20 text-green-500 hover:bg-green-500/30">
+          <Badge variant="outline">
             Usuário
           </Badge>
         );
@@ -139,25 +101,17 @@ const Usuarios = () => {
   };
 
   const canEditRole = (user: User): boolean => {
-
     if (currentUser?.uid === user.uid) return false;
-    
     if (isSuperAdmin && user.role !== "superadmin") return true;
-    
     if (currentUser?.role === "admin" && user.role === "user") return true;
-    
     if (currentUser?.role === "admin" && user.role === "admin") return true;
-    
     return false;
   };
   
   const canBlock = (user: User): boolean => {
     if (currentUser?.uid === user.uid) return false;
-    
     if (isSuperAdmin && user.role !== "superadmin") return true;
-    
     if (currentUser?.role === "admin" && user.role === "user") return true;
-    
     return false;
   };
 
@@ -176,156 +130,150 @@ const Usuarios = () => {
     });
   };
 
-
   const showActionsButton = (user: User): boolean => {
     return user.role !== "superadmin";
   };
 
   return (
     <AppLayout>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h2 className="text-3xl font-bold tracking-tight text-gradient">Usuários</h2>
-              <p className="text-muted-foreground mt-1">
-                Gerencie os usuários da plataforma ECCOS.
-              </p>
-            </div>
+      <div className="space-y-8 p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold">Gestão de Usuários</h1>
+            <p className="text-muted-foreground">
+              Administre os usuários do sistema - {users.length} registros encontrados
+            </p>
           </div>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle>Lista de Usuários</CardTitle>
-              <CardDescription>
-                Todos os usuários cadastrados na plataforma ECCOS.
-                {users.length > 0 ? ` (${users.length} usuários)` : ''}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center mb-6">
-                <Search className="mr-2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar usuários..."
-                  value={searchTerm}
-                  onChange={handleSearch}
-                  className="max-w-md"
-                />
-              </div>
-
-              <div className="rounded-md border overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[250px]">Nome</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Função</TableHead>
-                      <TableHead>Último Acesso</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredUsers.map((user) => (
-                      <TableRow key={user.uid} className={`hover:bg-secondary/30 ${user.blocked ? "bg-red-50 dark:bg-red-950/20" : ""}`}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar>
-                              <AvatarImage src={user.photoURL || ""} />
-                              <AvatarFallback className="bg-gradient-to-br from-eccos-blue to-eccos-purple text-foreground">
-                                {user.displayName.split(' ').map(n => n[0]).join('').toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <span className="font-medium">{user.displayName}</span>
-                              {user.blocked && (
-                                <Badge variant="outline" className="ml-2 bg-red-500/20 text-red-500">
-                                  Bloqueado
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>{getRoleBadge(user)}</TableCell>
-                        <TableCell>{getLastActive(user.lastActive)}</TableCell>
-                        <TableCell className="text-right">
-                          {showActionsButton(user) && (
-                            <div className="flex justify-end">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  {canEditRole(user) && (
-                                    <DropdownMenuItem 
-                                      onClick={() => handleRoleChangeClick(user)}
-                                    >
-                                      <Edit className="mr-2 h-4 w-4" />
-                                      {user.role === "admin" ? "Remover Admin" : "Tornar Admin"}
-                                    </DropdownMenuItem>
-                                  )}
-                                  {canBlock(user) && (
-                                    <DropdownMenuItem 
-                                      onClick={() => handleBlockClick(user)}
-                                      className={user.blocked ? "text-green-600" : "text-red-600"}
-                                    >
-                                      {user.blocked ? (
-                                        <>
-                                            <Unlock className="mr-2 h-4 w-4" />
-                                            Desbloquear
-                                        </>
-                                      ) : (
-                                        <>
-                                            <Lock className="mr-2 h-4 w-4" />
-                                            Bloquear
-                                        </>
-                                      )}
-                                    </DropdownMenuItem>
-                                  )}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    
-                    {filteredUsers.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={5} className="h-24 text-center">
-                          Nenhum usuário encontrado.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
         </div>
-      </motion.div>
-      
-      {/* Role change dialog */}
-      <RoleChangeDialog 
-        open={roleDialogOpen}
-        onOpenChange={setRoleDialogOpen}
-        user={selectedUser}
-        onSuccess={refetch}
-      />
-      
-      {/* Block user dialog */}
-      <BlockUserDialog 
-        open={blockDialogOpen}
-        onOpenChange={setBlockDialogOpen}
-        user={selectedUser}
-        onSuccess={refetch}
-      />
+
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Filtrar usuários..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </div>
+
+        <div className="rounded-md border overflow-hidden bg-background shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px transition-all duration-300 relative border-0 border-l-4 border-blue-500 before:content-[''] before:absolute before:left-0 before:top-0 before:w-[2px] before:h-full before:bg-gradient-to-b before:from-transparent before:via-white/10 before:to-transparent before:opacity-30">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-center align-middle w-[30%]">Nome</TableHead>
+                <TableHead className="text-center align-middle w-[25%]">Email</TableHead>
+                <TableHead className="text-center align-middle w-[20%]">Função</TableHead>
+                <TableHead className="text-center align-middle w-[15%]">Último Acesso</TableHead>
+                <TableHead className="text-center align-middle w-[10%]">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+
+            <TableBody>
+              {filteredUsers.map((user) => (
+                <TableRow
+                  key={user.uid}
+                  className="group transition-all duration-200 hover:bg-secondary/10"
+                >
+                  <TableCell className="text-center align-middle">
+                    <div className="flex flex-col items-center">
+                      <span className="font-medium">{user.displayName}</span>
+                      {user.blocked && (
+                        <Badge variant="destructive" className="mt-1">
+                          Bloqueado
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  
+                  <TableCell className="text-center align-middle">{user.email}</TableCell>
+                  
+                  <TableCell className="text-center align-middle">
+                    {getRoleBadge(user)}
+                  </TableCell>
+                  
+                  <TableCell className="text-center align-middle">
+                    {getLastActive(user.lastActive)}
+                  </TableCell>
+                  
+                  <TableCell className="text-center align-middle">
+                    {showActionsButton(user) && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {canEditRole(user) && (
+                            <DropdownMenuItem
+                              onClick={() => handleRoleChangeClick(user)}
+                              className="cursor-pointer"
+                            >
+                              <Edit className="mr-2 h-4 w-4" />
+                              Alterar Função
+                            </DropdownMenuItem>
+                          )}
+                          {canBlock(user) && (
+                            <DropdownMenuItem
+                              onClick={() => handleBlockClick(user)}
+                              className={cn(
+                                "cursor-pointer",
+                                user.blocked ? "text-green-600" : "text-red-600"
+                              )}
+                            >
+                              {user.blocked ? (
+                                <>
+                                  <Unlock className="mr-2 h-4 w-4" />
+                                  Desbloquear
+                                </>
+                              ) : (
+                                <>
+                                  <Lock className="mr-2 h-4 w-4" />
+                                  Bloquear
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+              
+              {filteredUsers.length === 0 && (
+                <TableRow>
+                  <TableCell 
+                    colSpan={5} 
+                    className="h-24 text-center text-muted-foreground"
+                  >
+                    Nenhum usuário encontrado
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        <RoleChangeDialog
+          open={roleDialogOpen}
+          onOpenChange={setRoleDialogOpen}
+          user={selectedUser}
+          onSuccess={refetch}
+        />
+        <BlockUserDialog
+          open={blockDialogOpen}
+          onOpenChange={setBlockDialogOpen}
+          user={selectedUser}
+          onSuccess={refetch}
+        />
+      </div>
     </AppLayout>
   );
 };

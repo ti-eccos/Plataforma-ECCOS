@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
@@ -6,9 +6,10 @@ import { getUserRequests } from "@/services/reservationService";
 import { DashboardLoading } from "@/components/dashboard/DashboardLoading";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
+import { Timestamp } from "firebase/firestore";
+import { cn } from "@/lib/utils";
 
 enum RequestStatus {
   pending = 'pending',
@@ -23,25 +24,20 @@ type Request = {
   type: string;
   status: RequestStatus;
   createdAt: Date;
-  collectionName?: string;
   userName?: string;
-  userEmail?: string;
   userId?: string;
-  
+  userEmail?: string;
   location?: string;
- 
   category?: string;
   description?: string;
   deviceInfo?: string;
   priority?: string;
   unit?: string;
-
   date?: Date;
   endTime?: string;
   equipmentIds?: string[];
   purpose?: string;
   startTime?: string;
-
   itemName?: string;
   justification?: string;
   quantity?: number;
@@ -57,9 +53,15 @@ const UserDashboard = () => {
   const convertFirestoreData = (data: any): Request | null => {
     try {
       if (!data) return null;
-      
-      let normalizedStatus = ((data.status || '')).toLowerCase().trim();
 
+      const convertFirebaseDate = (date: any): Date => {
+        if (date instanceof Timestamp) return date.toDate();
+        if (date?.seconds) return new Date(date.seconds * 1000);
+        if (date instanceof Date) return date;
+        return new Date(date);
+      };
+
+      let normalizedStatus = ((data.status || '')).toLowerCase().trim();
       const statusMap: Record<string, RequestStatus> = {
         'hprongress': RequestStatus['in-progress'],
         'inprogress': RequestStatus['in-progress'],
@@ -80,42 +82,29 @@ const UserDashboard = () => {
       };
 
       normalizedStatus = statusMap[normalizedStatus] || normalizedStatus;
-
       if (!Object.values(RequestStatus).includes(normalizedStatus as RequestStatus)) {
         normalizedStatus = RequestStatus.pending;
       }
-
-      const convertFirebaseDate = (date: any): Date => {
-        if (!date) return new Date();
-        if (date instanceof Date) return date;
-        return date?.toDate?.() || 
-              (date?.seconds ? new Date(date.seconds * 1000) : 
-              typeof date === 'string' ? new Date(date) : new Date());
-      };
 
       return {
         id: data.id || `temp-${Math.random().toString(36).substring(2, 11)}`,
         type: (data.type || '').toLowerCase().trim(),
         status: normalizedStatus as RequestStatus,
         createdAt: convertFirebaseDate(data.createdAt),
-        collectionName: data.collectionName,
         userName: data.userName || 'Usuário não identificado',
         userEmail: (data.userEmail || '').toLowerCase(),
         userId: data.userId || data.uid,
         location: data.location,
-
         category: data.category,
         description: data.description,
         deviceInfo: data.deviceInfo,
         priority: data.priority,
         unit: data.unit,
-
         date: data.date ? convertFirebaseDate(data.date) : undefined,
         endTime: data.endTime,
         equipmentIds: Array.isArray(data.equipmentIds) ? data.equipmentIds : [],
         purpose: data.purpose,
         startTime: data.startTime,
-        
         itemName: data.itemName,
         justification: data.justification,
         quantity: Number(data.quantity) || 0,
@@ -128,43 +117,36 @@ const UserDashboard = () => {
     }
   };
 
-  const { data: requests = [], isLoading, isError, error } = useQuery<Request[]>({
+  const { data: requests = [], isLoading, isError } = useQuery<Request[]>({
     queryKey: ['userRequests', currentUser?.uid],
     queryFn: async () => {
       if (!currentUser) return [];
       try {
-        const res = await getUserRequests(currentUser.uid,currentUser.email);
-        const processedData = res
-          .filter(item => item) 
-          .map((item) => {
-            const processed = convertFirestoreData(item);
-            return processed;
-          })
+        const res = await getUserRequests(currentUser.uid, currentUser.email);
+        return res
+          .map(item => convertFirestoreData(item))
           .filter(Boolean) as Request[];
-        return processedData;
       } catch (err) {
         throw err;
       }
     },
     enabled: !!currentUser,
-    staleTime: 5 * 60 * 1000, 
-    retry: 1,
   });
 
   const statusLabels: Record<RequestStatus, string> = {
     [RequestStatus.pending]: "Pendentes",
     [RequestStatus.approved]: "Aprovadas",
     [RequestStatus.rejected]: "Reprovadas",
-    [RequestStatus['in-progress']]: "Em Progresso", 
+    [RequestStatus['in-progress']]: "Em Progresso",
     [RequestStatus.completed]: "Concluídas",
   };
 
   const statusColors: Record<RequestStatus, string> = {
-    [RequestStatus.pending]: "#F59E0B",    
-    [RequestStatus.approved]: "#10B981",   
-    [RequestStatus['in-progress']]: "#3B82F6",
-    [RequestStatus.rejected]: "#EF4444",  
-    [RequestStatus.completed]: "#8B5CF6", 
+    [RequestStatus.pending]: "#eab308",
+    [RequestStatus.approved]: "#22c55e",
+    [RequestStatus['in-progress']]: "#3b82f6",
+    [RequestStatus.rejected]: "#ef4444",
+    [RequestStatus.completed]: "#8b5cf6",
   };
 
   const statusCounts = Object.values(RequestStatus).reduce((acc, status) => {
@@ -172,86 +154,81 @@ const UserDashboard = () => {
     return acc;
   }, {} as Record<RequestStatus, number>);
 
-  const statusChartData = [RequestStatus.pending, RequestStatus.approved, RequestStatus['in-progress']]
-  .map((status) => ({
-    name: statusLabels[status],
-    value: statusCounts[status] || 0,
-    color: statusColors[status]
-  }));
-
-  const typeCounts = requests.reduce((acc: Record<string, number>, req) => {
+  const requestTypeCounts = requests.reduce((acc: Record<string, number>, req) => {
     acc[req.type] = (acc[req.type] || 0) + 1;
     return acc;
   }, {});
 
-  const requestTypeData = Object.entries(typeCounts).map(([type, count]) => ({
-    name: type === 'reservation' ? 'Reservas' :
-          type === 'purchase' ? 'Compras' :
-          type === 'support' ? 'Suporte' : type,
-    value: count,
-    color: type === 'reservation' ? '#3b82f6' :
-           type === 'purchase' ? '#8b5cf6' :
-           type === 'support' ? '#ec4899' :
-           '#6b7280'
-  }));
+  const statusChartData = [
+    { name: 'Pendentes', value: statusCounts[RequestStatus.pending], color: '#eab308' },
+    { name: 'Aprovadas', value: statusCounts[RequestStatus.approved], color: '#22c55e' },
+    { name: 'Em Progresso', value: statusCounts[RequestStatus['in-progress']], color: '#3b82f6' },
+  ];
 
-  const recentActivities = [...requests]
-    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-    .slice(0, 10);
+  const requestTypeData = [
+    { name: 'Reservas', value: requestTypeCounts.reservation || 0, color: '#3b82f6' },
+    { name: 'Compras', value: requestTypeCounts.purchase || 0, color: '#8b5cf6' },
+    { name: 'Suporte', value: requestTypeCounts.support || 0, color: '#ec4899' }
+  ];
 
   return (
     <AppLayout>
-      <div className="space-y-8 bg-background text-foreground p-4 rounded-lg">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
+      <div className="space-y-8 p-4">
+        <h1 className="text-2xl font-bold">Meu Dashboard</h1>
 
         {isLoading ? (
           <DashboardLoading isLoading={true} isError={false} />
         ) : isError ? (
-          <div className="p-6 bg-red-900 rounded-lg text-foreground">
+          <div className="p-6 bg-destructive/10 rounded-lg text-destructive">
             <h3 className="text-xl font-bold mb-2">Erro ao carregar dados</h3>
-            <p>Ocorreu um erro ao buscar suas solicitações. Por favor, tente novamente mais tarde ou entre em contato com o suporte.</p>
-            <button 
-              className="mt-4 px-4 py-2 bg-foreground text-red-900 rounded-md font-medium"
-              onClick={() => window.location.reload()}
-            >
-              Tentar novamente
-            </button>
+            <p>Ocorreu um erro ao buscar suas solicitações.</p>
           </div>
         ) : requests.length === 0 ? (
-          <div className="p-6 bg-border rounded-lg text-center">
+          <div className="p-6 bg-muted rounded-lg text-center">
             <h3 className="text-xl font-bold mb-2">Nenhuma solicitação encontrada</h3>
-            <p className="text-gray-400">Você ainda não fez nenhuma solicitação ou todas foram canceladas.</p>
           </div>
         ) : (
           <>
-            {/* Cards de status */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
               {Object.values(RequestStatus).map((status) => (
-  <Card 
-    key={status} 
-    className="bg-gray-800 border-gray-700 text-foreground hover:bg-gray-700 transition-colors cursor-pointer"
-    onClick={handleNavigateToRequests}
-  >
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className="text-sm font-medium">
-        {statusLabels[status]}
-      </CardTitle>
-    </CardHeader>
-    <CardContent>
-      <div className="text-2xl font-bold">{statusCounts[status] || 0}</div>
-      <Badge className={`mt-2 ${statusColors[status]}`}>
-        Solicitações
-      </Badge>
-    </CardContent>
-  </Card>
-))}
+                <Card 
+                key={status}
+                className={cn(
+                  "bg-background text-card-foreground hover:bg-accent/20 cursor-pointer",
+                  "border-0 border-l-4 border-blue-500 hover:border-blue-600",
+                  "shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px",
+                  "transition-all duration-300 relative w-full h-full flex flex-col", // Adicionado flex e h-full
+                  "before:content-[''] before:absolute before:left-0 before:top-0",
+                  "before:w-[2px] before:h-full before:bg-gradient-to-b",
+                  "before:from-transparent before:via-white/10 before:to-transparent before:opacity-30"
+                )}
+                onClick={handleNavigateToRequests}
+              >
+                <CardHeader className="pb-2 flex-1 flex items-center justify-center"> {/* Centralização vertical */}
+                  <CardTitle className="text-sm font-medium text-center"> {/* Centralização horizontal */}
+                    {statusLabels[status]}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="flex-1 flex flex-col items-center justify-center text-center"> {/* Centralização total */}
+                  <div className="text-2xl font-bold">{statusCounts[status]}</div>
+                  <Badge 
+                    variant="outline" 
+                    className="mt-2 "
+                  >
+                    Solicitações
+                  </Badge>
+                </CardContent>
+              </Card>
+              ))}
             </div>
 
             <DashboardCharts
               requestStatusData={statusChartData}
               requestTypeData={requestTypeData}
-              requests={requests}
-              darkMode={true}
+              chartWrapperClass="bg-card p-6 rounded-lg border"
+              headerClass="text-lg font-semibold"
+              hideOtherCharts={true}
+              darkMode={false}
             />
           </>
         )}

@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 import { addPurchaseRequest } from '@/services/reservationService';
 import { useAuth } from '@/contexts/AuthContext';
 import { sendAdminNotification } from '@/lib/email';
+import { cn } from '@/lib/utils';
 
 const formSchema = z.object({
   itemName: z.string().min(1, 'Nome do item é obrigatório'),
@@ -40,11 +41,34 @@ const formSchema = z.object({
   additionalInfo: z.string().optional(),
 });
 
-type FormValues = z.infer<typeof formSchema>;
+const inputStyle = cn(
+  "shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px",
+  "transition-all duration-300 relative border-0 border-l-4 border-blue-500 pl-8",
+  "before:content-[''] before:absolute before:left-0 before:top-0",
+  "before:w-[2px] before:h-full before:bg-gradient-to-b",
+  "before:from-transparent before:via-white/10 before:to-transparent before:opacity-30",
+  "hover:bg-accent/20 bg-background"
+);
+
+const selectTriggerStyle = cn(
+  "shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px",
+  "transition-all duration-300 relative border-0 border-l-4 border-blue-500",
+  "before:content-[''] before:absolute before:left-0 before:top-0",
+  "before:w-[2px] before:h-full before:bg-gradient-to-b",
+  "before:from-transparent before:via-white/10 before:to-transparent before:opacity-30",
+  "hover:bg-accent/20 bg-background"
+);
+
+const buttonPrimaryStyle = cn(
+  "shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px",
+  "transition-all duration-300 relative",
+  "bg-blue-500 hover:bg-blue-600 text-white",
+  "hover:scale-[1.02]"
+);
 
 const NovaCompra = () => {
   const { currentUser: user } = useAuth();
-  const form = useForm<FormValues>({
+  const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       itemName: '',
@@ -56,7 +80,7 @@ const NovaCompra = () => {
     },
   });
 
-  const onSubmit = async (values: FormValues) => {
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       await addPurchaseRequest({
         ...values,
@@ -70,9 +94,7 @@ const NovaCompra = () => {
       
       toast.success('Solicitação de compra enviada com sucesso!');
       form.reset();
-
       await sendAdminNotification('Compra', user?.displayName || 'Usuário não identificado');
-  
     } catch (error) {
       console.error('[Solicitação] Erro completo:', error);
       toast.error('Erro ao enviar solicitação');
@@ -101,6 +123,7 @@ const NovaCompra = () => {
                     <FormControl>
                       <Input 
                         placeholder="Ex: Notebook Dell Latitude 5440" 
+                        className={inputStyle}
                         {...field} 
                       />
                     </FormControl>
@@ -118,8 +141,7 @@ const NovaCompra = () => {
                     <FormControl>
                       <Input
                         type="number"
-                        step="0.01"
-                        min="0.01"
+                        className={inputStyle}
                         placeholder="Ex: 5"
                         value={field.value === 0 ? '' : field.value}
                         onChange={(e) => field.onChange(Number(e.target.value))}
@@ -143,7 +165,8 @@ const NovaCompra = () => {
                       type="number"
                       step="0.01"
                       min="0.01"
-                      placeholder="Ex: 4500.00"
+                      className={inputStyle}
+                      placeholder="Ex: 100.00"
                       value={field.value === 0 ? '' : field.value}
                       onChange={(e) => field.onChange(Number(e.target.value))}
                     />
@@ -158,6 +181,7 @@ const NovaCompra = () => {
                 <FormControl>
                   <Input
                     readOnly
+                    className={inputStyle}
                     value={new Intl.NumberFormat('pt-BR', {
                       style: 'currency',
                       currency: 'BRL',
@@ -177,7 +201,7 @@ const NovaCompra = () => {
                   <FormLabel>Nível de Urgência *</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className={selectTriggerStyle}>
                         <SelectValue placeholder="Selecione a urgência" />
                       </SelectTrigger>
                     </FormControl>
@@ -202,7 +226,7 @@ const NovaCompra = () => {
                   <FormControl>
                     <Textarea
                       placeholder="Descreva detalhadamente a necessidade desta compra..."
-                      className="min-h-[120px]"
+                      className={cn(inputStyle, "min-h-[120px]")}
                       {...field}
                     />
                   </FormControl>
@@ -220,7 +244,7 @@ const NovaCompra = () => {
                   <FormControl>
                     <Textarea
                       placeholder="Links de referência, especificações técnicas..."
-                      className="min-h-[100px]"
+                      className={cn(inputStyle, "min-h-[100px]")}
                       {...field}
                     />
                   </FormControl>
@@ -234,12 +258,13 @@ const NovaCompra = () => {
                 type="button" 
                 variant="ghost"
                 onClick={() => form.reset()}
+                className="shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px"
               >
                 Limpar Formulário
               </Button>
               <Button 
                 type="submit" 
-                className="bg-primary hover:bg-primary/90 text-foreground"
+                className={buttonPrimaryStyle}
               >
                 Enviar Solicitação
               </Button>

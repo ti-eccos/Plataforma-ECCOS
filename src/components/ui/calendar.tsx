@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { DayPicker } from "react-day-picker";
@@ -17,10 +16,10 @@ function Calendar({
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
-      className={cn("p-3 pointer-events-auto", className)}
+      className={cn("p-3 pointer-events-auto w-full", className)}
       classNames={{
-        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-        month: "space-y-4",
+        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 w-full",
+        month: "space-y-4 w-full",
         caption: "flex justify-center pt-1 relative items-center",
         caption_label: "text-sm font-medium text-foreground",
         nav: "space-x-1 flex items-center",
@@ -31,24 +30,20 @@ function Calendar({
         nav_button_previous: "absolute left-1",
         nav_button_next: "absolute right-1",
         table: "w-full border-collapse space-y-1",
-        head_row: "flex",
-        head_cell:
-          "text-gray-400 rounded-md w-9 font-normal text-[0.8rem]",
-        row: "flex w-full mt-2",
-        cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+        head_row: "grid grid-cols-7 gap-px w-full",
+        head_cell: "text-gray-400 text-[0.8rem] font-medium px-0 py-1.5",
+        row: "grid grid-cols-7 w-full mt-1 gap-px",
+        cell: "h-9 text-center text-sm p-0 relative flex-1",
         day: cn(
           buttonVariants({ variant: "ghost" }),
-          "h-9 w-9 p-0 font-normal text-foreground hover:bg-gray-800 hover:text-foreground aria-selected:opacity-100"
+          "h-9 w-full p-0 font-normal hover:bg-gray-800 relative"
         ),
         day_range_end: "day-range-end",
-        day_selected:
-          "bg-transparent text-foreground hover:bg-gray-800 hover:text-foreground focus:bg-gray-800 focus:text-foreground border-2 border-blue-500",
-        day_today: "bg-gray-800 text-foreground",
-        day_outside:
-          "day-outside text-gray-500 opacity-50 aria-selected:bg-gray-800 aria-selected:text-gray-400 aria-selected:opacity-30",
+        day_selected: "bg-transparent text-foreground hover:bg-gray-800",
+        day_today: "text-gray-500 opacity-50 after:absolute after:top-0 after:right-0 after:left-0 after:bottom-0 after:content-[''] after:bg-blue-500 after:h-2 after:w-2 after:rounded-full after:mx-auto after:bottom-0.5",
+        day_outside: "day-outside text-gray-500 opacity-50 aria-selected:bg-gray-800 aria-selected:text-gray-400 aria-selected:opacity-30",
         day_disabled: "text-gray-500 opacity-50",
-        day_range_middle:
-          "aria-selected:bg-gray-800 aria-selected:text-foreground",
+        day_range_middle: "aria-selected:bg-gray-800 aria-selected:text-foreground",
         day_hidden: "invisible",
         ...classNames,
       }}
@@ -58,13 +53,15 @@ function Calendar({
       }}
       modifiersClassNames={{
         available: "border-2 border-green-500",
-        selected: "border-2 border-blue-500",
+        selectedAdd: "relative",
+        selectedRemove: "relative",
         ...props.modifiersClassNames,
       }}
       {...props}
     />
   );
 }
+
 Calendar.displayName = "Calendar";
 
 export { Calendar };

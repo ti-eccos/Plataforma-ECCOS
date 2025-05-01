@@ -34,6 +34,21 @@ export function RequestStatusChart({
     }
   };
 
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const { name, value } = payload[0].payload;
+      const percentage = ((value / totalValue) * 100).toFixed(1);
+      
+      return (
+        <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-md">
+          <p className="text-blue-600 font-semibold">{name}</p>
+          <p className="text-gray-700">{`${percentage}%`}</p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="h-[300px] w-full relative">
       {totalValue === 0 ? (
@@ -52,45 +67,27 @@ export function RequestStatusChart({
               paddingAngle={2}
               dataKey="value"
               nameKey="name"
-              label={({ name, percent }) => 
-                `${name}: ${(percent * 100).toFixed(0)}%`
-              }
+              label={({ percent }) => `${(percent * 100).toFixed(1)}%`}
             >
               {filteredData.map((entry, index) => (
                 <Cell 
                   key={`cell-${index}`} 
                   fill={entry.color}
-                  stroke="#1f2937"
+                  stroke="#f3f4f6"
                   strokeWidth={2}
                 />
               ))}
             </Pie>
             <Legend 
               {...legendConfig}
-              formatter={(value: string) => (
-                <span className="text-gray-400">{value}</span>
-              )}
+              formatter={(value: string, entry: any) => {
+                const percentage = (entry.payload.value / totalValue * 100).toFixed(1);
+                return <span className="text-gray-700">{value} ({percentage}%)</span>;
+              }}
             />
             <Tooltip 
-              contentStyle={{
-                backgroundColor: '#1f2937',
-                border: '1px solid #374151',
-                borderRadius: '8px',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-              }}
-              itemStyle={{ 
-                color: '#e5e7eb',
-                fontSize: '14px'
-              }}
-              formatter={(value: number, name: string, entry: any) => [
-                <span key={`value-${name}`} className="text-indigo-400">
-                  {value}
-                </span>,
-                <span key={`name-${name}`} style={{ color: entry.payload.color }}>
-                  {name}
-                </span>
-              ]}
-              itemSorter={(item) => -item.value}
+              content={<CustomTooltip />}
+              cursor={{ fill: 'rgba(243, 244, 246, 0.5)' }}
             />
           </PieChart>
         </ResponsiveContainer>

@@ -3,7 +3,8 @@ import { Link, useLocation } from "react-router-dom";
 import { 
   Home, Laptop, Calendar, Users, 
   PlusCircle, LogOut, ChevronDown, 
-  ChevronUp, FileText, Bell
+  ChevronUp, FileText, Bell,
+  CalendarCheck, ShoppingCart, Wrench
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,7 +16,7 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import Logo from '@/images/logo-eccos.png';
+import Logo from '@/images/logo-eccos.jpg';
 
 interface SidebarItemProps {
   icon: React.ElementType;
@@ -30,13 +31,21 @@ const SidebarItem = ({ icon: Icon, label, href, active, expanded }: SidebarItemP
     <Link
       to={href}
       className={cn(
-        "flex items-center gap-3 px-3 py-3 rounded-md transition-all duration-300 group hover:bg-foreground/10 text-base",
-        active ? "bg-white text-eccos-blue" : "text-background"
+        "flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group",
+        "hover:bg-primary/10 hover:shadow-sm text-foreground", // Texto preto base
+        active ? "bg-primary/5 text-primary shadow-inner" : "", // Azul apenas no ativo
+        expanded ? "w-full" : "w-12 justify-center"
       )}
       tabIndex={0}
     >
-      <Icon className="h-5 w-5 shrink-0" />
-      <span className={cn("transition-all duration-300", expanded ? "opacity-100" : "opacity-0 w-0 overflow-hidden")}>
+      <Icon className={cn(
+        "h-5 w-5 shrink-0 stroke-[1.5]",
+        active ? "stroke-primary" : "stroke-foreground" // Ícone preto normal
+      )} />
+      <span className={cn(
+        "transition-all duration-300 font-medium",
+        expanded ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+      )}>
         {label}
       </span>
     </Link>
@@ -48,24 +57,28 @@ interface SubMenuItemProps {
   active: boolean;
   expanded: boolean;
   children: React.ReactNode;
+  icon: React.ElementType;
 }
 
-const SubMenuItem = ({ href, active, expanded, children }: SubMenuItemProps) => {
+const SubMenuItem = ({ href, active, expanded, children, icon: Icon }: SubMenuItemProps) => {
   return (
     <Link
       to={href}
       className={cn(
-        "flex items-center gap-3 px-4 py-3 rounded-md transition-all duration-300 group hover:bg-foreground/10 text-base",
-        active ? "bg-white text-eccos-blue" : "text-background",
-        !expanded && "justify-center"
+        "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
+        "hover:bg-primary/10 hover:shadow-sm text-foreground", // Texto preto base
+        active ? "bg-primary/5 text-primary shadow-inner" : "", // Azul apenas no ativo
+        expanded ? "w-full" : "w-12 justify-center"
       )}
     >
-      <span 
-        className={cn(
-          "transition-all duration-300", 
-          expanded ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
-        )}
-      >
+      <Icon className={cn(
+        "h-5 w-5 shrink-0 stroke-[1.5]",
+        active ? "stroke-primary" : "stroke-foreground" // Ícone preto normal
+      )} />
+      <span className={cn(
+        "transition-all duration-300 font-medium",
+        expanded ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+      )}>
         {children}
       </span>
     </Link>
@@ -87,33 +100,33 @@ const SidebarSubMenu = ({ label, icon: Icon, children, expanded }: SidebarSubMen
     <div className="space-y-1">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between w-full px-3 py-2 rounded-md transition-colors text-background hover:bg-foreground/10"
+        className={cn(
+          "flex items-center justify-between w-full px-3 py-2 rounded-xl",
+          "transition-colors text-foreground hover:bg-primary/10", // Texto preto
+          expanded ? "pr-3" : "justify-center"
+        )}
       >
         <div className="flex items-center gap-3">
-          <Icon className="h-5 w-5 shrink-0" />
-          <span 
-            className={cn(
-              "transition-all duration-300", 
-              expanded ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
-            )}
-          >
+          <Icon className="h-5 w-5 shrink-0 stroke-[1.5] stroke-foreground" /> {/* Ícone preto */}
+          <span className={cn(
+            "transition-all duration-300 font-medium",
+            expanded ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+          )}>
             {label}
           </span>
         </div>
         {expanded && (
           isOpen ? (
-            <ChevronUp className="h-4 w-4" />
+            <ChevronUp className="h-4 w-4 stroke-[1.5] stroke-foreground" />
           ) : (
-            <ChevronDown className="h-4 w-4" />
+            <ChevronDown className="h-4 w-4 stroke-[1.5] stroke-foreground" /> 
           )
         )}
       </button>
-      <div 
-        className={cn(
-          "space-y-1 transition-all duration-300",
-          isOpen && expanded ? "block" : "hidden"
-        )}
-      >
+      <div className={cn(
+        "space-y-1 transition-all duration-300 pl-7",
+        isOpen && expanded ? "block" : "hidden"
+      )}>
         {React.Children.map(children, child => 
           React.cloneElement(child as React.ReactElement, {
             active: location.pathname === (child as React.ReactElement).props.href,
@@ -137,9 +150,9 @@ export const AppSidebar = () => {
       icon: PlusCircle,
       label: "Nova Solicitação",
       items: [
-        { label: "Reserva", href: "/nova-solicitacao/reserva" },
-        { label: "Compra", href: "/nova-solicitacao/compra" },
-        { label: "Suporte", href: "/nova-solicitacao/suporte" },
+        { icon: CalendarCheck, label: "Reserva", href: "/nova-solicitacao/reserva" },
+        { icon: ShoppingCart, label: "Compra", href: "/nova-solicitacao/compra" },
+        { icon: Wrench, label: "Suporte", href: "/nova-solicitacao/suporte" },
       ]
     },
   ];
@@ -155,7 +168,8 @@ export const AppSidebar = () => {
   return (
     <div
       className={cn(
-        "h-screen bg-[hsl(var(--sidebar-background))] border-r border-border flex flex-col transition-all duration-300 z-10",
+        "h-screen bg-background/95 border-r border-border/40 flex flex-col",
+        "transition-all duration-300 z-10 backdrop-blur-lg shadow-xl rounded-r-xl",
         expanded ? "w-72" : "w-20",
       )}
     >
@@ -188,6 +202,7 @@ export const AppSidebar = () => {
                     href={subItem.href}
                     active={location.pathname === subItem.href}
                     expanded={expanded}
+                    icon={subItem.icon}
                   >
                     {subItem.label}
                   </SubMenuItem>
@@ -210,13 +225,12 @@ export const AppSidebar = () => {
 
         {isAdmin && (
           <>
-            <div className="h-px bg-border my-4"></div>
-            <div 
-              className={cn(
-                "px-4 mb-2 uppercase text-background font-semibold transition-all duration-300 text-sm",
-                expanded ? "opacity-100" : "opacity-0"
-              )}
-            >
+            <div className="h-[1px] bg-gradient-to-r from-transparent via-border/30 to-transparent my-4" />
+            <div className={cn(
+              "px-4 mb-2 text-xs font-medium tracking-wide transition-all",
+              "text-foreground/80 uppercase", // Texto preto com opacidade
+              expanded ? "opacity-100" : "opacity-0"
+            )}>
               Administração
             </div>
             {adminMenuItems.map((item, index) => (
@@ -237,14 +251,15 @@ export const AppSidebar = () => {
             <DropdownMenuTrigger asChild>
               <button 
                 className={cn(
-                  "w-full p-2 hover:bg-border rounded-md text-background transition-colors focus:outline-none flex items-center gap-2",
+                  "w-full p-2 hover:bg-primary/10 rounded-xl transition-colors",
+                  "focus:outline-none flex items-center gap-2 text-foreground", // Texto preto
                   expanded ? "px-3 justify-start" : "justify-center"
                 )}
                 aria-label="Menu de logout"
               >
-                <LogOut className="h-5 w-5 shrink-0" />
+                <LogOut className="h-5 w-5 shrink-0 stroke-[1.5] stroke-foreground" /> {/* Ícone preto */}
                 {expanded && (
-                  <span className="text-sm transition-all duration-300">
+                  <span className="text-sm transition-all duration-300 font-medium">
                     Sair
                   </span>
                 )}
@@ -253,18 +268,18 @@ export const AppSidebar = () => {
             
             <DropdownMenuContent 
               align={expanded ? "start" : "center"} 
-              className="w-48"
+              className="rounded-xl shadow-lg border-border/40"
             >
-              <DropdownMenuLabel className="text-xs font-semibold">
+              <DropdownMenuLabel className="text-xs font-medium text-foreground/80"> {/* Texto preto */}
                 Ações da Conta
               </DropdownMenuLabel>
-              <DropdownMenuSeparator />
+              <DropdownMenuSeparator className="bg-border/40" />
               <DropdownMenuItem 
                 onClick={signOut} 
-                className="text-destructive cursor-pointer focus:bg-destructive/10"
+                className="text-destructive cursor-pointer focus:bg-destructive/5 rounded-lg"
               >
-                <LogOut className="mr-2 h-4 w-4" />
-                <span className="text-sm">Confirmar Saída</span>
+                <LogOut className="mr-2 h-4 w-4 stroke-[1.5]" />
+                <span className="text-sm font-medium">Confirmar Saída</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

@@ -1,10 +1,10 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { RequestStatusChart } from "@/components/dashboard/RequestStatusChart";
-import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { TopUsersChart } from "@/components/dashboard/TopUsersChart";
+import { cn } from "@/lib/utils";
 
 interface PieData {
   name: string;
@@ -12,21 +12,16 @@ interface PieData {
   color: string;
 }
 
-interface TopUserData {
-  userId: string;
-  userName: string;
-  requestCount: number;
-}
-
 interface DashboardChartsProps {
   requestStatusData?: PieData[];
   equipmentTypeData?: PieData[];
   requestTypeData?: PieData[];
-  statusData?: PieData[]; 
-  topUsersData?: TopUserData[];
+  topUsersData?: any[];
   requests?: any[];
   hideOtherCharts?: boolean;
   darkMode?: boolean;
+  chartWrapperClass?: string;
+  headerClass?: string;
 }
 
 export function DashboardCharts({
@@ -34,50 +29,39 @@ export function DashboardCharts({
   equipmentTypeData,
   requestTypeData,
   topUsersData,
-  statusData,
   requests,
   hideOtherCharts = false,
-  darkMode = false
+  darkMode = false,
+  chartWrapperClass = "",
+  headerClass = "",
 }: DashboardChartsProps) {
   const navigate = useNavigate();
-  const handleNavigateToMyRequests = () => navigate('/minhas-solicitacoes');
-  const statusChartData = requestStatusData || statusData;
-
-  const handleNavigateToRequests = () => navigate('/solicitacoes');
-  const handleNavigateToEquipment = () => navigate('/equipamentos');
-  const handleNavigateToUsers = () => navigate('/usuarios');
-
-  const cardClass = darkMode 
-    ? "bg-gray-800 border-gray-700 text-foreground shadow-md hover:shadow-lg transition-shadow cursor-pointer" 
-    : "shadow-md hover:shadow-lg transition-shadow cursor-pointer";
   
-  const descriptionClass = darkMode ? "text-gray-400" : "";
-  const buttonClass = darkMode ? "text-blue-400 hover:text-blue-300" : "";
+  const cardClass = cn(
+    "bg-background text-card-foreground border-0 border-l-4",
+    "shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px",
+    "transition-all duration-300 w-full min-h-[300px] flex flex-col",
+    darkMode 
+      ? "border-blue-300 hover:border-blue-400" 
+      : "border-blue-500 hover:border-blue-600",
+    "before:content-[''] before:absolute before:left-0 before:top-0",
+    "before:w-[2px] before:h-full before:bg-gradient-to-b",
+    "before:from-transparent before:via-white/10 before:to-transparent before:opacity-30"
+  );
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* Status das Solicitações */}
-      {statusChartData && (
+    <div className={cn("grid grid-cols-1 lg:grid-cols-2 gap-6", chartWrapperClass)}>
+      {/* Gráfico de Status */}
+      {requestStatusData && (
         <Card className={cardClass}>
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Status das Solicitações</span>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className={buttonClass}
-                onClick={handleNavigateToRequests}
-              >
-                Ver Detalhes
-              </Button>
+            <CardTitle className={cn("text-xl font-bold", headerClass)}>
+              Status das Solicitações
             </CardTitle>
-            <CardDescription className={descriptionClass}>
-              Distribuição das solicitações por status
-            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="h-80">
-              <RequestStatusChart data={statusChartData}/>
+          <CardContent className="pb-4 flex-1">
+            <div className="h-full">
+              <RequestStatusChart data={requestStatusData} />
             </div>
           </CardContent>
         </Card>
@@ -87,100 +71,53 @@ export function DashboardCharts({
       {requestTypeData && (
         <Card className={cardClass}>
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Tipos de Solicitações</span>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className={buttonClass}
-                onClick={handleNavigateToRequests}
-              >
-                Ver Detalhes
-              </Button>
+            <CardTitle className={cn("text-xl font-bold", headerClass)}>
+              Tipos de Solicitações
             </CardTitle>
-            <CardDescription className={descriptionClass}>
-              Distribuição por tipo de solicitação
-            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="h-80">
-              <RequestStatusChart data={requestTypeData}/>
+          <CardContent className="pb-4 flex-1">
+            <div className="h-full">
+              <RequestStatusChart data={requestTypeData} />
             </div>
           </CardContent>
         </Card>
       )}
-      
-      {/* Charts visíveis apenas no admin dashboard */}
+
+      {/* Gráficos específicos do admin */}
       {!hideOtherCharts && (
         <>
           {/* Gráfico de Equipamentos */}
           {equipmentTypeData && (
-            <Card className={cardClass} onClick={handleNavigateToEquipment}>
+            <Card className={cardClass}>
               <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>Tipos de Equipamentos</span>
-                  <Button variant="ghost" size="sm" className={buttonClass}>
-                    Ver Equipamentos
-                  </Button>
+                <CardTitle className={cn("text-xl font-bold", headerClass)}>
+                  Tipos de Equipamentos
                 </CardTitle>
-                <CardDescription className={descriptionClass}>
-                  Distribuição por tipo de equipamento
-                </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="h-80">
+              <CardContent className="pb-4 flex-1">
+                <div className="h-full">
                   <RequestStatusChart data={equipmentTypeData} />
                 </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Novo gráfico - Usuários Mais Ativos */}
-          {topUsersData && topUsersData.length > 0 && (
-            <Card className={cardClass} onClick={handleNavigateToUsers}>
+          {/* Gráfico de Usuários Ativos */}
+          {topUsersData && (
+            <Card className={cardClass}>
               <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>Usuários Mais Ativos</span>
-                  <Button variant="ghost" size="sm" className={buttonClass}>
-                    Ver Usuários
-                  </Button>
+                <CardTitle className={cn("text-xl font-bold", headerClass)}>
+                  Usuários Mais Ativos
                 </CardTitle>
-                <CardDescription className={descriptionClass}>
-                  Top 5 usuários com mais solicitações
-                </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="h-80">
-                  <TopUsersChart data={topUsersData} darkMode={darkMode} />
+              <CardContent className="pb-4 flex-1">
+                <div className="h-full">
+                  <TopUsersChart data={topUsersData} />
                 </div>
               </CardContent>
             </Card>
           )}
         </>
-      )}
-
-      {requests && requests.length > 0 && (
-        <Card className={`${cardClass} lg:col-span-2`}>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Atividade Recente</span>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className={buttonClass}
-                onClick={handleNavigateToRequests}
-              >
-                Ver Todas
-              </Button>
-            </CardTitle>
-            <CardDescription className={descriptionClass}>
-              Últimas solicitações
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <RecentActivity requests={requests} />
-          </CardContent>
-        </Card>
       )}
     </div>
   );

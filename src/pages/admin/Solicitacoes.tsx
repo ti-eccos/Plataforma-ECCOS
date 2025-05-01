@@ -11,19 +11,18 @@ import {
   Eye, 
   EyeOff,
   Trash2,
-  Send,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 import { 
   getAllRequests,
   getRequestById,
-  addMessageToRequest,
   deleteRequest,
   RequestStatus,
   RequestData,
-  MessageData
+  RequestType
 } from "@/services/reservationService";
 import { useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/components/AppLayout";
@@ -60,7 +59,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -71,10 +69,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { RequestType } from "@/services/reservationService";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { createNotification } from '@/services/notificationService';
+import ChatAdmin from "@/components/admin/ChatAdmin";
 
 const getRequestTypeIcon = (type: RequestType) => {
   switch (type) {
@@ -145,12 +143,10 @@ const Solicitacoes = () => {
   const [equipmentCounts, setEquipmentCounts] = useState({ ipads: 0, chromebooks: 0, others: 0 });
   const [showEquipmentList, setShowEquipmentList] = useState(false);
   const equipmentCache = useRef(new Map<string, any>());
-  
   const [selectedRequest, setSelectedRequest] = useState<RequestData | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isDetailsLoading, setIsDetailsLoading] = useState(false);
   const [newStatus, setNewStatus] = useState<RequestStatus>("pending");
-  const [newMessage, setNewMessage] = useState("");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<{id: string, collectionName: string} | null>(null);
   const [unreadMessages, setUnreadMessages] = useState<Record<string, number>>({});
@@ -158,6 +154,8 @@ const Solicitacoes = () => {
     const saved = typeof window !== 'undefined' ? localStorage.getItem('adminViewedRequests') : null;
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatRequest, setChatRequest] = useState<RequestData | null>(null);
 
   const { 
     data: requests = [], 
@@ -175,13 +173,12 @@ const Solicitacoes = () => {
       const newUnread: Record<string, number> = {};
       
       requests.forEach(req => {
-        if (req.messages) {
-          const unreadCount = req.messages.filter(msg => 
-            !msg.isAdmin && !viewedRequests.has(`${req.id}-${msg.timestamp.toMillis()}`)
-          ).length;
-          if (unreadCount > 0) {
-            newUnread[req.id] = unreadCount;
-          }
+        const messages = req.messages || [];
+        const unreadCount = messages.filter(msg => 
+          !msg.isAdmin && !viewedRequests.has(`${req.id}-${msg.timestamp.toMillis()}`)
+        ).length;
+        if (unreadCount > 0) {
+          newUnread[req.id] = unreadCount;
         }
       });
       
@@ -233,27 +230,6 @@ const Solicitacoes = () => {
         counts = await countEquipment(fullRequest.equipmentIds);
       }
       
-      // Mark messages as read
-      if (fullRequest.messages) {
-        setViewedRequests(prev => {
-          const newSet = new Set(prev);
-          fullRequest.messages.forEach(msg => {
-            if (!msg.isAdmin) {
-              newSet.add(`${fullRequest.id}-${msg.timestamp.toMillis()}`);
-            }
-          });
-          localStorage.setItem('adminViewedRequests', JSON.stringify(Array.from(newSet)));
-          return newSet;
-        });
-        
-        // Remove unread badge
-        setUnreadMessages(prev => {
-          const newUnread = {...prev};
-          delete newUnread[fullRequest.id];
-          return newUnread;
-        });
-      }
-      
       setSelectedRequest(fullRequest);
       setEquipmentCounts(counts);
       setNewStatus(fullRequest.status);
@@ -266,68 +242,33 @@ const Solicitacoes = () => {
     }
   };
 
-  const renderEquipmentCounts = () => {
-    const { ipads, chromebooks, others } = equipmentCounts;
-    const items = [];
-    
-    if (ipads > 0) {
-      items.push(<li key="ipads">{ipads} iPad{ipads !== 1 ? 's' : ''}</li>);
+  const handleOpenChat = async (request: RequestData) => {
+    try {
+      const fullRequest = await getRequestById(request.id, request.collectionName);
+      setChatRequest(fullRequest);
+      
+      setViewedRequests(prev => {
+        const newSet = new Set(prev);
+        (fullRequest.messages || []).forEach(msg => {
+          if (!msg.isAdmin) {
+            newSet.add(`${fullRequest.id}-${msg.timestamp.toMillis()}`);
+          }
+        });
+        localStorage.setItem('adminViewedRequests', JSON.stringify(Array.from(newSet)));
+        return newSet;
+      });
+      
+      setUnreadMessages(prev => {
+        const newUnread = {...prev};
+        delete newUnread[fullRequest.id];
+        return newUnread;
+      });
+      
+      setIsChatOpen(true);
+    } catch (error) {
+      toast.error("Erro ao abrir chat");
+      console.error("Error:", error);
     }
-    if (chromebooks > 0) {
-      items.push(<li key="chromebooks">{chromebooks} Chromebook{chromebooks !== 1 ? 's' : ''}</li>);
-    }
-    if (others > 0) {
-      items.push(<li key="others">{others} Outro equipamento{others !== 1 ? 's' : ''}</li>);
-    }
-    
-    return (
-      <div className="space-y-2">
-        <ul className="list-disc pl-5">
-          {items.length > 0 ? items : <li>Nenhum equipamento selecionado</li>}
-        </ul>
-        
-        {selectedRequest?.equipmentIds?.length > 0 && (
-          <div>
-            <Button
-              variant="link"
-              size="sm"
-              className="h-auto p-0 text-sm flex items-center gap-1"
-              onClick={() => setShowEquipmentList(!showEquipmentList)}
-            >
-              {showEquipmentList ? (
-                <>
-                  <ChevronUp className="h-4 w-4" />
-                  Ocultar equipamentos
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="h-4 w-4" />
-                  Mostrar todos os equipamentos
-                </>
-              )}
-            </Button>
-            
-            {showEquipmentList && (
-              <div className="mt-2 pl-5">
-                <h4 className="font-medium mb-1">Lista completa:</h4>
-                <ul className="list-disc pl-5 space-y-1">
-                  {selectedRequest.equipmentIds.map((id, index) => {
-                    const doc = equipmentCache.current.get(id);
-                    const equipmentData = doc?.exists() ? doc.data() : null;
-                    return (
-                      <li key={index}>
-                        {equipmentData?.name || `Equipamento ${index + 1}`}
-                        {equipmentData?.identifier && ` (${equipmentData.identifier})`}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    );
   };
 
   const handleStatusChange = async () => {
@@ -353,32 +294,6 @@ const Solicitacoes = () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     } catch (error) {
       toast.error("Erro ao atualizar");
-      console.error("Error:", error);
-    }
-  };
-
-  const handleSendMessage = async () => {
-    if (!selectedRequest || !newMessage.trim()) return;
-    
-    try {
-      await addMessageToRequest(
-        selectedRequest.id, 
-        newMessage, 
-        true,
-        selectedRequest.collectionName,
-        user?.displayName || "Administrador"
-      );
-      
-      const updatedRequest = await getRequestById(
-        selectedRequest.id, 
-        selectedRequest.collectionName
-      );
-      
-      setSelectedRequest(updatedRequest);
-      setNewMessage("");
-      toast.success("Mensagem enviada");
-    } catch (error) {
-      toast.error("Erro ao enviar");
       console.error("Error:", error);
     }
   };
@@ -524,49 +439,64 @@ const Solicitacoes = () => {
             Nenhuma solicitação encontrada
           </div>
         ) : (
-          <div className="rounded-md border overflow-hidden">
+          <div className="rounded-md border overflow-hidden bg-background shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px transition-all duration-300 relative border-0 border-l-4 border-blue-500 before:content-[''] before:absolute before:left-0 before:top-0 before:w-[2px] before:h-full before:bg-gradient-to-b before:from-transparent before:via-white/10 before:to-transparent before:opacity-30">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Usuário</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead className="text-center align-middle w-[25%] sm:w-[20%]">Tipo</TableHead>
+                  <TableHead className="text-center align-middle w-[30%] sm:w-[35%]">Nome</TableHead>
+                  <TableHead className="text-center align-middle w-[25%] sm:w-[25%]">Status</TableHead>
+                  <TableHead className="text-center align-middle w-[20%] sm:w-[20%]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredRequests.map((request) => (
                   <TableRow key={`${request.collectionName}-${request.id}`}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
+                    <TableCell className="text-center align-middle">
+                      <div className="flex items-center justify-center gap-2">
                         {getRequestTypeIcon(request.type)}
-                        <span>{getReadableRequestType(request.type)}</span>
+                        <span className="hidden sm:inline truncate">
+                          {getReadableRequestType(request.type)}
+                        </span>
                       </div>
                     </TableCell>
-                    <TableCell>{request.userName || request.userEmail}</TableCell>
-                    <TableCell>
-                      {format(
-                        new Date(request.createdAt.toMillis()), 
-                        "dd/MM/yy HH:mm", 
-                        { locale: ptBR }
-                      )}
+
+                    <TableCell className="text-center align-middle truncate max-w-[180px]">
+                      {request.userName || request.userEmail}
                     </TableCell>
-                    <TableCell>{getStatusBadge(request.status)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleViewDetails(request)}
-                        className="relative"
-                      >
-                        Detalhes
-                        {unreadMessages[request.id] && (
-                          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                            {unreadMessages[request.id]}
-                          </span>
-                        )}
-                      </Button>
+
+                    <TableCell className="text-center align-middle">
+                      <div className="flex justify-center">
+                        {getStatusBadge(request.status)}
+                      </div>
+                    </TableCell>
+
+                    <TableCell className="text-center align-middle">
+                      <div className="flex justify-center items-center space-x-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleViewDetails(request)}
+                          title="Detalhes"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 relative"
+                          onClick={() => handleOpenChat(request)}
+                          title="Chat"
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                          {unreadMessages[request.id] > 0 && (
+                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                              {unreadMessages[request.id]}
+                            </span>
+                          )}
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -654,7 +584,52 @@ const Solicitacoes = () => {
                           </div>
                           <div className="col-span-2">
                             <p className="text-sm font-medium text-muted-foreground">Equipamentos</p>
-                            {renderEquipmentCounts()}
+                            <div className="space-y-2">
+                              <ul className="list-disc pl-5">
+                                {equipmentCounts.ipads > 0 && <li>{equipmentCounts.ipads} iPad{equipmentCounts.ipads !== 1 ? 's' : ''}</li>}
+                                {equipmentCounts.chromebooks > 0 && <li>{equipmentCounts.chromebooks} Chromebook{equipmentCounts.chromebooks !== 1 ? 's' : ''}</li>}
+                                {equipmentCounts.others > 0 && <li>{equipmentCounts.others} Outro equipamento{equipmentCounts.others !== 1 ? 's' : ''}</li>}
+                              </ul>
+                              {selectedRequest.equipmentIds?.length > 0 && (
+                                <div>
+                                  <Button
+                                    variant="link"
+                                    size="sm"
+                                    className="h-auto p-0 text-sm flex items-center gap-1"
+                                    onClick={() => setShowEquipmentList(!showEquipmentList)}
+                                  >
+                                    {showEquipmentList ? (
+                                      <>
+                                        <ChevronUp className="h-4 w-4" />
+                                        Ocultar equipamentos
+                                      </>
+                                    ) : (
+                                      <>
+                                        <ChevronDown className="h-4 w-4" />
+                                        Mostrar todos os equipamentos
+                                      </>
+                                    )}
+                                  </Button>
+                                  {showEquipmentList && (
+                                    <div className="mt-2 pl-5">
+                                      <h4 className="font-medium mb-1">Lista completa:</h4>
+                                      <ul className="list-disc pl-5 space-y-1">
+                                        {selectedRequest.equipmentIds.map((id, index) => {
+                                          const doc = equipmentCache.current.get(id);
+                                          const equipmentData = doc?.exists() ? doc.data() : null;
+                                          return (
+                                            <li key={index}>
+                                              {equipmentData?.name || `Equipamento ${index + 1}`}
+                                              {equipmentData?.identifier && ` (${equipmentData.identifier})`}
+                                            </li>
+                                          );
+                                        })}
+                                      </ul>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       )}
@@ -747,49 +722,6 @@ const Solicitacoes = () => {
                         <Button onClick={handleStatusChange}>Atualizar Status</Button>
                       </div>
                     </div>
-
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-medium">Mensagens</h3>
-                      <div className="space-y-4 max-h-[200px] overflow-y-auto p-2 border rounded-md">
-                        {selectedRequest.messages?.length > 0 ? (
-                          selectedRequest.messages.map((msg: MessageData, index: number) => (
-                            <div 
-                              key={index} 
-                              className={`p-3 rounded-lg ${msg.isAdmin ? 
-                                'bg-primary text-primary-foreground ml-8' : 
-                                'bg-muted mr-8'}`}
-                            >
-                              <div className="flex justify-between text-xs mb-1">
-                                <span className="font-medium">{msg.userName}</span>
-                                <span>
-                                  {format(
-                                    new Date(msg.timestamp.toMillis()),
-                                    "dd/MM HH:mm",
-                                    { locale: ptBR }
-                                  )}
-                                </span>
-                              </div>
-                              <p>{msg.message}</p>
-                            </div>
-                          ))
-                        ) : (
-                          <p className="text-center text-muted-foreground py-8">
-                            Nenhuma mensagem ainda
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex gap-2">
-                        <Textarea 
-                          placeholder="Digite uma mensagem..." 
-                          value={newMessage}
-                          onChange={(e) => setNewMessage(e.target.value)}
-                          className="resize-none"
-                        />
-                        <Button onClick={handleSendMessage} className="flex-shrink-0">
-                          <Send className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
                   </div>
                 )}
                 
@@ -808,6 +740,13 @@ const Solicitacoes = () => {
             )}
           </DialogContent>
         </Dialog>
+
+        <ChatAdmin 
+          request={chatRequest} 
+          isOpen={isChatOpen} 
+          onOpenChange={setIsChatOpen}
+          onMessageSent={refetch}
+        />
 
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>

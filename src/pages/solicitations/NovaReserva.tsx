@@ -201,162 +201,95 @@ const NovaReserva = () => {
     setIsSubmitting(false);
   }
 };
-  return (
-    <AppLayout>
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight text-gradient">Nova Reserva</h2>
-          <p className="text-foreground mt-1">
-            Preencha o formulário para reservar equipamentos
-          </p>
-        </div>
+return (
+  <AppLayout>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-3xl font-bold tracking-tight text-gradient">Nova Reserva</h2>
+        <p className="text-foreground mt-1">
+          Preencha o formulário para reservar equipamentos
+        </p>
+      </div>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Data *</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP", { locale: ptBR })
-                          ) : (
-                            <span>Selecione uma data</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) => 
-                          isDateInPastOrToday(date) || !isDateAvailable(date)
-                        }
-                        modifiers={{ available: availableDates }}
-                        modifiersStyles={{
-                          available: { border: "2px solid #22c55e" },
-                        }}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid gap-6 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="startTime"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Hora Inicial *</FormLabel>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <FormField
+            control={form.control}
+            name="date"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Data *</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
                     <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="07:00"
-                        maxLength={5}
-                        onChange={(e) => {
-                          field.onChange(autoCompleteTime(e.target.value));
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="endTime"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Hora Final *</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="19:00"
-                        maxLength={5}
-                        onChange={(e) => {
-                          field.onChange(autoCompleteTime(e.target.value));
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="selectedEquipment"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="mb-4">
-                    <FormLabel className="text-base">Equipamentos *</FormLabel>
-                  </div>
-                  <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] md:grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-2">
-                    {equipment.map((item) => (
-                      <FormItem
-                        key={item.id}
-                        className="flex items-start space-x-3 space-y-0 rounded-md border p-4"
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full pl-3 text-left font-normal",
+                          "shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px",
+                          "transition-all duration-300 relative border-0 border-l-4 border-blue-500",
+                          "before:content-[''] before:absolute before:left-0 before:top-0",
+                          "before:w-[2px] before:h-full before:bg-gradient-to-b",
+                          "before:from-transparent before:via-white/10 before:to-transparent before:opacity-30",
+                          "hover:bg-accent/20 bg-background",
+                          !field.value && "text-foreground"
+                        )}
                       >
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value.includes(item.id)}
-                            onCheckedChange={(checked) => {
-                              const newValue = checked
-                                ? [...field.value, item.id]
-                                : field.value.filter(id => id !== item.id);
-                              field.onChange(newValue);
-                            }}
-                          />
-                        </FormControl>
-                        <FormLabel className="font-normal cursor-pointer flex-1 whitespace-normal">
-                          {item.name}
-                        </FormLabel>
-                      </FormItem>
-                    ))}
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                        {field.value ? (
+                          format(field.value, "PPP", { locale: ptBR })
+                        ) : (
+                          <span>Selecione uma data</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      disabled={(date) => 
+                        isDateInPastOrToday(date) || !isDateAvailable(date)
+                      }
+                      modifiers={{ available: availableDates }}
+                      modifiersStyles={{
+                        available: { border: "2px solid #22c55e" },
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
+          <div className="grid gap-6 md:grid-cols-2">
             <FormField
               control={form.control}
-              name="location"
+              name="startTime"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Local de Uso *</FormLabel>
+                  <FormLabel>Hora Inicial *</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
-                      placeholder="Selecione o local"
-                      list="locations-list"
+                      placeholder="07:00"
+                      maxLength={5}
+                      className={cn(
+                        "shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px",
+                        "transition-all duration-300 relative border-0 border-l-4 border-blue-500 pl-8",
+                        "before:content-[''] before:absolute before:left-0 before:top-0",
+                        "before:w-[2px] before:h-full before:bg-gradient-to-b",
+                        "before:from-transparent before:via-white/10 before:to-transparent before:opacity-30",
+                        "hover:bg-accent/20 bg-background"
+                      )}
+                      onChange={(e) => {
+                        field.onChange(autoCompleteTime(e.target.value));
+                      }}
                     />
                   </FormControl>
-                  <datalist id="locations-list">
-                    {LOCATIONS.map(location => (
-                      <option key={location} value={location} />
-                    ))}
-                  </datalist>
                   <FormMessage />
                 </FormItem>
               )}
@@ -364,34 +297,152 @@ const NovaReserva = () => {
 
             <FormField
               control={form.control}
-              name="purpose"
+              name="endTime"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Finalidade *</FormLabel>
+                  <FormLabel>Hora Final *</FormLabel>
                   <FormControl>
-                    <Textarea
+                    <Input
                       {...field}
-                      placeholder="Descreva o propósito da reserva..."
-                      className="min-h-[120px]"
+                      placeholder="19:00"
+                      maxLength={5}
+                      className={cn(
+                        "shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px",
+                        "transition-all duration-300 relative border-0 border-l-4 border-blue-500 pl-8",
+                        "before:content-[''] before:absolute before:left-0 before:top-0",
+                        "before:w-[2px] before:h-full before:bg-gradient-to-b",
+                        "before:from-transparent before:via-white/10 before:to-transparent before:opacity-30",
+                        "hover:bg-accent/20 bg-background"
+                      )}
+                      onChange={(e) => {
+                        field.onChange(autoCompleteTime(e.target.value));
+                      }}
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+          </div>
 
-            <Button 
-              type="submit" 
-              className="w-full md:w-auto" 
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Enviando..." : "Solicitar Reserva"}
-            </Button>
-          </form>
-        </Form>
-      </div>
-    </AppLayout>
-  );
+          <FormField
+            control={form.control}
+            name="selectedEquipment"
+            render={({ field }) => (
+              <FormItem>
+                <div className="mb-4">
+                  <FormLabel className="text-base">Equipamentos *</FormLabel>
+                </div>
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] md:grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-2">
+                  {equipment.map((item) => (
+                    <FormItem
+                      key={item.id}
+                      className={cn(
+                        "flex items-start space-x-3 space-y-0 rounded-md p-4",
+                        "shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px",
+                        "transition-all duration-300 relative border-0 border-l-4 border-blue-500",
+                        "before:content-[''] before:absolute before:left-0 before:top-0",
+                        "before:w-[2px] before:h-full before:bg-gradient-to-b",
+                        "before:from-transparent before:via-white/10 before:to-transparent before:opacity-30",
+                        "hover:bg-accent/20 cursor-pointer bg-background"
+                      )}
+                    >
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value.includes(item.id)}
+                          onCheckedChange={(checked) => {
+                            const newValue = checked
+                              ? [...field.value, item.id]
+                              : field.value.filter(id => id !== item.id);
+                            field.onChange(newValue);
+                          }}
+                        />
+                      </FormControl>
+                      <FormLabel className="font-normal cursor-pointer flex-1 whitespace-normal">
+                        {item.name}
+                      </FormLabel>
+                    </FormItem>
+                  ))}
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="location"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Local de Uso *</FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    placeholder="Selecione o local"
+                    list="locations-list"
+                    className={cn(
+                      "shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px",
+                      "transition-all duration-300 relative border-0 border-l-4 border-blue-500 pl-8",
+                      "before:content-[''] before:absolute before:left-0 before:top-0",
+                      "before:w-[2px] before:h-full before:bg-gradient-to-b",
+                      "before:from-transparent before:via-white/10 before:to-transparent before:opacity-30",
+                      "hover:bg-accent/20 bg-background"
+                    )}
+                  />
+                </FormControl>
+                <datalist id="locations-list">
+                  {LOCATIONS.map(location => (
+                    <option key={location} value={location} />
+                  ))}
+                </datalist>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="purpose"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Finalidade *</FormLabel>
+                <FormControl>
+                  <Textarea
+                    {...field}
+                    placeholder="Descreva o propósito da reserva..."
+                    className={cn(
+                      "min-h-[120px] shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px",
+                      "transition-all duration-300 relative border-0 border-l-4 border-blue-500 pl-8",
+                      "before:content-[''] before:absolute before:left-0 before:top-0",
+                      "before:w-[2px] before:h-full before:bg-gradient-to-b",
+                      "before:from-transparent before:via-white/10 before:to-transparent before:opacity-30",
+                      "hover:bg-accent/20 bg-background"
+                    )}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+<Button 
+  type="submit" 
+  className={cn(
+    "shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px",
+    "transition-all duration-300 relative",
+    "bg-blue-500 hover:bg-blue-600 text-white", // Cores principais
+    "border-0", // Remove bordas anteriores
+    "hover:scale-[1.02]" // Efeito opcional de escala no hover
+  )}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Enviando..." : "Solicitar Reserva"}
+          </Button>
+        </form>
+      </Form>
+    </div>
+  </AppLayout>
+);
 };
 
 export default NovaReserva;

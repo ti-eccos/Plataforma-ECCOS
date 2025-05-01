@@ -11,10 +11,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import AddEquipmentDialog from "@/components/AddEquipmentDialog";
 import AppLayout from "@/components/AppLayout";
 import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 export default function Equipamentos() {
   const [equipment, setEquipment] = useState<Equipment[]>([]);
@@ -70,6 +71,7 @@ export default function Equipamentos() {
       });
     }
   };
+
   const handleDeleteSingle = async (id: string) => {
     try {
       await deleteEquipment(id);
@@ -86,6 +88,7 @@ export default function Equipamentos() {
       });
     }
   };
+
   const getTypeStyle = (type: string) => {
     if (type === "Chromebook") {
       return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
@@ -97,16 +100,17 @@ export default function Equipamentos() {
 
   return (
     <AppLayout>
-      <div className="container mx-auto p-4">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Equipamentos para Empréstimo</h1>
+      <div className="space-y-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h1 className="text-3xl font-bold">Gestão de Equipamentos</h1>
           <div className="flex gap-2">
             {selectedIds.length > 0 && (
               <Button
                 variant="destructive"
                 onClick={handleBulkDelete}
+                className="flex items-center gap-2"
               >
-                <Trash className="mr-2 h-4 w-4" />
+                <Trash className="h-4 w-4" />
                 Excluir ({selectedIds.length})
               </Button>
             )}
@@ -119,74 +123,80 @@ export default function Equipamentos() {
           </div>
         </div>
 
-        <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle>Lista de Equipamentos</CardTitle>
-            <CardDescription>
+        <div className="space-y-4">
+          <div>
+            <p className="text-sm text-muted-foreground">
               Gerencie os equipamentos disponíveis para empréstimo.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="flex justify-center items-center p-8">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-eccos-blue"></div>
-              </div>
-            ) : equipment.length === 0 ? (
-              <div className="text-center p-8 text-gray-500">
-                Nenhum equipamento cadastrado para empréstimo.
-              </div>
-            ) : (
-              <div className="rounded-md border overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[40px]">
+            </p>
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>
+          ) : equipment.length === 0 ? (
+            <div className="text-center text-muted-foreground p-8 border border-dashed rounded-md">
+              Nenhum equipamento cadastrado para empréstimo.
+            </div>
+          ) : (
+            <div className="rounded-md border overflow-hidden bg-background shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px transition-all duration-300 relative border-0 border-l-4 border-blue-500 before:content-[''] before:absolute before:left-0 before:top-0 before:w-[2px] before:h-full before:bg-gradient-to-b before:from-transparent before:via-white/10 before:to-transparent before:opacity-30">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-accent/10 hover:bg-accent/10">
+                    <TableHead className="w-[40px]">
+                      <Checkbox
+                        checked={selectedIds.length === equipment.length && equipment.length > 0}
+                        onCheckedChange={toggleAll}
+                      />
+                    </TableHead>
+                    <TableHead className="text-center align-middle w-[25%]">Tipo</TableHead>
+                    <TableHead className="text-center align-middle w-[55%]">Nome</TableHead>
+                    <TableHead className="text-center align-middle w-[20%]">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {equipment.map((item) => (
+                    <TableRow 
+                      key={item.id}
+                      className="hover:bg-accent/20 border-t-0"
+                    >
+                      <TableCell>
                         <Checkbox
-                          checked={selectedIds.length === equipment.length && equipment.length > 0}
-                          onCheckedChange={toggleAll}
+                          checked={selectedIds.includes(item.id!)}
+                          onCheckedChange={(checked) => {
+                            setSelectedIds(prev => 
+                              checked ? [...prev, item.id!] : prev.filter(id => id !== item.id!)
+                   )}}
                         />
-                      </TableHead>
-                      <TableHead className="w-[150px]">Tipo</TableHead>
-                      <TableHead>Nome</TableHead>
-                      <TableHead className="w-[80px] text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {equipment.map((item) => (
-                      <TableRow key={item.id} className="hover:bg-muted/50">
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedIds.includes(item.id!)}
-                            onCheckedChange={(checked) => {
-                              setSelectedIds(prev => 
-                                checked ? [...prev, item.id!] : prev.filter(id => id !== item.id!)
-                    )}}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTypeStyle(item.type)}`}>
-                            {item.type}
-                          </span>
-                        </TableCell>
-                        <TableCell className="font-medium">{item.name}</TableCell>
-                        <TableCell className="text-right">
+                      </TableCell>
+                      <TableCell className="text-center align-middle">
+                        <Badge className={`px-2 py-1 rounded-full text-xs font-medium ${getTypeStyle(item.type)}`}>
+                          {item.type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center align-middle font-medium truncate max-w-[180px]">
+                        {item.name}
+                      </TableCell>
+                      <TableCell className="text-center align-middle">
+                        <div className="flex justify-center items-center space-x-1">
                           <Button
                             variant="ghost"
                             size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
                             onClick={() => handleDeleteSingle(item.id!)}
-                            className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                            title="Excluir"
                           >
                             <Trash className="h-4 w-4" />
                           </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
 
         <AddEquipmentDialog 
           open={addDialogOpen} 
