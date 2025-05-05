@@ -32,15 +32,15 @@ const SidebarItem = ({ icon: Icon, label, href, active, expanded }: SidebarItemP
       to={href}
       className={cn(
         "flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group",
-        "hover:bg-primary/10 hover:shadow-sm text-foreground", // Texto preto base
-        active ? "bg-primary/5 text-primary shadow-inner" : "", // Azul apenas no ativo
+        "hover:bg-primary/10 hover:shadow-sm text-foreground",
+        active ? "bg-primary/5 text-primary shadow-inner" : "",
         expanded ? "w-full" : "w-12 justify-center"
       )}
       tabIndex={0}
     >
       <Icon className={cn(
         "h-5 w-5 shrink-0 stroke-[1.5]",
-        active ? "stroke-primary" : "stroke-foreground" // Ícone preto normal
+        active ? "stroke-primary" : "stroke-foreground"
       )} />
       <span className={cn(
         "transition-all duration-300 font-medium",
@@ -66,14 +66,14 @@ const SubMenuItem = ({ href, active, expanded, children, icon: Icon }: SubMenuIt
       to={href}
       className={cn(
         "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
-        "hover:bg-primary/10 hover:shadow-sm text-foreground", // Texto preto base
-        active ? "bg-primary/5 text-primary shadow-inner" : "", // Azul apenas no ativo
+        "hover:bg-primary/10 hover:shadow-sm text-foreground",
+        active ? "bg-primary/5 text-primary shadow-inner" : "",
         expanded ? "w-full" : "w-12 justify-center"
       )}
     >
       <Icon className={cn(
         "h-5 w-5 shrink-0 stroke-[1.5]",
-        active ? "stroke-primary" : "stroke-foreground" // Ícone preto normal
+        active ? "stroke-primary" : "stroke-foreground"
       )} />
       <span className={cn(
         "transition-all duration-300 font-medium",
@@ -102,12 +102,12 @@ const SidebarSubMenu = ({ label, icon: Icon, children, expanded }: SidebarSubMen
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
           "flex items-center justify-between w-full px-3 py-2 rounded-xl",
-          "transition-colors text-foreground hover:bg-primary/10", // Texto preto
+          "transition-colors text-foreground hover:bg-primary/10",
           expanded ? "pr-3" : "justify-center"
         )}
       >
         <div className="flex items-center gap-3">
-          <Icon className="h-5 w-5 shrink-0 stroke-[1.5] stroke-foreground" /> {/* Ícone preto */}
+          <Icon className="h-5 w-5 shrink-0 stroke-[1.5] stroke-foreground" />
           <span className={cn(
             "transition-all duration-300 font-medium",
             expanded ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
@@ -141,7 +141,7 @@ const SidebarSubMenu = ({ label, icon: Icon, children, expanded }: SidebarSubMen
 export const AppSidebar = () => {
   const [expanded, setExpanded] = useState(true);
   const location = useLocation();
-  const { isAdmin, signOut } = useAuth();
+  const { isAdmin, signOut, currentUser } = useAuth();
   
   const userMenuItems = [
     { icon: Home, label: "Página Inicial", href: "/" },
@@ -162,8 +162,14 @@ export const AppSidebar = () => {
     { icon: Calendar, label: "Disponibilidade", href: "/disponibilidade" },
     { icon: Users, label: "Usuários", href: "/usuarios" },
     { icon: FileText, label: "Solicitações", href: "/solicitacoes" },
-    { icon: Bell, label: "Notificações", href: "/notificacoes" }
   ];
+
+  // Novo item de menu para notificações
+  const notificationMenuItem = {
+    icon: Bell, 
+    label: "Notificações", 
+    href: "/notificacoes"
+  };
 
   return (
     <div
@@ -223,19 +229,22 @@ export const AppSidebar = () => {
           }
         })}
 
-        {isAdmin && (
+        {/* Seção de Administração */}
+        {(isAdmin || currentUser?.role === 'financeiro') && (
           <>
             <div className="h-[1px] bg-gradient-to-r from-transparent via-border/30 to-transparent my-4" />
             <div className={cn(
               "px-4 mb-2 text-xs font-medium tracking-wide transition-all",
-              "text-foreground/80 uppercase", // Texto preto com opacidade
+              "text-foreground/80 uppercase",
               expanded ? "opacity-100" : "opacity-0"
             )}>
-              Administração
+              {isAdmin ? "Administração" : "Recursos Financeiros"}
             </div>
-            {adminMenuItems.map((item, index) => (
+            
+            {/* Itens de Administrador */}
+            {isAdmin && adminMenuItems.map((item, index) => (
               <SidebarItem
-                key={index}
+                key={`admin-${index}`}
                 icon={item.icon}
                 label={item.label}
                 href={item.href}
@@ -243,6 +252,15 @@ export const AppSidebar = () => {
                 expanded={expanded}
               />
             ))}
+
+            {/* Item de Notificações para ambos */}
+            <SidebarItem
+              icon={notificationMenuItem.icon}
+              label={notificationMenuItem.label}
+              href={notificationMenuItem.href}
+              active={location.pathname === notificationMenuItem.href}
+              expanded={expanded}
+            />
           </>
         )}
 
@@ -252,12 +270,12 @@ export const AppSidebar = () => {
               <button 
                 className={cn(
                   "w-full p-2 hover:bg-primary/10 rounded-xl transition-colors",
-                  "focus:outline-none flex items-center gap-2 text-foreground", // Texto preto
+                  "focus:outline-none flex items-center gap-2 text-foreground",
                   expanded ? "px-3 justify-start" : "justify-center"
                 )}
                 aria-label="Menu de logout"
               >
-                <LogOut className="h-5 w-5 shrink-0 stroke-[1.5] stroke-foreground" /> {/* Ícone preto */}
+                <LogOut className="h-5 w-5 shrink-0 stroke-[1.5] stroke-foreground" />
                 {expanded && (
                   <span className="text-sm transition-all duration-300 font-medium">
                     Sair
@@ -270,7 +288,7 @@ export const AppSidebar = () => {
               align={expanded ? "start" : "center"} 
               className="rounded-xl shadow-lg border-border/40"
             >
-              <DropdownMenuLabel className="text-xs font-medium text-foreground/80"> {/* Texto preto */}
+              <DropdownMenuLabel className="text-xs font-medium text-foreground/80">
                 Ações da Conta
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-border/40" />

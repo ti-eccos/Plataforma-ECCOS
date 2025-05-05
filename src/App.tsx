@@ -49,7 +49,7 @@ const router = createBrowserRouter(
     },
     {
       path: "/",
-      element: <AppWrapper />, // <- agora o wrapper com useNavigate
+      element: <AppWrapper />,
       children: [
         {
           index: true,
@@ -86,7 +86,7 @@ const router = createBrowserRouter(
         {
           path: "equipamentos",
           element: (
-            <ProtectedRoute requiresAdmin>
+            <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
               <Equipamentos />
             </ProtectedRoute>
           ),
@@ -94,7 +94,7 @@ const router = createBrowserRouter(
         {
           path: "disponibilidade",
           element: (
-            <ProtectedRoute requiresAdmin>
+            <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
               <Disponibilidade />
             </ProtectedRoute>
           ),
@@ -102,7 +102,7 @@ const router = createBrowserRouter(
         {
           path: "usuarios",
           element: (
-            <ProtectedRoute requiresAdmin>
+            <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
               <Usuarios />
             </ProtectedRoute>
           ),
@@ -110,7 +110,7 @@ const router = createBrowserRouter(
         {
           path: "solicitacoes",
           element: (
-            <ProtectedRoute requiresAdmin>
+            <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
               <Solicitacoes />
             </ProtectedRoute>
           ),
@@ -118,7 +118,7 @@ const router = createBrowserRouter(
         {
           path: "notificacoes",
           element: (
-            <ProtectedRoute requiresAdmin>
+            <ProtectedRoute allowedRoles={['admin', 'superadmin', 'financeiro']}>
               <Notificacao />
             </ProtectedRoute>
           ),

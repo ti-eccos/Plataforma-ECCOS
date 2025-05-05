@@ -60,8 +60,14 @@ const Usuarios = () => {
         user.role.toLowerCase().includes(term)
       )
       .sort((a, b) => {
-        const rolePriority = { "superadmin": 0, "admin": 1, "user": 2 };
-        const roleDiff = (rolePriority[a.role] ?? 3) - (rolePriority[b.role] ?? 3);
+        const rolePriority = { 
+          "superadmin": 0, 
+          "admin": 1, 
+          "financeiro": 2,
+          "operacional": 3,
+          "user": 4 
+        };
+        const roleDiff = (rolePriority[a.role] ?? 5) - (rolePriority[b.role] ?? 5);
         return roleDiff !== 0 ? roleDiff : a.displayName.localeCompare(b.displayName);
       });
 
@@ -91,6 +97,18 @@ const Usuarios = () => {
             Admin
           </Badge>
         );
+      case "financeiro":
+        return (
+          <Badge className="bg-green-500 text-foreground">
+            Financeiro
+          </Badge>
+        );
+      case "operacional":
+        return (
+          <Badge className="bg-orange-500 text-foreground">
+            Operacional
+          </Badge>
+        );
       default:
         return (
           <Badge variant="outline">
@@ -103,15 +121,14 @@ const Usuarios = () => {
   const canEditRole = (user: User): boolean => {
     if (currentUser?.uid === user.uid) return false;
     if (isSuperAdmin && user.role !== "superadmin") return true;
-    if (currentUser?.role === "admin" && user.role === "user") return true;
-    if (currentUser?.role === "admin" && user.role === "admin") return true;
+    if (currentUser?.role === "admin" && ["user", "financeiro", "operacional", "admin"].includes(user.role)) return true;
     return false;
   };
-  
+
   const canBlock = (user: User): boolean => {
     if (currentUser?.uid === user.uid) return false;
     if (isSuperAdmin && user.role !== "superadmin") return true;
-    if (currentUser?.role === "admin" && user.role === "user") return true;
+    if (currentUser?.role === "admin" && ["user", "financeiro", "operacional"].includes(user.role)) return true;
     return false;
   };
 

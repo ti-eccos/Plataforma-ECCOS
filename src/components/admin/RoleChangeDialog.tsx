@@ -1,186 +1,102 @@
-
-import * as React from "react";
-import { useToast } from "@/hooks/use-toast";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { changeUserRole, User } from "@/services/userService";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { changeUserRole, User, UserRole } from "@/services/userService";
+import { useState } from "react";
 
 interface RoleChangeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   user: User | null;
   onSuccess: () => void;
-  requiresApproval?: boolean;
 }
 
-export function RoleChangeDialog({ 
-  open, 
-  onOpenChange, 
-  user, 
-  onSuccess,
-  requiresApproval = false,
-}: RoleChangeDialogProps) {
-  const { toast } = useToast();
-  const [approvalState, setApprovalState] = React.useState<'initial' | 'pending' | 'approved'>('initial');
-  const [adminCode, setAdminCode] = React.useState<string>('');
-  
-  React.useEffect(() => {
-    if (!open) {
-      setApprovalState('initial');
-      setAdminCode('');
-    }
-  }, [open]);
-  
-  if (!user) return null;
-  
-  const isCurrentlyAdmin = user.role === 'admin';
-  
-  const handleRequestApproval = async () => {
-    setApprovalState('pending');
+const ROLE_OPTIONS = [
+  { value: "user", label: "Usuário Padrão" },
+  { value: "financeiro", label: "Financeiro" },
+  { value: "operacional", label: "Operacional" },
+  { value: "admin", label: "Administrador" },
+];
+
+export const RoleChangeDialog = ({ open, onOpenChange, user, onSuccess }: RoleChangeDialogProps) => {
+  const [selectedRole, setSelectedRole] = useState<UserRole>(user?.role || "user");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSave = async () => {
+    if (!user || !selectedRole) return;
     
-    toast({
-      title: "Solicitação enviada",
-      description: "Aguardando aprovação de outro administrador.",
-    });
-    
-    setTimeout(() => {
-      setApprovalState('approved');
-      toast({
-        title: "Aprovação recebida",
-        description: "Outro administrador aprovou a alteração.",
-      });
-    }, 3000);
-  };
-  
-  const handleChangeRole = async () => {
+    setIsSubmitting(true);
     try {
-      await changeUserRole(user.uid, isCurrentlyAdmin ? 'user' : 'admin');
-      
-      toast({
-        title: "Sucesso",
-        description: `Usuário alterado para ${isCurrentlyAdmin ? "usuário comum" : "administrador"} com sucesso.`,
-      });
-      
+      await changeUserRole(user.uid, selectedRole);
       onSuccess();
       onOpenChange(false);
-    } catch (error: any) {
-      console.error("Error changing user role:", error);
-      toast({
-        title: "Erro",
-        description: error.message || "Ocorreu um erro ao alterar o papel do usuário.",
-        variant: "destructive"
-      });
-    }
-  };
-  
-  const handleSuperAdminApproval = () => {
-    if (adminCode === '123456') {
-      setApprovalState('approved');
-      toast({
-        title: "Código válido",
-        description: "Super administrador autorizou a alteração.",
-      });
-    } else {
-      toast({
-        title: "Código inválido",
-        description: "O código informado não é válido.",
-        variant: "destructive"
-      });
+    } catch (error) {
+      console.error("Error changing role:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {isCurrentlyAdmin ? "Remover privilégios de administrador" : "Conceder privilégios de administrador"}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {isCurrentlyAdmin ? (
-              <>
-                Tem certeza que deseja remover os privilégios de administrador de <strong>{user.displayName}</strong>?
-                <br /><br />
-                Esta ação removerá o acesso deste usuário a funcionalidades administrativas.
-              </>
-            ) : (
-              <>
-                Tem certeza que deseja conceder privilégios de administrador para <strong>{user.displayName}</strong>?
-                <br /><br />
-                Esta ação dará ao usuário acesso a funcionalidades administrativas sensíveis.
-              </>
-            )}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        
-        {requiresApproval && approvalState === 'initial' && (
-          <div className="flex flex-col space-y-4">
-            <p className="text-sm text-amber-500">
-              Esta ação requer aprovação adicional de um superadministrador ou outro administrador.
-            </p>
-            <div className="flex justify-end space-x-2">
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <Button 
-                onClick={handleRequestApproval}
-                className={cn(
-                  isCurrentlyAdmin 
-                    ? "bg-amber-600 hover:bg-amber-700" 
-                    : "bg-blue-600 hover:bg-blue-700"
-                )}
-              >
-                Solicitar Aprovação
-              </Button>
-            </div>
-          </div>
-        )}
-        
-        {requiresApproval && approvalState === 'pending' && (
-          <div className="flex flex-col space-y-4">
-            <p className="text-sm">
-              Aguardando aprovação... ou insira o código de superadministrador:
-            </p>
-            <input 
-              type="text" 
-              placeholder="Código de autorização" 
-              className="p-2 border rounded text-black"
-              value={adminCode}
-              onChange={(e) => setAdminCode(e.target.value)}
-            />
-            <div className="flex justify-end space-x-2">
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <Button onClick={handleSuperAdminApproval}>
-                Verificar Código
-              </Button>
-            </div>
-          </div>
-        )}
-        
-        {(!requiresApproval || approvalState === 'approved') && (
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <Button 
-              onClick={handleChangeRole}
-              className={cn(
-                isCurrentlyAdmin 
-                  ? "bg-amber-600 hover:bg-amber-700" 
-                  : "bg-blue-600 hover:bg-blue-700"
-              )}
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Alterar Função do Usuário</DialogTitle>
+          <DialogDescription>
+            Selecione a nova função para {user?.displayName}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="role" className="text-right">
+              Nova Função
+            </Label>
+            <Select
+              value={selectedRole}
+              onValueChange={(value) => setSelectedRole(value as UserRole)}
+              disabled={isSubmitting}
             >
-              {isCurrentlyAdmin ? "Remover Administrador" : "Tornar Administrador"}
-            </Button>
-          </AlertDialogFooter>
-        )}
-      </AlertDialogContent>
-    </AlertDialog>
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="Selecione uma função" />
+              </SelectTrigger>
+              <SelectContent>
+                {ROLE_OPTIONS.map((role) => (
+                  <SelectItem key={role.value} value={role.value}>
+                    {role.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isSubmitting}
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            onClick={handleSave}
+            disabled={isSubmitting || !selectedRole}
+          >
+            {isSubmitting ? "Salvando..." : "Confirmar Alteração"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
-}
+};

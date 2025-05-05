@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
-type UserRole = "user" | "admin" | "superadmin";
+export type UserRole = "user" | "admin" | "superadmin" | "financeiro" | "operacional";
 
 export interface AuthUser {
   uid: string;

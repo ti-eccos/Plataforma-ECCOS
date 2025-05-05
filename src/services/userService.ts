@@ -12,7 +12,7 @@ import {
   getDoc
 } from "firebase/firestore";
 
-export type UserRole = "user" | "admin" | "superadmin";
+export type UserRole = "user" | "admin" | "superadmin" | "financeiro" | "operacional";
 
 export interface User {
   uid: string;

@@ -117,7 +117,8 @@ const AdminNotificacoes = () => {
     }
   };
 
-  if (!isAdmin) return null;
+  const { currentUser } = useAuth();
+  if (!['admin', 'superadmin', 'financeiro'].includes(currentUser?.role || '')) return null;
 
   return (
     <AppLayout>
