@@ -164,13 +164,6 @@ export const AppSidebar = () => {
     { icon: FileText, label: "Solicitações", href: "/solicitacoes" },
   ];
 
-  // Novo item de menu para notificações
-  const notificationMenuItem = {
-    icon: Bell, 
-    label: "Notificações", 
-    href: "/notificacoes"
-  };
-
   return (
     <div
       className={cn(
@@ -229,8 +222,7 @@ export const AppSidebar = () => {
           }
         })}
 
-        {/* Seção de Administração */}
-        {(isAdmin || currentUser?.role === 'financeiro') && (
+        {(isAdmin || currentUser?.role === 'financeiro' || currentUser?.role === 'operacional') && (
           <>
             <div className="h-[1px] bg-gradient-to-r from-transparent via-border/30 to-transparent my-4" />
             <div className={cn(
@@ -238,7 +230,9 @@ export const AppSidebar = () => {
               "text-foreground/80 uppercase",
               expanded ? "opacity-100" : "opacity-0"
             )}>
-              {isAdmin ? "Administração" : "Recursos Financeiros"}
+              {isAdmin ? "Administração" : 
+               currentUser?.role === 'financeiro' ? "Recursos Financeiros" :
+               "Suporte Operacional"}
             </div>
             
             {/* Itens de Administrador */}
@@ -253,12 +247,34 @@ export const AppSidebar = () => {
               />
             ))}
 
-            {/* Item de Notificações para ambos */}
+            {/* Item específico para financeiro */}
+            {currentUser?.role === 'financeiro' && (
+              <SidebarItem
+                icon={ShoppingCart}
+                label="Compras"
+                href="/compras-financeiro"
+                active={location.pathname === "/compras-financeiro"}
+                expanded={expanded}
+              />
+            )}
+
+            {/* Item específico para operacional */}
+            {currentUser?.role === 'operacional' && (
+              <SidebarItem
+                icon={Wrench}
+                label="Chamados de Suporte"
+                href="/suporte-operacional"
+                active={location.pathname === "/suporte-operacional"}
+                expanded={expanded}
+              />
+            )}
+
+            {/* Item de Notificações para todos */}
             <SidebarItem
-              icon={notificationMenuItem.icon}
-              label={notificationMenuItem.label}
-              href={notificationMenuItem.href}
-              active={location.pathname === notificationMenuItem.href}
+              icon={Bell}
+              label="Notificações"
+              href="/notificacoes"
+              active={location.pathname === "/notificacoes"}
               expanded={expanded}
             />
           </>

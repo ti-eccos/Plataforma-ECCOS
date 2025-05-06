@@ -9,7 +9,7 @@ import {
 } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import Notificacao from "@/pages/admin/Notificacoes";
+import Notificacao from "@/pages/Notificacoes";
 import AppWrapper from "@/components/AppWrapper";
 
 // Páginas
@@ -18,6 +18,7 @@ import Dashboard from "./pages/Dashboard";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 import UserSolicitacoes from "@/pages/UserSolicitacoes";
+import ComprasFinanceiro from "@/pages/admin/ComprasFinanceiro";
 
 // Admin
 import Equipamentos from "./pages/admin/Equipamentos";
@@ -29,6 +30,7 @@ import Solicitacoes from "./pages/admin/Solicitacoes";
 import NovaReserva from "./pages/solicitations/NovaReserva";
 import NovaCompra from "./pages/solicitations/NovaCompra";
 import NovaSuporte from "./pages/solicitations/NovaSuporte";
+import SuporteOperacional from "./pages/SuporteOperacional";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +82,22 @@ const router = createBrowserRouter(
           element: (
             <ProtectedRoute>
               <NovaSuporte />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "suporte-operacional",
+          element: (
+            <ProtectedRoute allowedRoles={['operacional']}>
+              <SuporteOperacional />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "compras-financeiro",
+          element: (
+            <ProtectedRoute allowedRoles={['financeiro']}>
+              <ComprasFinanceiro />
             </ProtectedRoute>
           ),
         },
