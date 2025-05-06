@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -6,11 +6,9 @@ import {
   Wrench, 
   Filter, 
   Search, 
-  Eye, 
   Trash2,
-  ChevronDown,
-  ChevronUp,
   MessageSquare,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import { 
@@ -18,15 +16,13 @@ import {
   getRequestById,
   deleteRequest,
   RequestStatus,
-  RequestData,
-  RequestType
+  RequestData
 } from "@/services/reservationService";
 import { useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/components/AppLayout";
 import { 
   Table, 
   TableBody, 
-  TableCaption, 
   TableCell, 
   TableHead, 
   TableHeader, 
@@ -38,10 +34,10 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -60,19 +56,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { doc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { createNotification } from '@/services/notificationService';
 import ChatAdmin from "@/components/admin/ChatAdmin";
+import { createNotification } from "@/services/notificationService";
+import { updateDoc, doc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const getStatusBadge = (status: RequestStatus) => {
   switch (status) {
     case "pending": return <Badge variant="outline">Pendente</Badge>;
-    case "approved": return <Badge className="bg-green-500 text-foreground">Aprovada</Badge>;
-    case "rejected": return <Badge variant="destructive">Reprovada</Badge>;
     case "in-progress": return <Badge className="bg-blue-500 text-foreground">Em Andamento</Badge>;
-    case "completed": return <Badge className="bg-slate-500 text-foreground">Concluída</Badge>;
-    case "canceled": return <Badge className="bg-amber-500 text-foreground">Cancelada</Badge>;
+    case "completed": return <Badge className="bg-slate-500 text-foreground">Concluído</Badge>;
+    case "canceled": return <Badge className="bg-amber-500 text-foreground">Cancelado</Badge>;
     default: return <Badge variant="outline">Desconhecido</Badge>;
   }
 };
@@ -94,6 +94,9 @@ const SuporteOperacional = () => {
   });
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatRequest, setChatRequest] = useState<RequestData | null>(null);
+  
+  const supportTypes = ["Tecnologia", "Manutenção"];
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(supportTypes);
 
   const { 
     data: requests = [], 
@@ -222,8 +225,9 @@ const SuporteOperacional = () => {
   };
 
   const filteredRequests = requests.filter(req => 
-    req.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    req.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    (req.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    req.description?.toLowerCase().includes(searchTerm.toLowerCase())) &&
+    selectedTypes.includes(req.tipo)
   );
 
   return (
@@ -231,6 +235,9 @@ const SuporteOperacional = () => {
       <div className="space-y-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h1 className="text-3xl font-bold">Chamados de Suporte</h1>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
@@ -240,6 +247,31 @@ const SuporteOperacional = () => {
               className="pl-10"
             />
           </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2">
+                <Filter className="h-4 w-4" /> Tipo ({selectedTypes.length})
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-background">
+              {supportTypes.map((type) => (
+                <DropdownMenuCheckboxItem
+                  key={type}
+                  checked={selectedTypes.includes(type)}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedTypes([...selectedTypes, type]);
+                    } else {
+                      setSelectedTypes(selectedTypes.filter(t => t !== type));
+                    }
+                  }}
+                >
+                  {type}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {isLoading ? (
@@ -354,6 +386,10 @@ const SuporteOperacional = () => {
                     <div className="space-y-4 border-b pb-4">
                       <h3 className="text-lg font-medium">Detalhes do Chamado</h3>
                       <div className="grid grid-cols-1 gap-4">
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Tipo</p>
+                          <p>{selectedRequest.tipo || "Não especificado"}</p>
+                        </div>
                         <div>
                           <p className="text-sm font-medium text-muted-foreground">Local</p>
                           <p>{selectedRequest.location}</p>

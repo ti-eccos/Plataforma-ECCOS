@@ -38,7 +38,17 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { getAllUsers } from "@/services/userService";
-import { AlertDialog } from "@/components/ui/alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const AdminNotificacoes = () => {
   const { isAdmin } = useAuth();
@@ -286,13 +296,37 @@ const AdminNotificacoes = () => {
                           </div>
                           <p className="text-muted-foreground text-sm">{notification.message}</p>
                         </div>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => deleteNotification(notification.id)}
-                        >
-                          Excluir
-                        </Button>
+                        <AlertDialog>
+  <AlertDialogTrigger asChild>
+    <Button variant="destructive" size="sm">
+      Excluir
+    </Button>
+  </AlertDialogTrigger>
+  <AlertDialogContent>
+    <AlertDialogHeader>
+      <AlertDialogTitle>Confirmar exclusão?</AlertDialogTitle>
+      <AlertDialogDescription>
+        Esta ação não pode ser desfeita. A notificação será permanentemente removida.
+      </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+      <AlertDialogAction
+        onClick={async () => {
+          try {
+            await deleteNotification(notification.id);
+            toast.success("Notificação excluída com sucesso");
+            queryClient.invalidateQueries({ queryKey: ["allNotifications"] });
+          } catch (error) {
+            toast.error("Falha ao excluir notificação");
+          }
+        }}
+      >
+        Confirmar
+      </AlertDialogAction>
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>
                       </div>
                     </div>
                   ))}

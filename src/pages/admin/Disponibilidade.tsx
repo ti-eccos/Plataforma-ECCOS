@@ -8,7 +8,7 @@ import {
   getAvailableDates, 
   addAvailableDates, 
   removeAvailableDates, 
-  isDateInPastOrToday
+  isDateInPast
 } from "@/services/availabilityService";
 import AppLayout from "@/components/AppLayout";
 import { format, isSameDay } from "date-fns";
@@ -90,11 +90,11 @@ export default function Disponibilidade() {
     const loadDates = async () => {
       try {
         const dates = await getAvailableDates();
-        const datesToRemove = dates.filter(date => isDateInPastOrToday(date));
+        const datesToRemove = dates.filter(date => isDateInPast(date)); 
         
         if (datesToRemove.length > 0) {
           await removeAvailableDates(datesToRemove);
-          setAvailableDates(dates.filter(date => !isDateInPastOrToday(date)));
+          setAvailableDates(dates.filter(date => !isDateInPast(date)));
         } else {
           setAvailableDates(dates);
         }
@@ -225,15 +225,14 @@ export default function Disponibilidade() {
             <Card className="shadow-sm">
               <CardContent className="space-y-3 pt-4">
                 <div className="bg-gray-50 rounded-lg p-2 w-full">
-                  <Calendar
-                    mode="multiple"
-                    selected={selectedAddDates}
-                    onSelect={setSelectedAddDates}
-                    disabled={(date) => 
-                      isDateInPastOrToday(date) || 
-                      isDateAvailable(date) ||
-                      date < new Date()
-                    }
+                <Calendar
+                  mode="multiple"
+                  selected={selectedAddDates}
+                  onSelect={setSelectedAddDates}
+                  disabled={(date) => 
+                    isDateInPast(date) || 
+                    isDateAvailable(date)
+  }
                     modifiers={{
                       available: (date) => isDateAvailable(date),
                       today: (date) => isTodayDate(date),

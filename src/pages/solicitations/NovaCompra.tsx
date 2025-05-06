@@ -28,6 +28,9 @@ import { sendAdminNotification } from '@/lib/email';
 import { cn } from '@/lib/utils';
 
 const formSchema = z.object({
+  tipo: z.enum(["Compra Pedagógica", "Compra Administrativa", "Compra Infraestrutura"], {
+    required_error: "Selecione o tipo de compra"
+  }),
   itemName: z.string().min(1, 'Nome do item é obrigatório'),
   quantity: z.coerce
     .number()
@@ -132,6 +135,28 @@ const NovaCompra = () => {
                 )}
               />
 
+              <FormField
+                control={form.control}
+                name="tipo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tipo de Compra *</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className={selectTriggerStyle}>
+                          <SelectValue placeholder="Selecione o tipo" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Compra Pedagógica">Compra Pedagógica</SelectItem>
+                        <SelectItem value="Compra Administrativa">Compra Administrativa</SelectItem>
+                        <SelectItem value="Compra Infraestrutura">Compra Infraestrutura</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="quantity"

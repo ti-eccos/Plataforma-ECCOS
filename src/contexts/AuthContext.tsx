@@ -44,109 +44,127 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isSuperAdmin = currentUser?.email === "suporte@colegioeccos.com.br";
   const isAdmin = currentUser?.role === "admin" || isSuperAdmin;
 
+  const handleUserDocument = useCallback(async (firebaseUser: FirebaseUser) => {
+    try {
+      const userRef = doc(db, "users", firebaseUser.uid);
+      const docSnap = await getDoc(userRef);
+      
+      let userData: Partial<AuthUser>;
+
+      if (docSnap.exists()) {
+        userData = docSnap.data() as AuthUser;
+        
+        if (userData.blocked) {
+          await firebaseSignOut(auth);
+          toast({
+            title: "Acesso bloqueado",
+            description: "Sua conta foi bloqueada. Entre em contato com um administrador.",
+            variant: "destructive"
+          });
+          return null;
+        }
+
+        // Atualiza último acesso
+        await setDoc(userRef, {
+          lastActive: new Date()
+        }, { merge: true });
+
+      } else {
+        // Cria novo documento apenas para emails válidos
+        if (!firebaseUser.email?.endsWith("@colegioeccos.com.br")) return null;
+
+        const role: UserRole = firebaseUser.email === "suporte@colegioeccos.com.br" 
+          ? "superadmin" 
+          : "user";
+
+        userData = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email || "",
+          displayName: firebaseUser.displayName || "Usuário sem nome",
+          photoURL: firebaseUser.photoURL,
+          role,
+          blocked: false,
+          lastActive: new Date(),
+          createdAt: new Date(),
+          department: "Não definido"
+        };
+        
+        await setDoc(userRef, userData);
+      }
+
+      return {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email || "",
+        displayName: firebaseUser.displayName || "Usuário sem nome",
+        photoURL: firebaseUser.photoURL,
+        role: userData.role || "user",
+        ...userData
+      } as AuthUser;
+
+    } catch (error) {
+      console.error("Error handling user document:", error);
+      toast({
+        title: "Erro de acesso",
+        description: "Ocorreu um erro ao carregar seus dados de usuário.",
+        variant: "destructive"
+      });
+      return null;
+    }
+  }, [toast]);
+
   useEffect(() => {
     let isMounted = true;
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (!isMounted) return;
 
-      if (firebaseUser) {
-        if (!firebaseUser.email?.endsWith("@colegioeccos.com.br")) {
-          await firebaseSignOut(auth);
-          if (isMounted) {
+      setLoading(true);
+      
+      try {
+        if (firebaseUser) {
+          // Verifica domínio do email
+          if (!firebaseUser.email?.endsWith("@colegioeccos.com.br")) {
+            await firebaseSignOut(auth);
             toast({
               title: "Acesso negado",
               description: "Apenas emails do domínio @colegioeccos.com.br são permitidos.",
               variant: "destructive"
             });
-            setCurrentUser(null);
-            setLoading(false);
+            return;
           }
-          return;
-        }
 
-        try {
-          const userRef = doc(db, "users", firebaseUser.uid);
-          const docSnap = await getDoc(userRef);
+          const authUser = await handleUserDocument(firebaseUser);
+          if (authUser) setCurrentUser(authUser);
           
-          let userData: Partial<AuthUser>;
-          
-          if (docSnap.exists()) {
-            userData = docSnap.data() as AuthUser;
-            
-            if (userData.blocked) {
-              await firebaseSignOut(auth);
-              if (isMounted) {
-                toast({
-                  title: "Acesso bloqueado",
-                  description: "Sua conta foi bloqueada. Entre em contato com um administrador.",
-                  variant: "destructive"
-                });
-                setCurrentUser(null);
-                setLoading(false);
-              }
-              return;
-            }
-            
-            await setDoc(userRef, {
-              ...userData,
-              lastActive: new Date()
-            }, { merge: true });
-          } else {
-            const role: UserRole = firebaseUser.email === "suporte@colegioeccos.com.br" 
-              ? "superadmin" 
-              : "user";
-
-            userData = {
-              uid: firebaseUser.uid,
-              email: firebaseUser.email || "",
-              displayName: firebaseUser.displayName || "Usuário sem nome",
-              photoURL: firebaseUser.photoURL,
-              role,
-              blocked: false,
-              lastActive: new Date(),
-              createdAt: new Date(),
-              department: "Não definido"
-            };
-            
-            await setDoc(userRef, userData);
-          }
-          
-          if (isMounted) {
-            setCurrentUser({
-              uid: firebaseUser.uid,
-              email: firebaseUser.email || "",
-              displayName: firebaseUser.displayName || "Usuário sem nome",
-              photoURL: firebaseUser.photoURL,
-              role: userData.role || "user",
-              ...userData
-            });
-          }
-        } catch (error) {
-          console.error("Error handling auth state:", error);
-          if (isMounted) {
-            toast({
-              title: "Erro",
-              description: "Ocorreu um erro ao carregar seus dados.",
-              variant: "destructive"
-            });
-          }
+        } else {
+          setCurrentUser(null);
         }
-      } else if (isMounted) {
-        setCurrentUser(null);
+      } catch (error) {
+        console.error("Auth state error:", error);
+      } finally {
+        if (isMounted) setLoading(false);
       }
-      if (isMounted) setLoading(false);
     });
 
     return () => {
       isMounted = false;
       unsubscribe();
     };
-  }, []);
+  }, [handleUserDocument, toast]);
 
   const signInWithGoogle = useCallback(async () => {
     try {
       setLoading(true);
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      
+      // Verificação adicional de domínio
+      if (!result.user.email?.endsWith("@colegioeccos.com.br")) {
+        await firebaseSignOut(auth);
+        toast({
+          title: "Domínio não permitido",
+          description: "Apenas emails @colegioeccos.com.br são aceitos",
+          variant: "destructive"
+        });
+      }
     } catch (error: any) {
       console.error("Login error:", error);
       toast({
@@ -162,6 +180,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = useCallback(async () => {
     try {
       await firebaseSignOut(auth);
+      setCurrentUser(null);
       toast({
         title: "Logout realizado",
         description: "Até breve!",
@@ -188,7 +207,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={authContextValue}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 }

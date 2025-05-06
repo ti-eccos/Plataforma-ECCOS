@@ -39,6 +39,7 @@ const locationsByUnit = {
 };
 
 const formSchema = z.object({
+  tipo: z.enum(["Manutenção", "Tecnologia"], {required_error: "Selecione o tipo de suporte"}),
   unit: z.string({ required_error: "Selecione a unidade" }),
   location: z.string({ required_error: "Selecione a localização" }),
   category: z.string({ required_error: "Selecione a categoria" }),
@@ -167,6 +168,31 @@ const NovaSuporte = () => {
                   </FormItem>
                 )}
               />
+
+<FormField
+  control={form.control}
+  name="tipo"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>Tipo de Suporte *</FormLabel>
+      <Select
+        onValueChange={field.onChange}
+        defaultValue={field.value}
+      >
+        <FormControl>
+          <SelectTrigger className={selectTriggerStyle}>
+            <SelectValue placeholder="Selecione o tipo de suporte" />
+          </SelectTrigger>
+        </FormControl>
+        <SelectContent>
+          <SelectItem value="Manutenção">Manutenção</SelectItem>
+          <SelectItem value="Tecnologia">Tecnologia</SelectItem>
+        </SelectContent>
+      </Select>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
 
               <FormField
                 control={form.control}

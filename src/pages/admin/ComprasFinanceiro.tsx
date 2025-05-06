@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -6,12 +6,9 @@ import {
   ShoppingCart, 
   Filter, 
   Search, 
-  Eye, 
-  EyeOff,
   Trash2,
-  ChevronDown,
-  ChevronUp,
   MessageSquare,
+  Eye
 } from "lucide-react";
 import { toast } from "sonner";
 import { 
@@ -26,7 +23,6 @@ import AppLayout from "@/components/AppLayout";
 import { 
   Table, 
   TableBody, 
-  TableCaption, 
   TableCell, 
   TableHead, 
   TableHeader, 
@@ -61,9 +57,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import ChatAdmin from "@/components/admin/ChatAdmin";
-import { createNotification } from '@/services/notificationService';
+import { createNotification } from "@/services/notificationService";
 import { updateDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const getStatusBadge = (status: RequestStatus) => {
   switch (status) {
@@ -80,7 +82,6 @@ const getStatusBadge = (status: RequestStatus) => {
 const ComprasFinanceiro = () => {
   const queryClient = useQueryClient();
   const { currentUser } = useAuth();
-  const [showHidden, setShowHidden] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRequest, setSelectedRequest] = useState<RequestData | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -94,10 +95,13 @@ const ComprasFinanceiro = () => {
     const saved = typeof window !== 'undefined' ? localStorage.getItem('financeViewedRequests') : null;
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
+  
+  const purchaseTypes = ["Compra Pedagógica", "Compra Administrativa", "Compra Infraestrutura"];
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(purchaseTypes);
 
   const { data: allRequests = [], isLoading } = useQuery({
-    queryKey: ['allRequests', showHidden],
-    queryFn: () => getAllRequests(showHidden),
+    queryKey: ['allRequests'],
+    queryFn: () => getAllRequests(),
   });
 
   useEffect(() => {
@@ -204,39 +208,56 @@ const ComprasFinanceiro = () => {
     .filter(req => {
       const search = searchTerm.toLowerCase();
       return (
-        req.userName?.toLowerCase().includes(search) ||
+        (req.userName?.toLowerCase().includes(search) ||
         req.userEmail?.toLowerCase().includes(search) ||
-        req.itemName?.toLowerCase().includes(search)
-      );
-    });
+        req.itemName?.toLowerCase().includes(search)) &&
+        selectedTypes.includes(req.tipo)
+    )});
 
   return (
     <AppLayout>
       <div className="space-y-8">
-        {/* Cabeçalho e Search */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h1 className="text-3xl font-bold">Gerenciamento de Compras</h1>
-          <Button
-            variant="outline"
-            onClick={() => setShowHidden(!showHidden)}
-            className="flex items-center gap-2"
-          >
-            {showHidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            {showHidden ? "Ocultar Finalizadas" : "Mostrar Todas"}
-          </Button>
         </div>
 
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Pesquisar por nome, email ou item..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Pesquisar por nome, email ou item..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2">
+                <Filter className="h-4 w-4" /> Tipo ({selectedTypes.length})
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-background">
+              {purchaseTypes.map((type) => (
+                <DropdownMenuCheckboxItem
+                  key={type}
+                  checked={selectedTypes.includes(type)}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedTypes([...selectedTypes, type]);
+                    } else {
+                      setSelectedTypes(selectedTypes.filter(t => t !== type));
+                    }
+                  }}
+                >
+                  {type}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
-        {/* Tabela */}
         {isLoading ? (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -310,7 +331,6 @@ const ComprasFinanceiro = () => {
           </div>
         )}
 
-        {/* Modal de Detalhes */}
         <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
           <DialogContent className="max-w-2xl">
             {selectedRequest && (
@@ -328,6 +348,10 @@ const ComprasFinanceiro = () => {
                 
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Tipo</p>
+                      <p>{selectedRequest.tipo || "Não especificado"}</p>
+                    </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Solicitante</p>
                       <p>{selectedRequest.userName}</p>
@@ -400,7 +424,6 @@ const ComprasFinanceiro = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Chat */}
         <ChatAdmin 
           request={chatRequest} 
           isOpen={isChatOpen} 
@@ -408,7 +431,6 @@ const ComprasFinanceiro = () => {
           onMessageSent={() => queryClient.invalidateQueries({ queryKey: ['allRequests'] })}
         />
 
-        {/* Confirmação de Exclusão */}
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>

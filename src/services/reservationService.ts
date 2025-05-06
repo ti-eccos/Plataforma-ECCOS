@@ -323,6 +323,7 @@ export const getEquipmentReservations = async (equipmentId: string): Promise<Req
 export const addPurchaseRequest = async (data: Omit<RequestData, 'id' | 'collectionName'>): Promise<string> => {
   try {
     const docRef = await addDoc(collection(db, 'purchases'), {
+      tipo: data.tipo, 
       ...data,
       type: 'purchase',
       status: 'pending',
@@ -340,6 +341,7 @@ export const addPurchaseRequest = async (data: Omit<RequestData, 'id' | 'collect
 export const addSupportRequest = async (data: Omit<RequestData, 'id' | 'collectionName'>): Promise<string> => {
   try {
     const docRef = await addDoc(collection(db, 'supports'), {
+      tipo: data.tipo, 
       ...data,
       type: 'support',
       status: 'pending',

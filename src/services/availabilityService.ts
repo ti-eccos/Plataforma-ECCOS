@@ -68,7 +68,7 @@ export const formatDateToYYYYMMDD = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
-export const isDateInPastOrToday = (date: Date): boolean => {
+export const isDateInPast = (date: Date) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return date < today;

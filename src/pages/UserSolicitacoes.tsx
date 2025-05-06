@@ -8,7 +8,15 @@ import {
   Wrench, 
   Trash2, 
   MessageSquare,
-  Info
+  Info,
+  Filter,
+  ChevronDown,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  RefreshCw,
+  AlertTriangle,
+  Search
 } from "lucide-react";
 import { toast } from "sonner";
 import { 
@@ -46,9 +54,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { doc, getDoc } from "firebase/firestore";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import ChatUser from "@/components/ChatUser";
+import { Input } from "@/components/ui/input";
+import { createNotification } from '@/services/notificationService';
 
 const getRequestTypeIcon = (type: RequestType) => {
   switch (type) {
@@ -61,13 +77,48 @@ const getRequestTypeIcon = (type: RequestType) => {
 
 const getStatusBadge = (status: RequestStatus) => {
   switch (status) {
-    case "pending": return <Badge variant="outline">Pendente</Badge>;
-    case "approved": return <Badge className="bg-green-500 text-foreground">Aprovada</Badge>;
-    case "rejected": return <Badge variant="destructive">Reprovada</Badge>;
-    case "in-progress": return <Badge className="bg-blue-500 text-foreground">Em Andamento</Badge>;
-    case "completed": return <Badge className="bg-slate-500 text-foreground">Concluída</Badge>;
-    case "canceled": return <Badge className="bg-amber-500 text-foreground">Cancelada</Badge>;
-    default: return <Badge variant="outline">Desconhecido</Badge>;
+    case "pending": return (
+      <Badge variant="outline" className="flex items-center gap-1">
+        <Clock className="h-4 w-4" />
+        Pendente
+      </Badge>
+    );
+    case "approved": return (
+      <Badge className="bg-green-500 text-foreground flex items-center gap-1">
+        <CheckCircle2 className="h-4 w-4" />
+        Aprovada
+      </Badge>
+    );
+    case "rejected": return (
+      <Badge variant="destructive" className="flex items-center gap-1">
+        <XCircle className="h-4 w-4" />
+        Reprovada
+      </Badge>
+    );
+    case "in-progress": return (
+      <Badge className="bg-blue-500 text-foreground flex items-center gap-1">
+        <RefreshCw className="h-4 w-4" />
+        Em Andamento
+      </Badge>
+    );
+    case "completed": return (
+      <Badge className="bg-slate-500 text-foreground flex items-center gap-1">
+        <CheckCircle2 className="h-4 w-4" />
+        Concluída
+      </Badge>
+    );
+    case "canceled": return (
+      <Badge className="bg-amber-500 text-foreground flex items-center gap-1">
+        <AlertTriangle className="h-4 w-4" />
+        Cancelada
+      </Badge>
+    );
+    default: return (
+      <Badge variant="outline" className="flex items-center gap-1">
+        <AlertTriangle className="h-4 w-4" />
+        Desconhecido
+      </Badge>
+    );
   }
 };
 
@@ -108,12 +159,18 @@ const getPriorityLevelBadge = (level?: string) => {
 
 const UserSolicitacoes = () => {
   const { currentUser } = useAuth();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState<RequestType[]>(["reservation", "purchase", "support"]);
+  const [selectedStatuses, setSelectedStatuses] = useState<RequestStatus[]>(["pending", "approved", "in-progress"]);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(["Manutenção", "Tecnologia", "Compra Pedagógica", "Compra Administrativa", "Compra Infraestrutura"]);
   const [selectedRequest, setSelectedRequest] = useState<RequestData | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
-  const [requestToCancel, setRequestToCancel] = useState<{ id: string; collectionName: string } | null>(null);
-  const [selectedType, setSelectedType] = useState<RequestType | 'todos'>('todos');
-  const [selectedStatus, setSelectedStatus] = useState<RequestStatus | 'todos'>('todos');
+  const [requestToCancel, setRequestToCancel] = useState<{
+    id: string;
+    collectionName: string;
+    userEmail: string;
+  } | null>(null);
   const [equipmentCounts, setEquipmentCounts] = useState({ ipads: 0, chromebooks: 0, others: 0 });
   const [equipmentCache, setEquipmentCache] = useState<Record<string, {type: string}>>({});
   const [isDetailsLoading, setIsDetailsLoading] = useState(false);
@@ -139,10 +196,23 @@ const UserSolicitacoes = () => {
   );
 
   const filteredRequests = useMemo(() => 
-    userRequests
-      .filter(req => selectedType === 'todos' || req.type === selectedType)
-      .filter(req => selectedStatus === 'todos' || req.status === selectedStatus),
-    [userRequests, selectedType, selectedStatus]
+    userRequests.filter(req => {
+      const search = searchTerm.toLowerCase();
+      return (
+        (req.userName?.toLowerCase().includes(search) ||
+        req.userEmail?.toLowerCase().includes(search) ||
+        req.purpose?.toLowerCase().includes(search) ||
+        req.itemName?.toLowerCase().includes(search) ||
+        req.location?.toLowerCase().includes(search)) &&
+        selectedCategories.includes(req.type) && 
+        selectedStatuses.includes(req.status) &&
+        (
+          (req.type === "support" && selectedTypes.includes(req.tipo)) ||
+          (req.type === "purchase" && selectedTypes.includes(req.tipo)) ||
+          (req.type === "reservation")
+        ))
+    }),
+    [userRequests, searchTerm, selectedCategories, selectedStatuses, selectedTypes]
   );
 
   useEffect(() => {
@@ -301,14 +371,30 @@ const UserSolicitacoes = () => {
   };
 
   const handleCancelRequest = (request: RequestData) => {
-    setRequestToCancel({ id: request.id, collectionName: request.collectionName });
+    setRequestToCancel({
+      id: request.id,
+      collectionName: request.collectionName,
+      userEmail: request.userEmail
+    });
     setIsCancelDialogOpen(true);
   };
 
   const handleCancelConfirm = async () => {
     if (!requestToCancel) return;
     try {
-      // Implementar lógica de cancelamento aqui
+      const docRef = doc(db, requestToCancel.collectionName, requestToCancel.id);
+      await updateDoc(docRef, { status: "canceled" });
+
+      await createNotification({
+        title: 'Solicitação Cancelada',
+        message: `Sua solicitação foi cancelada.`,
+        link: 'minhas-solicitacoes',
+        createdAt: new Date(),
+        readBy: [],
+        recipients: [requestToCancel.userEmail],
+        isBatch: false
+      });
+
       toast.success("Solicitação cancelada");
       setIsCancelDialogOpen(false);
       setRequestToCancel(null);
@@ -334,37 +420,113 @@ const UserSolicitacoes = () => {
   return (
     <AppLayout>
       <div className="space-y-8">
-        <h1 className="text-3xl font-bold">Minhas Solicitações</h1>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Filtrar por tipo</label>
-            <select
-              value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value as RequestType | 'todos')}
-              className="w-full p-2 border rounded-md bg-background"
-            >
-              <option value="todos">Todos os Tipos</option>
-              <option value="reservation">Reserva</option>
-              <option value="purchase">Compra</option>
-              <option value="support">Suporte</option>
-            </select>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h1 className="text-3xl font-bold">Minhas Solicitações</h1>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setSelectedCategories(["reservation", "purchase", "support"]);
+              setSelectedStatuses(["pending", "approved", "in-progress"]);
+              setSelectedTypes(["Manutenção", "Tecnologia", "Compra Pedagógica", "Compra Administrativa", "Compra Infraestrutura"]);
+              setSearchTerm("");
+            }}
+            className="flex items-center gap-2"
+          >
+            Limpar Filtros
+          </Button>
+        </div>
+
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Pesquisar por nome, email, finalidade ou local..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
           </div>
           
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Filtrar por status</label>
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value as RequestStatus | 'todos')}
-              className="w-full p-2 border rounded-md bg-background"
-            >
-              <option value="todos">Todos os Status</option>
-              <option value="pending">Pendente</option>
-              <option value="approved">Aprovada</option>
-              <option value="rejected">Reprovada</option>
-              <option value="in-progress">Em Andamento</option>
-              <option value="completed">Concluída</option>
-            </select>
+          <div className="flex flex-wrap gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" /> Categoria
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-background">
+                {["reservation", "purchase", "support"].map((type) => (
+                  <DropdownMenuCheckboxItem
+                    key={type}
+                    checked={selectedCategories.includes(type as RequestType)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedCategories([...selectedCategories, type as RequestType]);
+                      } else {
+                        setSelectedCategories(selectedCategories.filter(t => t !== type));
+                      }
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    {getRequestTypeIcon(type as RequestType)}
+                    {getReadableRequestType(type as RequestType)}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" /> Status
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-background">
+                {["pending", "approved", "rejected", "in-progress", "completed"].map((status) => (
+                  <DropdownMenuCheckboxItem
+                    key={status}
+                    checked={selectedStatuses.includes(status as RequestStatus)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedStatuses([...selectedStatuses, status as RequestStatus]);
+                      } else {
+                        setSelectedStatuses(selectedStatuses.filter(s => s !== status));
+                      }
+                    }}
+                  >
+                    {getStatusBadge(status as RequestStatus)}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" /> Tipo
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-background">
+                {["Compra Pedagógica", "Compra Administrativa", "Compra Infraestrutura","Manutenção", "Tecnologia"].map((type) => (
+                  <DropdownMenuCheckboxItem
+                    key={type}
+                    checked={selectedTypes.includes(type)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedTypes([...selectedTypes, type]);
+                      } else {
+                        setSelectedTypes(selectedTypes.filter(t => t !== type));
+                      }
+                    }}
+                  >
+                    {type}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -446,146 +608,138 @@ const UserSolicitacoes = () => {
               <div className="flex justify-center items-center h-64">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
               </div>
-            ) : (
+            ) : selectedRequest ? (
               <>
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
-                    {selectedRequest && (
-                      <>
-                        {getRequestTypeIcon(selectedRequest.type)}
-                        <span>
-                          {getReadableRequestType(selectedRequest.type)} - {selectedRequest.userName || selectedRequest.userEmail}
-                        </span>
-                      </>
-                    )}
+                    {getRequestTypeIcon(selectedRequest.type)}
+                    <span>
+                      {getReadableRequestType(selectedRequest.type)} - {selectedRequest.userName || selectedRequest.userEmail}
+                    </span>
                   </DialogTitle>
-                  {selectedRequest && (
-                    <DialogDescription asChild>
-                      <div className="px-1 flex items-center justify-between">
-                        <div>
-                          {format(
-                            new Date(selectedRequest.createdAt.toMillis()),
-                            "dd 'de' MMMM 'de' yyyy 'às' HH:mm",
-                            { locale: ptBR }
-                          )}
-                        </div>
-                        <div>{getStatusBadge(selectedRequest.status)}</div>
+                  <DialogDescription asChild>
+                    <div className="px-1 flex items-center justify-between">
+                      <div>
+                        {format(
+                          new Date(selectedRequest.createdAt.toMillis()),
+                          "dd 'de' MMMM 'de' yyyy 'às' HH:mm",
+                          { locale: ptBR }
+                        )}
                       </div>
-                    </DialogDescription>
-                  )}
+                      <div>{getStatusBadge(selectedRequest.status)}</div>
+                    </div>
+                  </DialogDescription>
                 </DialogHeader>
 
-                {selectedRequest && (
-                  <div className="space-y-6 py-4">
-                    <div className="space-y-4 border-b pb-4">
-                      <h3 className="text-lg font-medium">Detalhes da Solicitação</h3>
+                <div className="space-y-6 py-4">
+                  <div className="space-y-4 border-b pb-4">
+                    <h3 className="text-lg font-medium">Detalhes da Solicitação</h3>
 
-                      {selectedRequest.type === "reservation" && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground">Data</p>
-                            <p>
-                              {format(
-                                new Date(selectedRequest.date.toMillis()),
-                                "dd/MM/yyyy",
-                                { locale: ptBR }
-                              )}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground">Horário</p>
-                            <p>{selectedRequest.startTime} - {selectedRequest.endTime}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground">Local</p>
-                            <p>{selectedRequest.location}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground">Finalidade</p>
-                            <p>{selectedRequest.purpose}</p>
-                          </div>
-                          <div className="col-span-2">
-                            <p className="text-sm font-medium text-muted-foreground">Equipamentos</p>
-                            <ul className="list-disc pl-5">
-                              {renderEquipmentCounts()}
-                            </ul>
-                          </div>
+                    {selectedRequest.type === "reservation" && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Data</p>
+                          <p>
+                            {format(
+                              new Date(selectedRequest.date.toMillis()),
+                              "dd/MM/yyyy",
+                              { locale: ptBR }
+                            )}
+                          </p>
                         </div>
-                      )}
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Horário</p>
+                          <p>{selectedRequest.startTime} - {selectedRequest.endTime}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Local</p>
+                          <p>{selectedRequest.location}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Finalidade</p>
+                          <p>{selectedRequest.purpose}</p>
+                        </div>
+                        <div className="col-span-2">
+                          <p className="text-sm font-medium text-muted-foreground">Equipamentos</p>
+                          <ul className="list-disc pl-5">
+                            {renderEquipmentCounts()}
+                          </ul>
+                        </div>
+                      </div>
+                    )}
 
-                      {selectedRequest.type === "purchase" && (
-                        <div className="grid grid-cols-1 gap-4">
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground">Item Solicitado</p>
-                            <p>{selectedRequest.itemName}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground">Quantidade</p>
-                            <p>{selectedRequest.quantity}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground">Valor Unitário</p>
-                            <p>
+                    {selectedRequest.type === "purchase" && (
+                      <div className="grid grid-cols-1 gap-4">
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Item Solicitado</p>
+                          <p>{selectedRequest.itemName}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Quantidade</p>
+                          <p>{selectedRequest.quantity}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Valor Unitário</p>
+                          <p>
+                            {new Intl.NumberFormat("pt-BR", {
+                              style: "currency",
+                              currency: "BRL"
+                            }).format(selectedRequest.unitPrice || 0)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Valor Total</p>
+                          <div className="bg-primary/10 p-2 rounded-md">
+                            <p className="text-lg font-semibold text-primary">
                               {new Intl.NumberFormat("pt-BR", {
                                 style: "currency",
                                 currency: "BRL"
-                              }).format(selectedRequest.unitPrice || 0)}
+                              }).format((selectedRequest.quantity || 0) * (selectedRequest.unitPrice || 0))}
                             </p>
                           </div>
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground">Valor Total</p>
-                            <div className="bg-primary/10 p-2 rounded-md">
-                              <p className="text-lg font-semibold text-primary">
-                                {new Intl.NumberFormat("pt-BR", {
-                                  style: "currency",
-                                  currency: "BRL"
-                                }).format((selectedRequest.quantity || 0) * (selectedRequest.unitPrice || 0))}
-                              </p>
-                            </div>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground">Urgência</p>
-                            <div className="flex items-center gap-2">
-                              {getPriorityLevelBadge(selectedRequest.urgency)}
-                            </div>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground">Justificativa</p>
-                            <p>{selectedRequest.justification}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Urgência</p>
+                          <div className="flex items-center gap-2">
+                            {getPriorityLevelBadge(selectedRequest.urgency)}
                           </div>
                         </div>
-                      )}
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Justificativa</p>
+                          <p>{selectedRequest.justification}</p>
+                        </div>
+                      </div>
+                    )}
 
-                      {selectedRequest.type === "support" && (
-                        <div className="grid grid-cols-1 gap-4">
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground">Problema</p>
-                            <div className="max-h-[200px] overflow-y-auto rounded-md bg-muted p-3">
-                              <pre className="whitespace-pre-wrap font-sans text-sm">
-                                {selectedRequest.description || "Nenhuma descrição fornecida"}
-                              </pre>
-                            </div>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground">Local</p>
-                            <p>{selectedRequest.location}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground">Prioridade</p>
-                            <div className="flex items-center gap-2">
-                              {getPriorityLevelBadge(selectedRequest.priority)}
-                            </div>
+                    {selectedRequest.type === "support" && (
+                      <div className="grid grid-cols-1 gap-4">
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Problema</p>
+                          <div className="max-h-[200px] overflow-y-auto rounded-md bg-muted p-3">
+                            <pre className="whitespace-pre-wrap font-sans text-sm">
+                              {selectedRequest.description || "Nenhuma descrição fornecida"}
+                            </pre>
                           </div>
                         </div>
-                      )}
-                    </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Local</p>
+                          <p>{selectedRequest.location}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Prioridade</p>
+                          <div className="flex items-center gap-2">
+                            {getPriorityLevelBadge(selectedRequest.priority)}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
                 
                 <DialogFooter className="gap-2">
                   <Button 
                     variant="destructive" 
-                    onClick={() => selectedRequest && handleCancelRequest(selectedRequest)}
+                    onClick={() => handleCancelRequest(selectedRequest)}
                     disabled={selectedRequest?.status === 'canceled'}
                   >
                     <Trash2 className="h-4 w-4 mr-2" /> Cancelar Solicitação
@@ -595,6 +749,10 @@ const UserSolicitacoes = () => {
                   </Button>
                 </DialogFooter>
               </>
+            ) : (
+              <div className="text-center p-4 text-destructive">
+                Nenhuma solicitação selecionada
+              </div>
             )}
           </DialogContent>
         </Dialog>
