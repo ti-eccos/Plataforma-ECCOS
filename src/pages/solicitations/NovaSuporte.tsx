@@ -15,6 +15,7 @@ import { addSupportRequest } from '@/services/reservationService';
 import { Timestamp } from 'firebase/firestore';
 import { sendAdminNotification } from '@/lib/email';
 import { cn } from "@/lib/utils";
+import { Wrench } from 'lucide-react';
 
 const locationsByUnit = {
   'Berçário e Educação Infantil': [
@@ -125,10 +126,11 @@ const NovaSuporte = () => {
   transition={{ duration: 0.5 }}
   className="bg-white space-y-6" // Removido padding extra e arredondamento
 >
-  <div>
-    <h2 className="text-3xl font-bold tracking-tight text-gradient">
-      Novo Suporte Técnico
-    </h2>
+       <div className="space-y-8">
+        <h1 className="text-3xl font-bold flex items-center gap-2">
+           <Wrench className="text-black" size={35} /> {/* Ícone adicionado */}
+          Nova Suporte
+        </h1>
     <p className="text-muted-foreground mt-1">
       Preencha todos os campos obrigatórios (*) para registrar sua solicitação
     </p>

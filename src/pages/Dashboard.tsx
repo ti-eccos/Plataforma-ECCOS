@@ -11,6 +11,7 @@ import { DashboardLoading } from "@/components/dashboard/DashboardLoading";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { Home } from 'lucide-react';
 
 export const Dashboard = () => {
   const { currentUser, isAdmin } = useAuth();
@@ -125,11 +126,13 @@ export const Dashboard = () => {
     requestCount: user.requestCount,
   }));
 
-  return (
+return (
     <AppLayout>
       <div className="space-y-8">
-        <h1 className="text-3xl font-bold">Dashboard Administrativo</h1>
-        
+        <h1 className="text-3xl font-bold flex items-center gap-2">
+          <Home className="text-black" size={35} /> {/* Ícone adicionado */}
+          Dashboard Administrativo
+        </h1>
         <DashboardLoading isLoading={isLoading} isError={isError} />
         
         {!isLoading && !isError && (

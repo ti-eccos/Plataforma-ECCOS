@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
 import { Timestamp } from "firebase/firestore";
 import { cn } from "@/lib/utils";
+import {Home} from 'lucide-react';
 
 enum RequestStatus {
   pending = 'pending',
@@ -173,8 +174,11 @@ const UserDashboard = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-8 p-4">
-        <h1 className="text-2xl font-bold">Meu Dashboard</h1>
+      <div className="space-y-8">
+        <h1 className="text-3xl font-bold flex items-center gap-2">
+          <Home className="text-black" size={35} /> {/* Ícone adicionado */}
+          Dashboard
+        </h1>
 
         {isLoading ? (
           <DashboardLoading isLoading={true} isError={false} />

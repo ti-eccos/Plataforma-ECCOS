@@ -1,7 +1,12 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { getSortedEquipmentForLending, Equipment, deleteMultipleEquipment, deleteEquipment } from "@/services/equipmentService";
-import { Trash } from "lucide-react";
+import {
+  getSortedEquipmentForLending,
+  Equipment,
+  deleteMultipleEquipment,
+  deleteEquipment,
+} from "@/services/equipmentService";
+import { Trash, Laptop } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -48,18 +53,18 @@ export default function Equipamentos() {
     if (selectedIds.length === equipment.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(equipment.map(e => e.id!));
+      setSelectedIds(equipment.map((e) => e.id!));
     }
   };
 
   const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return;
-    
+
     try {
       await deleteMultipleEquipment(selectedIds);
       toast({
         title: "Sucesso",
-        description: `${selectedIds.length} equipamentos excluídos com sucesso.`
+        description: `${selectedIds.length} equipamentos excluídos com sucesso.`,
       });
       fetchEquipment();
       setSelectedIds([]);
@@ -67,7 +72,7 @@ export default function Equipamentos() {
       toast({
         title: "Erro",
         description: "Falha ao excluir equipamentos",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -77,14 +82,14 @@ export default function Equipamentos() {
       await deleteEquipment(id);
       toast({
         title: "Sucesso",
-        description: "Equipamento excluído com sucesso."
+        description: "Equipamento excluído com sucesso.",
       });
       fetchEquipment();
     } catch (error) {
       toast({
         title: "Erro",
         description: "Falha ao excluir equipamento",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -102,7 +107,16 @@ export default function Equipamentos() {
     <AppLayout>
       <div className="space-y-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h1 className="text-3xl font-bold">Gestão de Equipamentos</h1>
+          <div>
+            <h1 className="text-3xl font-bold flex items-center gap-2">
+              <Laptop className="text-black" size={40} />
+              Gestão de Equipamentos
+            </h1>
+            <p className="text-muted-foreground mt-2 text-sm md:text-base">
+              Gerencie os equipamentos disponíveis para empréstimo.
+            </p>
+          </div>
+
           <div className="flex gap-2">
             {selectedIds.length > 0 && (
               <Button
@@ -114,8 +128,8 @@ export default function Equipamentos() {
                 Excluir ({selectedIds.length})
               </Button>
             )}
-            <Button 
-              className="bg-eccos-blue hover:bg-eccos-blue/80" 
+            <Button
+              className="bg-eccos-blue hover:bg-eccos-blue/80"
               onClick={() => setAddDialogOpen(true)}
             >
               Adicionar Equipamentos
@@ -124,12 +138,6 @@ export default function Equipamentos() {
         </div>
 
         <div className="space-y-4">
-          <div>
-            <p className="text-sm text-muted-foreground">
-              Gerencie os equipamentos disponíveis para empréstimo.
-            </p>
-          </div>
-
           {loading ? (
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -156,21 +164,23 @@ export default function Equipamentos() {
                 </TableHeader>
                 <TableBody>
                   {equipment.map((item) => (
-                    <TableRow 
-                      key={item.id}
-                      className="hover:bg-accent/20 border-t-0"
-                    >
+                    <TableRow key={item.id} className="hover:bg-accent/20 border-t-0">
                       <TableCell>
                         <Checkbox
                           checked={selectedIds.includes(item.id!)}
                           onCheckedChange={(checked) => {
-                            setSelectedIds(prev => 
-                              checked ? [...prev, item.id!] : prev.filter(id => id !== item.id!)
-                   )}}
+                            setSelectedIds((prev) =>
+                              checked ? [...prev, item.id!] : prev.filter((id) => id !== item.id!)
+                            );
+                          }}
                         />
                       </TableCell>
                       <TableCell className="text-center align-middle">
-                        <Badge className={`px-2 py-1 rounded-full text-xs font-medium ${getTypeStyle(item.type)}`}>
+                        <Badge
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${getTypeStyle(
+                            item.type
+                          )}`}
+                        >
                           {item.type}
                         </Badge>
                       </TableCell>
@@ -198,8 +208,8 @@ export default function Equipamentos() {
           )}
         </div>
 
-        <AddEquipmentDialog 
-          open={addDialogOpen} 
+        <AddEquipmentDialog
+          open={addDialogOpen}
           onOpenChange={setAddDialogOpen}
           onEquipmentAdded={fetchEquipment}
         />

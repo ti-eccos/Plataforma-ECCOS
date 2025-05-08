@@ -336,7 +336,7 @@ const Solicitacoes = () => {
       <div className="space-y-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Wrench className="h-8 w-8 text-primary" />
+            <Wrench className="h-8 w-8 text:black" />
             Gerenciamento de Solicitações
           </h1>
           <Button

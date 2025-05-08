@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon,CalendarCheck } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -204,8 +204,11 @@ const NovaReserva = () => {
 return (
   <AppLayout>
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight text-gradient">Nova Reserva</h2>
+       <div className="space-y-8">
+        <h1 className="text-3xl font-bold flex items-center gap-2">
+           <CalendarCheck className="text-black" size={35} /> {/* Ícone adicionado */}
+          Nova Reserva
+        </h1>
         <p className="text-foreground mt-1">
           Preencha o formulário para reservar equipamentos
         </p>

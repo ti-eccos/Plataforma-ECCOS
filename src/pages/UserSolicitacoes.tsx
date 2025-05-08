@@ -16,7 +16,8 @@ import {
   XCircle,
   RefreshCw,
   AlertTriangle,
-  Search
+  Search,
+  FileText
 } from "lucide-react";
 import { toast } from "sonner";
 import { 
@@ -420,20 +421,11 @@ const UserSolicitacoes = () => {
   return (
     <AppLayout>
       <div className="space-y-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h1 className="text-3xl font-bold">Minhas Solicitações</h1>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setSelectedCategories(["reservation", "purchase", "support"]);
-              setSelectedStatuses(["pending", "approved", "in-progress"]);
-              setSelectedTypes(["Manutenção", "Tecnologia", "Compra Pedagógica", "Compra Administrativa", "Compra Infraestrutura"]);
-              setSearchTerm("");
-            }}
-            className="flex items-center gap-2"
-          >
-            Limpar Filtros
-          </Button>
+          <div className="space-y-8">
+            <h1 className="text-3xl font-bold flex items-center gap-2">
+              <FileText className="text-black" size={35} /> {/* Ícone adicionado */}
+              Minhas Solicitações
+            </h1>
         </div>
 
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

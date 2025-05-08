@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Search, ShieldCheck, Edit, Lock, Unlock } from "lucide-react";
+import { Search, ShieldCheck, Edit, Lock, Unlock, Users} from "lucide-react";
 import { getAllUsers, User } from "@/services/userService";
 import { RoleChangeDialog } from "@/components/admin/RoleChangeDialog";
 import { BlockUserDialog } from "@/components/admin/BlockUserDialog";
@@ -153,10 +153,13 @@ const Usuarios = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-8 p-6">
+      <div className="space-y-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="space-y-2">
-            <h1 className="text-3xl font-bold">Gestão de Usuários</h1>
+             <h1 className="text-3xl font-bold flex items-center gap-2">
+          <Users className="text-black" size={35} /> {/* Ícone adicionado */}
+          Usuários
+        </h1>
             <p className="text-muted-foreground">
               Administre os usuários do sistema - {users.length} registros encontrados
             </p>

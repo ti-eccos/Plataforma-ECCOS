@@ -31,6 +31,7 @@ import NovaReserva from "./pages/solicitations/NovaReserva";
 import NovaCompra from "./pages/solicitations/NovaCompra";
 import NovaSuporte from "./pages/solicitations/NovaSuporte";
 import SuporteOperacional from "./pages/SuporteOperacional";
+import Estoque from "./pages/admin/Estoque";
 
 const queryClient = new QueryClient();
 
@@ -106,6 +107,14 @@ const router = createBrowserRouter(
           element: (
             <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
               <Equipamentos />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "estoque",
+          element: (
+          <ProtectedRoute allowedRoles={['admin', 'superadmin', 'financeiro', 'operacional']}>
+              <Estoque />
             </ProtectedRoute>
           ),
         },

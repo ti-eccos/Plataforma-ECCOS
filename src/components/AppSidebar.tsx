@@ -1,22 +1,37 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { 
-  Home, Laptop, Calendar, Users, 
-  PlusCircle, LogOut, ChevronDown, 
+import {
+  Home, Laptop, Calendar, Users,
+  PlusCircle, LogOut, ChevronDown,
   ChevronUp, FileText, Bell,
-  CalendarCheck, ShoppingCart, Wrench
+  CalendarCheck, ShoppingCart, Wrench,
+  Warehouse,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import Logo from '@/images/logo-eccos.jpg';
+
+// Definindo tipos claros para evitar erros de comparação
+type UserRole = "admin" | "financeiro" | "operacional" | "";
+interface User {
+  role: UserRole;
+}
+
+declare module "@/contexts/AuthContext" {
+  interface AuthContextType {
+    currentUser: User | null;
+    isAdmin: boolean;
+    signOut: () => void;
+  }
+}
 
 interface SidebarItemProps {
   icon: React.ElementType;
@@ -25,7 +40,6 @@ interface SidebarItemProps {
   active: boolean;
   expanded: boolean;
 }
-
 const SidebarItem = ({ icon: Icon, label, href, active, expanded }: SidebarItemProps) => {
   return (
     <Link
@@ -59,7 +73,6 @@ interface SubMenuItemProps {
   children: React.ReactNode;
   icon: React.ElementType;
 }
-
 const SubMenuItem = ({ href, active, expanded, children, icon: Icon }: SubMenuItemProps) => {
   return (
     <Link
@@ -91,11 +104,9 @@ interface SidebarSubMenuProps {
   children: React.ReactNode;
   expanded: boolean;
 }
-
 const SidebarSubMenu = ({ label, icon: Icon, children, expanded }: SidebarSubMenuProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
-
   return (
     <div className="space-y-1">
       <button
@@ -119,7 +130,7 @@ const SidebarSubMenu = ({ label, icon: Icon, children, expanded }: SidebarSubMen
           isOpen ? (
             <ChevronUp className="h-4 w-4 stroke-[1.5] stroke-foreground" />
           ) : (
-            <ChevronDown className="h-4 w-4 stroke-[1.5] stroke-foreground" /> 
+            <ChevronDown className="h-4 w-4 stroke-[1.5] stroke-foreground" />
           )
         )}
       </button>
@@ -127,7 +138,7 @@ const SidebarSubMenu = ({ label, icon: Icon, children, expanded }: SidebarSubMen
         "space-y-1 transition-all duration-300 pl-7",
         isOpen && expanded ? "block" : "hidden"
       )}>
-        {React.Children.map(children, child => 
+        {React.Children.map(children, child =>
           React.cloneElement(child as React.ReactElement, {
             active: location.pathname === (child as React.ReactElement).props.href,
             expanded
@@ -142,11 +153,14 @@ export const AppSidebar = () => {
   const [expanded, setExpanded] = useState(true);
   const location = useLocation();
   const { isAdmin, signOut, currentUser } = useAuth();
-  
+
+  // Garantir tipagem segura
+  const userRole = currentUser?.role || "";
+
   const userMenuItems = [
     { icon: Home, label: "Página Inicial", href: "/" },
     { icon: FileText, label: "Minhas Solicitações", href: "/minhas-solicitacoes" },
-    { 
+    {
       icon: PlusCircle,
       label: "Nova Solicitação",
       items: [
@@ -156,12 +170,13 @@ export const AppSidebar = () => {
       ]
     },
   ];
-  
+
   const adminMenuItems = [
     { icon: Laptop, label: "Equipamentos", href: "/equipamentos" },
     { icon: Calendar, label: "Disponibilidade", href: "/disponibilidade" },
     { icon: Users, label: "Usuários", href: "/usuarios" },
     { icon: FileText, label: "Solicitações", href: "/solicitacoes" },
+    { icon: Warehouse, label: "Estoque", href: "/estoque" },
   ];
 
   return (
@@ -174,9 +189,9 @@ export const AppSidebar = () => {
     >
       <div className="flex items-center justify-between p-1 h-24">
         <div className="flex items-center justify-center overflow-hidden px-4 py-0 w-full">
-          <img 
-            src={Logo} 
-            alt="Logo ECCOS" 
+          <img
+            src={Logo}
+            alt="Logo ECCOS"
             className={cn(
               "h-32 w-32 object-contain transition-all duration-300 shrink-0",
               expanded ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
@@ -184,15 +199,15 @@ export const AppSidebar = () => {
           />
         </div>
       </div>
-
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-2 scrollbar-none">
+        {/* Menu Principal */}
         {userMenuItems.map((item, index) => {
           if ('items' in item) {
             return (
-              <SidebarSubMenu 
-                key={index} 
-                label={item.label} 
-                icon={item.icon} 
+              <SidebarSubMenu
+                key={index}
+                label={item.label}
+                icon={item.icon}
                 expanded={expanded}
               >
                 {item.items.map((subItem, subIndex) => (
@@ -222,7 +237,8 @@ export const AppSidebar = () => {
           }
         })}
 
-        {(isAdmin || currentUser?.role === 'financeiro' || currentUser?.role === 'operacional') && (
+        {/* Menus Condicionais */}
+        {(isAdmin || ['financeiro', 'operacional'].includes(userRole)) && (
           <>
             <div className="h-[1px] bg-gradient-to-r from-transparent via-border/30 to-transparent my-4" />
             <div className={cn(
@@ -230,11 +246,11 @@ export const AppSidebar = () => {
               "text-foreground/80 uppercase",
               expanded ? "opacity-100" : "opacity-0"
             )}>
-              {isAdmin ? "Administração" : 
-               currentUser?.role === 'financeiro' ? "Recursos Financeiros" :
-               "Suporte Operacional"}
+              {isAdmin ? "Administração" :
+               userRole === 'financeiro' ? "Recursos Financeiros" :
+               userRole === 'operacional' ? "Manutenção" : "Suporte Operacional"}
             </div>
-            
+
             {/* Itens de Administrador */}
             {isAdmin && adminMenuItems.map((item, index) => (
               <SidebarItem
@@ -248,18 +264,27 @@ export const AppSidebar = () => {
             ))}
 
             {/* Item específico para financeiro */}
-            {currentUser?.role === 'financeiro' && (
-              <SidebarItem
-                icon={ShoppingCart}
-                label="Compras"
-                href="/compras-financeiro"
-                active={location.pathname === "/compras-financeiro"}
-                expanded={expanded}
-              />
+            {userRole === 'financeiro' && (
+              <>
+                <SidebarItem
+                  icon={ShoppingCart}
+                  label="Compras"
+                  href="/compras-financeiro"
+                  active={location.pathname === "/compras-financeiro"}
+                  expanded={expanded}
+                />
+                <SidebarItem
+                  icon={Warehouse}
+                  label="Estoque"
+                  href="/estoque"
+                  active={location.pathname === "/estoque"}
+                  expanded={expanded}
+                />
+              </>
             )}
 
             {/* Item específico para operacional */}
-            {currentUser?.role === 'operacional' && (
+            {userRole === 'operacional' && (
               <SidebarItem
                 icon={Wrench}
                 label="Chamados de Suporte"
@@ -269,7 +294,7 @@ export const AppSidebar = () => {
               />
             )}
 
-            {/* Item de Notificações para todos */}
+            {/* Notificações */}
             <SidebarItem
               icon={Bell}
               label="Notificações"
@@ -280,10 +305,11 @@ export const AppSidebar = () => {
           </>
         )}
 
+        {/* Botão de saída */}
         <div className="mt-auto pt-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button 
+              <button
                 className={cn(
                   "w-full p-2 hover:bg-primary/10 rounded-xl transition-colors",
                   "focus:outline-none flex items-center gap-2 text-foreground",
@@ -299,17 +325,16 @@ export const AppSidebar = () => {
                 )}
               </button>
             </DropdownMenuTrigger>
-            
-            <DropdownMenuContent 
-              align={expanded ? "start" : "center"} 
+            <DropdownMenuContent
+              align={expanded ? "start" : "center"}
               className="rounded-xl shadow-lg border-border/40"
             >
               <DropdownMenuLabel className="text-xs font-medium text-foreground/80">
                 Ações da Conta
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-border/40" />
-              <DropdownMenuItem 
-                onClick={signOut} 
+              <DropdownMenuItem
+                onClick={signOut}
                 className="text-destructive cursor-pointer focus:bg-destructive/5 rounded-lg"
               >
                 <LogOut className="mr-2 h-4 w-4 stroke-[1.5]" />

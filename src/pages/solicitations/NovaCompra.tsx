@@ -26,6 +26,7 @@ import { addPurchaseRequest } from '@/services/reservationService';
 import { useAuth } from '@/contexts/AuthContext';
 import { sendAdminNotification } from '@/lib/email';
 import { cn } from '@/lib/utils';
+import { ShoppingCart } from 'lucide-react';
 
 const formSchema = z.object({
   tipo: z.enum(["Compra Pedagógica", "Compra Administrativa", "Compra Infraestrutura"], {
@@ -107,8 +108,11 @@ const NovaCompra = () => {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight text-gradient">Nova Solicitação de Compra</h2>
+       <div className="space-y-8">
+        <h1 className="text-3xl font-bold flex items-center gap-2">
+           <ShoppingCart className="text-black" size={35} /> {/* Ícone adicionado */}
+          Nova Compra
+        </h1>
           <p className="text-muted-foreground mt-1">
             Preencha todos os campos obrigatórios para solicitar novos equipamentos ou materiais
           </p>
