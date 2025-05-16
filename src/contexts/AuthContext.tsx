@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { 
   User as FirebaseUser, 
   signInWithPopup, 
@@ -153,7 +153,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = useCallback(async () => {
     try {
-      setLoading(true);
       const result = await signInWithPopup(auth, googleProvider);
       
       // Verificação adicional de domínio
@@ -172,8 +171,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         description: error.message || "Falha ao realizar login",
         variant: "destructive"
       });
-    } finally {
-      setLoading(false);
     }
   }, [toast]);
 
@@ -195,7 +192,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [toast]);
 
-  const authContextValue = useMemo(() => ({
+  const authContextValue = {
     currentUser,
     user: currentUser,
     loading,
@@ -203,7 +200,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut,
     isAdmin,
     isSuperAdmin
-  }), [currentUser, loading, signInWithGoogle, signOut, isAdmin, isSuperAdmin]);
+  };
 
   return (
     <AuthContext.Provider value={authContextValue}>
