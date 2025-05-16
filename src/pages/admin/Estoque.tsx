@@ -145,6 +145,7 @@ const Estoque = () => {
   const [editingItem, setEditingItem] = useState<ItemEstoque | null>(null);
   const [filtroCategoria, setFiltroCategoria] = useState('');
   const [filtroLocalizacao, setFiltroLocalizacao] = useState('');
+  const [filtroNomeDescricao, setFiltroNomeDescricao] = useState('');
   const [formState, setFormState] = useState<Omit<ItemEstoque, 'id'>>({
     nome: '',
     quantidade: NaN,
@@ -186,10 +187,16 @@ const Estoque = () => {
     const matchLocalizacao = filtroLocalizacao
       ? item.localizacao === filtroLocalizacao
       : true;
-    return matchCategoria && matchLocalizacao;
+    const matchNomeDescricao = filtroNomeDescricao
+      ? item.nome.toLowerCase().includes(filtroNomeDescricao.toLowerCase()) ||
+        (item.descricao?.toLowerCase().includes(filtroNomeDescricao.toLowerCase()) || false)
+      : true;
+
+    return matchCategoria && matchLocalizacao && matchNomeDescricao;
   });
 
   const todasCategorias = ['TI', 'Administrativo', 'Limpeza', 'Manutenção'];
+
   const localizacoesCadastradas = Array.from(
     new Set(itens.map((item) => item.localizacao).filter((local) => local !== ''))
   );
@@ -239,29 +246,23 @@ const Estoque = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
     const itemName = formState.nome.trim();
-
     if (!itemName) {
       toast.error('Nome do item é obrigatório');
       return;
     }
-
     if (formState.quantidade <= 0) {
       toast.error('Quantidade deve ser maior que zero');
       return;
     }
-
     if (!formState.categoria) {
       toast.error('Selecione uma categoria');
       return;
     }
-
     if (!formState.unidade) {
       toast.error('Selecione uma unidade');
       return;
     }
-
     if (!formState.localizacao) {
       toast.error('Selecione uma localização');
       return;
@@ -269,15 +270,12 @@ const Estoque = () => {
 
     // Verifica se o nome já existe no estoque
     const existingItem = itens.find((item) => item.nome === itemName);
-
     if (existingItem && !editingItem) {
-      // Mostra alerta caso o item já exista
       setDuplicateItem(existingItem);
       setShowDuplicateDialog(true);
       return;
     }
 
-    // Caso não seja duplicado ou esteja editando, prossegue normalmente
     const itemData = {
       nome: itemName,
       quantidade: formState.quantidade,
@@ -323,6 +321,7 @@ const Estoque = () => {
       toast.error('Todos os campos são obrigatórios');
       return;
     }
+
     const itemsToAdd = Array.from({ length: quantidadeItens }).map((_, index) => ({
       nome: `${nomeBase} ${index + 1}`,
       quantidade: 1,
@@ -331,6 +330,7 @@ const Estoque = () => {
       localizacao,
       estado,
     }));
+
     addMultipleMutation.mutate(itemsToAdd);
     setIsBulkModalOpen(false);
     setBulkFormState({
@@ -371,7 +371,6 @@ const Estoque = () => {
     setIsDialogOpen(true);
   };
 
-  // Função chamada ao confirmar "Criar Novo"
   const handleCreateAnyway = () => {
     setShowDuplicateDialog(false);
     const itemData = {
@@ -391,7 +390,6 @@ const Estoque = () => {
     resetForm();
   };
 
-  // Função chamada ao clicar em "Editar Item Existente"
   const handleEditExisting = () => {
     if (duplicateItem) {
       handleEdit(duplicateItem);
@@ -420,39 +418,52 @@ const Estoque = () => {
           </div>
         </div>
 
-        {/* Filtros */}
-        <div className="flex gap-4">
-          <div className="flex-1">
-            <Label>Filtrar por Categoria</Label>
-            <select
-              className="w-full mt-1 flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              value={filtroCategoria}
-              onChange={(e) => setFiltroCategoria(e.target.value)}
-            >
-              <option value="">Todas categorias</option>
-              {todasCategorias.map((categoria) => (
-                <option key={categoria} value={categoria}>
-                  {categoria}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex-1">
-            <Label>Filtrar por Localização</Label>
-            <select
-              className="w-full mt-1 flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              value={filtroLocalizacao}
-              onChange={(e) => setFiltroLocalizacao(e.target.value)}
-            >
-              <option value="">Todas localizações</option>
-              {localizacoesCadastradas.map((local) => (
-                <option key={local} value={local}>
-                  {local}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+       {/* Filtros */}
+<div className="flex flex-wrap gap-4">
+  {/* NOVO CAMPO DE FILTRO POR NOME E DESCRIÇÃO - À ESQUERDA */}
+  <div className="flex-1 min-w-[250px]">
+    <Label>Filtrar por Nome ou Descrição</Label>
+    <Input
+      placeholder="Digite um termo..."
+      value={filtroNomeDescricao}
+      onChange={(e) => setFiltroNomeDescricao(e.target.value)}
+    />
+  </div>
+
+  {/* Filtro por Categoria */}
+  <div className="flex-1 min-w-[250px]">
+    <Label>Filtrar por Categoria</Label>
+    <select
+      className="w-full mt-1 flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+      value={filtroCategoria}
+      onChange={(e) => setFiltroCategoria(e.target.value)}
+    >
+      <option value="">Todas categorias</option>
+      {todasCategorias.map((categoria) => (
+        <option key={categoria} value={categoria}>
+          {categoria}
+        </option>
+      ))}
+    </select>
+  </div>
+
+  {/* Filtro por Localização */}
+  <div className="flex-1 min-w-[250px]">
+    <Label>Filtrar por Localização</Label>
+    <select
+      className="w-full mt-1 flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+      value={filtroLocalizacao}
+      onChange={(e) => setFiltroLocalizacao(e.target.value)}
+    >
+      <option value="">Todas localizações</option>
+      {localizacoesCadastradas.map((local) => (
+        <option key={local} value={local}>
+          {local}
+        </option>
+      ))}
+    </select>
+  </div>
+</div>
 
         {/* Tabela de Itens */}
         <div className="rounded-md border">

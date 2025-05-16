@@ -234,7 +234,10 @@ const SuporteOperacional = () => {
     <AppLayout>
       <div className="space-y-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h1 className="text-3xl font-bold">Chamados de Suporte</h1>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+          <Wrench className="text-black" size={35} /> {/* Ícone adicionado */}
+          Dashboard Administrativo
+        </h1>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4">

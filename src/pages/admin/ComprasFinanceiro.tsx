@@ -218,7 +218,10 @@ const ComprasFinanceiro = () => {
     <AppLayout>
       <div className="space-y-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h1 className="text-3xl font-bold">Gerenciamento de Compras</h1>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+          <ShoppingCart className="text-black" size={35} /> {/* Ícone adicionado */}
+          Solicitações de Compra
+        </h1>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4">

@@ -24,7 +24,6 @@ type UserRole = "admin" | "financeiro" | "operacional" | "";
 interface User {
   role: UserRole;
 }
-
 declare module "@/contexts/AuthContext" {
   interface AuthContextType {
     currentUser: User | null;
@@ -182,7 +181,7 @@ export const AppSidebar = () => {
   return (
     <div
       className={cn(
-        "h-screen bg-background/95 border-r border-border/40 flex flex-col",
+        "h-screen bg-background/95 border-r border-border/40 flex-col",
         "transition-all duration-300 z-10 backdrop-blur-lg shadow-xl rounded-r-xl",
         expanded ? "w-72" : "w-20",
       )}
@@ -199,6 +198,7 @@ export const AppSidebar = () => {
           />
         </div>
       </div>
+
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-2 scrollbar-none">
         {/* Menu Principal */}
         {userMenuItems.map((item, index) => {
@@ -241,6 +241,7 @@ export const AppSidebar = () => {
         {(isAdmin || ['financeiro', 'operacional'].includes(userRole)) && (
           <>
             <div className="h-[1px] bg-gradient-to-r from-transparent via-border/30 to-transparent my-4" />
+
             <div className={cn(
               "px-4 mb-2 text-xs font-medium tracking-wide transition-all",
               "text-foreground/80 uppercase",
@@ -251,7 +252,7 @@ export const AppSidebar = () => {
                userRole === 'operacional' ? "Manutenção" : "Suporte Operacional"}
             </div>
 
-            {/* Itens de Administrador */}
+            {/* Admin */}
             {isAdmin && adminMenuItems.map((item, index) => (
               <SidebarItem
                 key={`admin-${index}`}
@@ -263,7 +264,7 @@ export const AppSidebar = () => {
               />
             ))}
 
-            {/* Item específico para financeiro */}
+            {/* Financeiro */}
             {userRole === 'financeiro' && (
               <>
                 <SidebarItem
@@ -280,28 +281,35 @@ export const AppSidebar = () => {
                   active={location.pathname === "/estoque"}
                   expanded={expanded}
                 />
+                <SidebarItem
+                  icon={Bell}
+                  label="Notificações"
+                  href="/notificacoes"
+                  active={location.pathname === "/notificacoes"}
+                  expanded={expanded}
+                />
               </>
             )}
 
-            {/* Item específico para operacional */}
+            {/* Operacional */}
             {userRole === 'operacional' && (
-              <SidebarItem
-                icon={Wrench}
-                label="Chamados de Suporte"
-                href="/suporte-operacional"
-                active={location.pathname === "/suporte-operacional"}
-                expanded={expanded}
-              />
+              <>
+                <SidebarItem
+                  icon={Wrench}
+                  label="Chamados de Suporte"
+                  href="/suporte-operacional"
+                  active={location.pathname === "/suporte-operacional"}
+                  expanded={expanded}
+                />
+                <SidebarItem
+                  icon={Warehouse}
+                  label="Estoque"
+                  href="/estoque"
+                  active={location.pathname === "/estoque"}
+                  expanded={expanded}
+                />
+              </>
             )}
-
-            {/* Notificações */}
-            <SidebarItem
-              icon={Bell}
-              label="Notificações"
-              href="/notificacoes"
-              active={location.pathname === "/notificacoes"}
-              expanded={expanded}
-            />
           </>
         )}
 
