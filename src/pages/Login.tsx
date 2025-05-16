@@ -417,20 +417,12 @@ const Login = () => {
       <footer className="relative z-10 bg-gray-50 py-10 px-4 md:px-16">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col items-center justify-center gap-6 text-center">
-            {/* Logo e Sistema */}
-            <div className="flex flex-col items-center mb-4">
-              <img 
-                src={logo} 
-                alt="ECCOS Logo" 
-                className="h-16 w-auto mb-4"
-              />
-              <p className="text-gray-600 text-sm font-medium">
-                Sistema interno de gestão operacional
-              </p>
-            </div>
 
             {/* Copyright */}
             <div className="flex flex-col items-center">
+              <p className="text-gray-600 text-sm font-medium">
+                Sistema interno de gestão operacional
+              </p>
               <p className="text-gray-500 text-sm mb-2">
                 © 2025 Colégio ECCOS - Todos os direitos reservados
               </p>
