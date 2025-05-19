@@ -15,6 +15,8 @@ import {
   ListPlus,
   Copy,
 } from 'lucide-react';
+
+// Componentes UI
 import {
   Table,
   TableBody,
@@ -24,26 +26,18 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-} from '@/components/ui/alert-dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+
+// Componentes modularizados
+import Filtros from '@/components/Estoque/Filtros';
+import TabelaItens from '@/components/Estoque/TabelaItens';
+import DetalhesModal from '@/components/Estoque/DetalhesModal';
+import CadastroEdicaoModal from '@/components/Estoque/CadastroEdicaoModal';
+import ConfirmacaoExclusaoModal from '@/components/Estoque/ConfirmacaoExclusaoModal';
+import AlertaDuplicidadeModal from '@/components/Estoque/AlertaDuplicidadeModal';
+import CadastroMultiploModal from '@/components/Estoque/CadastroMultiploModal';
+
+// Firebase e Tipos
 import { db } from '@/lib/firebase';
 import {
   doc,
@@ -53,8 +47,10 @@ import {
   updateDoc,
   deleteDoc,
 } from 'firebase/firestore';
+
 import AppLayout from '@/components/AppLayout';
 
+// Tipos
 interface ItemEstoque {
   id?: string;
   nome: string;
@@ -69,6 +65,7 @@ interface ItemEstoque {
 
 type EstadoEstoque = 'Ótimo' | 'Bom' | 'Razoável' | 'Ruim' | 'Péssimo';
 
+// Localizações por unidade
 const locationsByUnit = {
   'Berçário e Educação Infantil': [
     'Recepção',
@@ -134,18 +131,26 @@ const locationsByUnit = {
 
 const Estoque = () => {
   const queryClient = useQueryClient();
+
+  // Estados do modal
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  // Estados de dados
   const [selectedItem, setSelectedItem] = useState<ItemEstoque | null>(null);
   const [selectedItemDetails, setSelectedItemDetails] = useState<ItemEstoque | null>(
     null
   );
   const [editingItem, setEditingItem] = useState<ItemEstoque | null>(null);
+
+  // Filtros
   const [filtroCategoria, setFiltroCategoria] = useState('');
   const [filtroLocalizacao, setFiltroLocalizacao] = useState('');
   const [filtroNomeDescricao, setFiltroNomeDescricao] = useState('');
+
+  // Formulário normal
   const [formState, setFormState] = useState<Omit<ItemEstoque, 'id'>>({
     nome: '',
     quantidade: NaN,
@@ -161,7 +166,7 @@ const Estoque = () => {
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
   const [duplicateItem, setDuplicateItem] = useState<ItemEstoque | null>(null);
 
-  // Estado para formulário de múltiplos itens
+  // Formulário múltiplo
   const [bulkFormState, setBulkFormState] = useState({
     nomeBase: '',
     quantidadeItens: 1,
@@ -171,6 +176,7 @@ const Estoque = () => {
     estado: 'Bom' as EstadoEstoque,
   });
 
+  // Queries e Mutations
   const { data: itens = [], isLoading } = useQuery({
     queryKey: ['estoque'],
     queryFn: async () => {
@@ -191,12 +197,10 @@ const Estoque = () => {
       ? item.nome.toLowerCase().includes(filtroNomeDescricao.toLowerCase()) ||
         (item.descricao?.toLowerCase().includes(filtroNomeDescricao.toLowerCase()) || false)
       : true;
-
     return matchCategoria && matchLocalizacao && matchNomeDescricao;
   });
 
   const todasCategorias = ['TI', 'Administrativo', 'Limpeza', 'Manutenção'];
-
   const localizacoesCadastradas = Array.from(
     new Set(itens.map((item) => item.localizacao).filter((local) => local !== ''))
   );
@@ -244,6 +248,7 @@ const Estoque = () => {
     },
   });
 
+  // Funções de manipulação
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const itemName = formState.nome.trim();
@@ -268,7 +273,6 @@ const Estoque = () => {
       return;
     }
 
-    // Verifica se o nome já existe no estoque
     const existingItem = itens.find((item) => item.nome === itemName);
     if (existingItem && !editingItem) {
       setDuplicateItem(existingItem);
@@ -309,6 +313,7 @@ const Estoque = () => {
       localizacao,
       estado,
     } = bulkFormState;
+
     if (!nomeBase.trim()) {
       toast.error('Nome base é obrigatório');
       return;
@@ -397,6 +402,10 @@ const Estoque = () => {
     }
   };
 
+  const handleChange = (field: string, value: any) => {
+    setFormState((prev) => ({ ...prev, [field]: value }));
+  };
+
   return (
     <AppLayout>
       <div className="space-y-8">
@@ -406,464 +415,91 @@ const Estoque = () => {
             Controle de Estoque
           </h1>
           <div className="flex gap-2">
-            <Button
-              onClick={() => {
-                resetForm();
-                setIsDialogOpen(true);
-              }}
-            >
+            <Button onClick={() => setIsDialogOpen(true)}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Novo Item
             </Button>
           </div>
         </div>
 
-       {/* Filtros */}
-<div className="flex flex-wrap gap-4">
-  {/* NOVO CAMPO DE FILTRO POR NOME E DESCRIÇÃO - À ESQUERDA */}
-  <div className="flex-1 min-w-[250px]">
-    <Label>Filtrar por Nome ou Descrição</Label>
-    <Input
-      placeholder="Digite um termo..."
-      value={filtroNomeDescricao}
-      onChange={(e) => setFiltroNomeDescricao(e.target.value)}
-    />
-  </div>
-
-  {/* Filtro por Categoria */}
-  <div className="flex-1 min-w-[250px]">
-    <Label>Filtrar por Categoria</Label>
-    <select
-      className="w-full mt-1 flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-      value={filtroCategoria}
-      onChange={(e) => setFiltroCategoria(e.target.value)}
-    >
-      <option value="">Todas categorias</option>
-      {todasCategorias.map((categoria) => (
-        <option key={categoria} value={categoria}>
-          {categoria}
-        </option>
-      ))}
-    </select>
-  </div>
-
-  {/* Filtro por Localização */}
-  <div className="flex-1 min-w-[250px]">
-    <Label>Filtrar por Localização</Label>
-    <select
-      className="w-full mt-1 flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-      value={filtroLocalizacao}
-      onChange={(e) => setFiltroLocalizacao(e.target.value)}
-    >
-      <option value="">Todas localizações</option>
-      {localizacoesCadastradas.map((local) => (
-        <option key={local} value={local}>
-          {local}
-        </option>
-      ))}
-    </select>
-  </div>
-</div>
+        {/* Filtros */}
+        <Filtros
+          filtroCategoria={filtroCategoria}
+          filtroLocalizacao={filtroLocalizacao}
+          filtroNomeDescricao={filtroNomeDescricao}
+          setFiltroCategoria={setFiltroCategoria}
+          setFiltroLocalizacao={setFiltroLocalizacao}
+          setFiltroNomeDescricao={setFiltroNomeDescricao}
+          todasCategorias={todasCategorias}
+          localizacoesCadastradas={localizacoesCadastradas}
+        />
 
         {/* Tabela de Itens */}
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[200px]">Item</TableHead>
-                <TableHead>Quantidade</TableHead>
-                <TableHead>Categoria</TableHead>
-                <TableHead className="text-right">Detalhes</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {itensFiltrados.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      <Package className="h-4 w-4" />
-                      {item.nome}
-                    </div>
-                  </TableCell>
-                  <TableCell>{item.quantidade}</TableCell>
-                  <TableCell>{item.categoria}</TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedItemDetails(item);
-                        setIsDetailModalOpen(true);
-                      }}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <TabelaItens
+          itensFiltrados={itensFiltrados}
+          setIsDetailModalOpen={setIsDetailModalOpen}
+          setSelectedItemDetails={setSelectedItemDetails}
+        />
 
         {/* Modal Detalhes */}
-        <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <ClipboardList className="h-6 w-6" />
-                Detalhes do Item
-              </DialogTitle>
-              <DialogDescription>
-                Informações completas sobre o item do estoque
-              </DialogDescription>
-            </DialogHeader>
-            {selectedItemDetails && (
-              <>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Nome:</Label>
-                    <p className="font-medium">{selectedItemDetails.nome}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Quantidade:</Label>
-                    <p>{selectedItemDetails.quantidade}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Categoria:</Label>
-                    <p>{selectedItemDetails.categoria}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Valor Unitário:</Label>
-                    <p>
-                      {selectedItemDetails.valorUnitario?.toLocaleString('pt-BR', {
-                        style: 'currency',
-                        currency: 'BRL',
-                      }) || 'Não informado'}
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Valor Total:</Label>
-                    <p>
-                      {(selectedItemDetails.quantidade *
-                        (selectedItemDetails.valorUnitario || 0)
-                      ).toLocaleString('pt-BR', {
-                        style: 'currency',
-                        currency: 'BRL',
-                      })}
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Unidade:</Label>
-                    <p>{selectedItemDetails.unidade}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Localização:</Label>
-                    <p>{selectedItemDetails.localizacao}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Estado:</Label>
-                    <p
-                      className={`inline-flex items-center rounded-md px-2 py-1 text-sm font-medium ${
-                        selectedItemDetails.estado === 'Ótimo'
-                          ? 'bg-green-100 text-green-800'
-                          : selectedItemDetails.estado === 'Bom'
-                          ? 'bg-blue-100 text-blue-800'
-                          : selectedItemDetails.estado === 'Razoável'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : selectedItemDetails.estado === 'Ruim'
-                          ? 'bg-orange-100 text-orange-800'
-                          : selectedItemDetails.estado === 'Péssimo'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      {selectedItemDetails.estado}
-                    </p>
-                  </div>
-                  <div className="col-span-2 space-y-2">
-                    <Label>Descrição:</Label>
-                    <p>{selectedItemDetails.descricao || 'Não informada'}</p>
-                  </div>
-                </div>
-                <DialogFooter className="gap-2">
-                  <Button
-                    variant="destructive"
-                    onClick={() => {
-                      setSelectedItem(selectedItemDetails);
-                      setIsDeleteDialogOpen(true);
-                    }}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Excluir
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      handleClone(selectedItemDetails);
-                      setIsDetailModalOpen(false);
-                    }}
-                  >
-                    <Copy className="mr-2 h-4 w-4" />
-                    Copiar
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      handleEdit(selectedItemDetails);
-                      setIsDetailModalOpen(false);
-                    }}
-                  >
-                    <Edit className="mr-2 h-4 w-4" />
-                    Editar
-                  </Button>
-                </DialogFooter>
-              </>
-            )}
-          </DialogContent>
-        </Dialog>
+        <DetalhesModal
+          isOpen={isDetailModalOpen}
+          onClose={() => setIsDetailModalOpen(false)}
+          selectedItemDetails={selectedItemDetails}
+          onDelete={() => {
+            setSelectedItem(selectedItemDetails);
+            setIsDeleteDialogOpen(true);
+          }}
+          onClone={() => handleClone(selectedItemDetails!)}
+          onEdit={() => handleEdit(selectedItemDetails!)}
+        />
 
         {/* Modal Cadastro/Edição */}
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <ClipboardList className="h-6 w-6" />
-                {editingItem ? 'Editar Item' : 'Novo Item'}
-              </DialogTitle>
-              <DialogDescription>
-                Campos marcados com{' '}
-                <span className="text-destructive">*</span> são obrigatórios
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                {/* Nome */}
-                <div className="space-y-2">
-                  <Label>
-                    Nome do Item <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    placeholder="Ex: Computador"
-                    value={formState.nome}
-                    onChange={(e) =>
-                      setFormState({ ...formState, nome: e.target.value })
-                    }
-                  />
-                </div>
-                {/* Quantidade */}
-                <div className="space-y-2">
-                  <Label>
-                    Quantidade <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    type="number"
-                    placeholder="Ex: 5"
-                    min="0"
-                    step="1"
-                    value={isNaN(formState.quantidade) ? '' : formState.quantidade}
-                    onChange={(e) =>
-                      setFormState({
-                        ...formState,
-                        quantidade: Number(e.target.value),
-                      })
-                    }
-                  />
-                </div>
-                {/* Valor Unitário */}
-                <div className="space-y-2">
-                  <Label>Valor Unitário (opcional)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="Ex: 1500.99"
-                    value={formState.valorUnitario || ''}
-                    onChange={(e) =>
-                      setFormState({
-                        ...formState,
-                        valorUnitario: e.target.value
-                          ? Number(e.target.value)
-                          : undefined,
-                      })
-                    }
-                  />
-                </div>
-                {/* Estado */}
-                <div className="space-y-2">
-                  <Label>
-                    Estado <span className="text-destructive">*</span>
-                  </Label>
-                  <select
-                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    value={formState.estado}
-                    onChange={(e) =>
-                      setFormState({
-                        ...formState,
-                        estado: e.target.value as EstadoEstoque,
-                      })
-                    }
-                  >
-                    <option value="">Selecione um estado</option>
-                    <option value="Ótimo">Ótimo</option>
-                    <option value="Bom">Bom</option>
-                    <option value="Razoável">Razoável</option>
-                    <option value="Ruim">Ruim</option>
-                    <option value="Péssimo">Péssimo</option>
-                  </select>
-                </div>
-                {/* Categoria */}
-                <div className="space-y-2">
-                  <Label>
-                    Categoria <span className="text-destructive">*</span>
-                  </Label>
-                  <select
-                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    value={formState.categoria}
-                    onChange={(e) =>
-                      setFormState({
-                        ...formState,
-                        categoria: e.target.value,
-                      })
-                    }
-                  >
-                    <option value="">Selecione uma categoria</option>
-                    <option value="TI">TI</option>
-                    <option value="Administrativo">Administrativo</option>
-                    <option value="Limpeza">Limpeza</option>
-                    <option value="Manutenção">Manutenção</option>
-                  </select>
-                </div>
-                {/* Unidade */}
-                <div className="space-y-2">
-                  <Label>
-                    Unidade <span className="text-destructive">*</span>
-                  </Label>
-                  <select
-                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    value={formState.unidade}
-                    onChange={(e) =>
-                      setFormState({
-                        ...formState,
-                        unidade: e.target.value,
-                        localizacao: '',
-                      })
-                    }
-                  >
-                    <option value="">Selecione uma unidade</option>
-                    {Object.keys(locationsByUnit).map((unidade) => (
-                      <option key={unidade} value={unidade}>
-                        {unidade}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {/* Localização */}
-                <div className="space-y-2">
-                  <Label>
-                    Localização <span className="text-destructive">*</span>
-                  </Label>
-                  <select
-                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    value={formState.localizacao}
-                    onChange={(e) =>
-                      setFormState({
-                        ...formState,
-                        localizacao: e.target.value,
-                      })
-                    }
-                    disabled={!formState.unidade}
-                  >
-                    <option value="">Selecione uma localização</option>
-                    {formState.unidade &&
-                      locationsByUnit[
-                        formState.unidade as keyof typeof locationsByUnit
-                      ]?.map((local) => (
-                        <option key={local} value={local}>
-                          {local}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-                {/* Descrição */}
-                <div className="col-span-2 space-y-2">
-                  <Label>Descrição (opcional)</Label>
-                  <Input
-                    placeholder="Ex: Computador Dell usado no laboratório"
-                    value={formState.descricao || ''}
-                    onChange={(e) =>
-                      setFormState({
-                        ...formState,
-                        descricao: e.target.value || undefined,
-                      })
-                    }
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setIsDialogOpen(false);
-                    resetForm();
-                  }}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit">
-                  {editingItem ? 'Salvar Alterações' : 'Adicionar Item'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <CadastroEdicaoModal
+          isOpen={isDialogOpen}
+          onClose={() => setIsDialogOpen(false)}
+          formState={formState}
+          editingItem={editingItem}
+          handleSubmit={handleSubmit}
+          handleChange={handleChange}
+          locationsByUnit={locationsByUnit}
+        />
 
         {/* Confirmação de Exclusão */}
-        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta ação não pode ser desfeita. O item será permanentemente removido.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <div className="py-4">
-              Tem certeza que deseja excluir o item &quot;{selectedItem?.nome}&quot;?
-            </div>
-            <div className="flex justify-end gap-2">
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => {
-                  if (selectedItem?.id) {
-                    deleteMutation.mutate(selectedItem.id);
-                  }
-                  setIsDeleteDialogOpen(false);
-                  setIsDetailModalOpen(false);
-                  setIsDialogOpen(false);
-                }}
-                className="bg-destructive hover:bg-destructive/90"
-              >
-                Confirmar Exclusão
-              </AlertDialogAction>
-            </div>
-          </AlertDialogContent>
-        </AlertDialog>
+        <ConfirmacaoExclusaoModal
+          isOpen={isDeleteDialogOpen}
+          onClose={() => setIsDeleteDialogOpen(false)}
+          itemName={selectedItem?.nome || ''}
+          onConfirm={() => {
+            if (selectedItem?.id) {
+              deleteMutation.mutate(selectedItem.id);
+            }
+            setIsDeleteDialogOpen(false);
+            setIsDetailModalOpen(false);
+            setIsDialogOpen(false);
+          }}
+        />
 
         {/* Alerta de Duplicidade */}
-        <AlertDialog open={showDuplicateDialog} onOpenChange={setShowDuplicateDialog}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Item já existe</AlertDialogTitle>
-              <AlertDialogDescription>
-                Um item com o nome "{formState.nome}" já está cadastrado no estoque.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <div className="py-4">Você quer:</div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={handleCreateAnyway}>
-                Criar Novo Item
-              </Button>
-              <Button onClick={handleEditExisting}>Editar Item Existente</Button>
-            </div>
-          </AlertDialogContent>
-        </AlertDialog>
+        <AlertaDuplicidadeModal
+          isOpen={showDuplicateDialog}
+          onClose={() => setShowDuplicateDialog(false)}
+          itemName={formState.nome}
+          onCreateAnyway={handleCreateAnyway}
+          onEditExisting={handleEditExisting}
+        />
+
+        {/* Cadastro Múltiplo */}
+        <CadastroMultiploModal
+          isOpen={isBulkModalOpen}
+          onClose={() => setIsBulkModalOpen(false)}
+          bulkFormState={bulkFormState}
+          handleBulkChange={(field, value) =>
+            setBulkFormState((prev) => ({ ...prev, [field]: value }))
+          }
+          handleBulkSubmit={handleBulkSubmit}
+          locationsByUnit={locationsByUnit}
+        />
       </div>
     </AppLayout>
   );
