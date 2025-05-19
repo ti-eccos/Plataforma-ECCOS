@@ -11,22 +11,16 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Notificacao from "@/pages/Notificacoes";
 import AppWrapper from "@/components/AppWrapper";
-
-// Páginas
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 import UserSolicitacoes from "@/pages/UserSolicitacoes";
 import ComprasFinanceiro from "@/pages/admin/ComprasFinanceiro";
-
-// Admin
 import Equipamentos from "./pages/admin/Equipamentos";
 import Disponibilidade from "./pages/admin/Disponibilidade";
 import Usuarios from "./pages/admin/Usuarios";
 import Solicitacoes from "./pages/admin/Solicitacoes";
-
-// Solicitações
 import NovaReserva from "./pages/solicitations/NovaReserva";
 import NovaCompra from "./pages/solicitations/NovaCompra";
 import NovaSuporte from "./pages/solicitations/NovaSuporte";
@@ -35,7 +29,6 @@ import Estoque from "./pages/admin/Estoque";
 
 const queryClient = new QueryClient();
 
-// Configuração de rotas
 const router = createBrowserRouter(
   [
     {
@@ -57,7 +50,7 @@ const router = createBrowserRouter(
         {
           index: true,
           element: (
-            <ProtectedRoute>
+            <ProtectedRoute> {/* Permite qualquer usuário autenticado */}
               <Dashboard />
             </ProtectedRoute>
           ),
@@ -113,7 +106,7 @@ const router = createBrowserRouter(
         {
           path: "estoque",
           element: (
-          <ProtectedRoute allowedRoles={['admin', 'superadmin', 'financeiro', 'operacional']}>
+            <ProtectedRoute allowedRoles={['admin', 'superadmin', 'financeiro', 'operacional']}>
               <Estoque />
             </ProtectedRoute>
           ),
@@ -174,7 +167,6 @@ const router = createBrowserRouter(
   }
 );
 
-// Componente principal
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>

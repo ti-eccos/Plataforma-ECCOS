@@ -35,7 +35,7 @@ const Login = () => {
   }, []);
 
   // Redireciona após login bem-sucedido
-  useEffect(() => {
+    useEffect(() => {
     const handlePostLogin = async () => {
       if (!currentUser || isRedirecting) return;
       try {
@@ -44,11 +44,12 @@ const Login = () => {
           lastActive: serverTimestamp()
         });
 
-        const redirectPath = sessionStorage.getItem("redirectPath") ||
-                         location.state?.from?.pathname ||
-                         "/";
-        sessionStorage.removeItem("redirectPath");
+        // Redirecionamento corrigido
+        const redirectPath = sessionStorage.getItem("redirectPath") || 
+                         location.state?.from?.pathname || 
+                         "/"; // Fallback explícito para raiz
 
+        sessionStorage.removeItem("redirectPath");
         navigate(redirectPath, { replace: true });
 
         toast({

@@ -64,15 +64,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return null;
         }
 
-        // Atualiza último acesso
         await setDoc(userRef, {
           lastActive: new Date()
         }, { merge: true });
 
       } else {
-        // Cria novo documento apenas para emails válidos
         if (!firebaseUser.email?.endsWith("@colegioeccos.com.br")) return null;
 
+        // Garante role 'user' para novos usuários
         const role: UserRole = firebaseUser.email === "suporte@colegioeccos.com.br" 
           ? "superadmin" 
           : "user";
@@ -93,12 +92,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       return {
+        ...userData,
         uid: firebaseUser.uid,
         email: firebaseUser.email || "",
         displayName: firebaseUser.displayName || "Usuário sem nome",
         photoURL: firebaseUser.photoURL,
-        role: userData.role || "user",
-        ...userData
+        role: userData.role || "user" // Fallback explícito
       } as AuthUser;
 
     } catch (error) {
@@ -121,7 +120,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       try {
         if (firebaseUser) {
-          // Verifica domínio do email
           if (!firebaseUser.email?.endsWith("@colegioeccos.com.br")) {
             await firebaseSignOut(auth);
             toast({
@@ -155,7 +153,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       
-      // Verificação adicional de domínio
       if (!result.user.email?.endsWith("@colegioeccos.com.br")) {
         await firebaseSignOut(auth);
         toast({
