@@ -14,7 +14,10 @@ interface RequestStatusChartProps {
   darkMode?: boolean;
 }
 
-export const RequestStatusChart: React.FC<RequestStatusChartProps> = ({ data, darkMode = false }) => {
+export const RequestStatusChart: React.FC<RequestStatusChartProps> = ({ 
+  data = [], 
+  darkMode = false 
+}) => {
   return (
     <div className="h-full w-full flex flex-col">
       {/* Gráfico */}

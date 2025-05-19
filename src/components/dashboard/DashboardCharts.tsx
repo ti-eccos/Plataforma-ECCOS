@@ -36,85 +36,81 @@ export function DashboardCharts({
   headerClass = "",
 }: DashboardChartsProps) {
   const navigate = useNavigate();
-  
+
+  // Classes para o card com estilo visual completo
   const cardClass = cn(
-    "bg-background text-card-foreground border-0 border-l-4",
-    "shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px",
-    "transition-all duration-300 w-full min-h-[300px] flex flex-col",
-    darkMode 
-      ? "border-blue-300 hover:border-blue-400" 
-      : "border-blue-500 hover:border-blue-600",
-    "before:content-[''] before:absolute before:left-0 before:top-0",
-    "before:w-[2px] before:h-full before:bg-gradient-to-b",
-    "before:from-transparent before:via-white/10 before:to-transparent before:opacity-30"
+  "bg-white border border-gray-100 rounded-2xl shadow-lg",
+  "hover:shadow-xl transition-all duration-300 relative group overflow-hidden",
+  "min-h-[300px]",
+  );
+
+  // Classe para o background gradient no card
+  const cardGradientOverlay = cn(
+    "absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent",
+    "opacity-0 group-hover:opacity-100 transition-opacity"
   );
 
   return (
     <div className={cn("grid grid-cols-1 lg:grid-cols-2 gap-6", chartWrapperClass)}>
-  {/* Gráfico de Tipos de Equipamentos */}
-  {equipmentTypeData && (
-    <Card className={cardClass}>
-      <CardHeader>
-        <CardTitle className={cn("text-xl font-bold", headerClass)}>
-          Tipos de Equipamentos
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pb-4 flex-1">
-        <div className="h-full">
-          <RequestStatusChart data={equipmentTypeData} />
-        </div>
-      </CardContent>
-    </Card>
-  )}
+      {/* Gráfico de Tipos de Equipamentos */}
+      {equipmentTypeData && (
+        <Card className={cardClass}>
+          <div className={cardGradientOverlay} />
+          <CardHeader>
+            <CardTitle className={cn("text-xl font-bold", headerClass)}>
+              Tipos de Equipamentos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+      <RequestStatusChart data={equipmentTypeData} />
+    </CardContent>
+  </Card>
+)}
 
-  {/* Gráfico de Tipos de Solicitação */}
-  {requestTypeData && (
-    <Card className={cardClass}>
-      <CardHeader>
-        <CardTitle className={cn("text-xl font-bold", headerClass)}>
-          Tipos de Solicitações
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pb-4 flex-1">
-        <div className="h-full">
-          <RequestStatusChart data={requestTypeData} />
-        </div>
-      </CardContent>
-    </Card>
-  )}
-  
-  {/* Gráfico de Status das Solicitações */}
-  {requestStatusData && (
-    <Card className={cardClass}>
-      <CardHeader>
-        <CardTitle className={cn("text-xl font-bold", headerClass)}>
-          Status das Solicitações
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pb-4 flex-1">
-        <div className="h-full">
-          <RequestStatusChart data={requestStatusData} />
-        </div>
-      </CardContent>
-    </Card>
-  )}
+      {/* Gráfico de Tipos de Solicitação */}
+      {requestTypeData && (
+        <Card className={cardClass}>
+          <div className={cardGradientOverlay} />
+          <CardHeader>
+            <CardTitle className={cn("text-xl font-bold", headerClass)}>
+              Tipos de Solicitações
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+      <RequestStatusChart data={requestTypeData} />
+    </CardContent>
+  </Card>
+)}
 
+      {/* Gráfico de Status das Solicitações */}
+      {requestStatusData && (
+        <Card className={cardClass}>
+          <div className={cardGradientOverlay} />
+          <CardHeader>
+            <CardTitle className={cn("text-xl font-bold", headerClass)}>
+              Status das Solicitações
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+      <RequestStatusChart data={requestStatusData} />
+    </CardContent>
+  </Card>
+)}
 
-  {/* Gráfico de Usuários Ativos */}
-  {topUsersData && (
-    <Card className={cardClass}>
-      <CardHeader>
-        <CardTitle className={cn("text-xl font-bold", headerClass)}>
-          Usuários Mais Ativos
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pb-4 flex-1">
-        <div className="h-full">
-          <TopUsersChart data={topUsersData} />
-        </div>
-      </CardContent>
-    </Card>
-  )}
-</div>
+      {/* Gráfico de Usuários Ativos */}
+      {topUsersData && (
+        <Card className={cardClass}>
+          <div className={cardGradientOverlay} />
+          <CardHeader>
+            <CardTitle className={cn("text-xl font-bold", headerClass)}>
+              Usuários Mais Ativos
+            </CardTitle>
+          </CardHeader>
+           <CardContent>
+      <TopUsersChart data={topUsersData} />
+    </CardContent>
+  </Card>
+)}
+    </div>
   );
 }

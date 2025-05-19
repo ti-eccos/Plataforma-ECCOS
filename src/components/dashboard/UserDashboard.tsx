@@ -253,7 +253,7 @@ const UserDashboard = () => {
                 key={status}
                 className={cn(
                   "bg-background text-card-foreground hover:bg-accent/20 cursor-pointer",
-                  "border-0 border-l-4 border-blue-500 hover:border-blue-600",
+                  "border-0 border-l-4",
                   "shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px",
                   "transition-all duration-300 relative w-full h-full flex flex-col", // Adicionado flex e h-full
                   "before:content-[''] before:absolute before:left-0 before:top-0",
@@ -283,7 +283,7 @@ const UserDashboard = () => {
             <DashboardCharts
               requestStatusData={statusChartData}
               requestTypeData={requestTypeData}
-              chartWrapperClass="bg-card p-6 rounded-lg border"
+              chartWrapperClass="bg-transparent"
               headerClass="text-lg font-semibold"
               hideOtherCharts={true}
               darkMode={false}
