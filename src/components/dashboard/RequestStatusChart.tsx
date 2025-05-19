@@ -1,97 +1,64 @@
-import React from "react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+// src/components/dashboard/RequestStatusChart.tsx
 
-interface DataItem {
+import React from "react";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+
+interface PieData {
   name: string;
   value: number;
   color: string;
 }
 
 interface RequestStatusChartProps {
-  data: DataItem[];
-  legendPosition?: 'top' | 'bottom' | 'left' | 'right';
-  legendWrapperStyle?: React.CSSProperties;
+  data: PieData[];
+  darkMode?: boolean;
 }
 
-export function RequestStatusChart({ 
-  data, 
-  legendPosition = 'bottom',
-  legendWrapperStyle = {}
-}: RequestStatusChartProps) {
-  const filteredData = data.filter(item => item.value > 0);
-  const totalValue = filteredData.reduce((sum, item) => sum + item.value, 0);
-
-  const legendConfig = {
-    layout: (legendPosition === 'top' || legendPosition === 'bottom' ? 'horizontal' : 'vertical') as 'horizontal' | 'vertical',
-    verticalAlign: (legendPosition === 'left' || legendPosition === 'right' ? 'middle' : legendPosition) as 'top' | 'bottom' | 'middle',
-    align: (legendPosition === 'right' ? 'right' : legendPosition === 'left' ? 'left' : 'center') as 'left' | 'center' | 'right',
-    wrapperStyle: {
-      ...legendWrapperStyle,
-      paddingLeft: legendPosition === 'right' ? '20px' : '0',
-      paddingRight: legendPosition === 'left' ? '20px' : '0',
-      paddingTop: legendPosition === 'bottom' ? '20px' : '0',
-      fontSize: '14px'
-    }
-  };
-
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const { name, value } = payload[0].payload;
-      const percentage = ((value / totalValue) * 100).toFixed(1);
-      
-      return (
-        <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-md">
-          <p className="text-blue-600 font-semibold">{name}</p>
-          <p className="text-gray-700">{`${percentage}%`}</p>
-        </div>
-      );
-    }
-    return null;
-  };
-
+export const RequestStatusChart: React.FC<RequestStatusChartProps> = ({ data, darkMode = false }) => {
   return (
-    <div className="h-[300px] w-full relative">
-      {totalValue === 0 ? (
-        <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-          Nenhum dado disponível
-        </div>
-      ) : (
+    <div className="h-full w-full flex flex-col">
+      {/* Gráfico */}
+      <div className="flex-1 min-h-[250px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
-              data={filteredData}
+              data={data}
               cx="50%"
               cy="50%"
-              innerRadius={60}
+              labelLine={false}
               outerRadius={80}
-              paddingAngle={2}
+              innerRadius={50} // estilo donut
+              fill="#8884d8"
               dataKey="value"
               nameKey="name"
-              label={({ percent }) => `${(percent * 100).toFixed(1)}%`}
+              label={({ percent }) =>
+                `${(percent * 100).toFixed(0)}%`
+              }
             >
-              {filteredData.map((entry, index) => (
-                <Cell 
-                  key={`cell-${index}`} 
-                  fill={entry.color}
-                  stroke="#f3f4f6"
-                  strokeWidth={2}
-                />
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
               ))}
             </Pie>
-            <Legend 
-              {...legendConfig}
-              formatter={(value: string, entry: any) => {
-                const percentage = (entry.payload.value / totalValue * 100).toFixed(1);
-                return <span className="text-gray-700">{value} ({percentage}%)</span>;
-              }}
-            />
-            <Tooltip 
-              content={<CustomTooltip />}
-              cursor={{ fill: 'rgba(243, 244, 246, 0.5)' }}
-            />
           </PieChart>
         </ResponsiveContainer>
-      )}
+      </div>
+
+      {/* Legenda customizada */}
+      <div className="mt-4 px-2 text-sm">
+        <ul className="space-y-2">
+          {data.map((entry, index) => (
+            <li key={index} className="flex items-center gap-2">
+              <span
+                className="inline-block w-3 h-3 rounded-full"
+                style={{ backgroundColor: entry.color }}
+              ></span>
+              <span className={darkMode ? "text-gray-300" : "text-gray-600"}>
+                {entry.name}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
-}
+};

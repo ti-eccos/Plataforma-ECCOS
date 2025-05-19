@@ -15,7 +15,6 @@ import { Home } from 'lucide-react';
 
 export const Dashboard = () => {
   const { currentUser, isAdmin } = useAuth();
-
   const { 
     data: requests = [], 
     isLoading: requestsLoading, 
@@ -25,7 +24,6 @@ export const Dashboard = () => {
     queryFn: () => getAllRequests(true),
     enabled: isAdmin,
   });
-
   const {
     data: users = [],
     isLoading: usersLoading,
@@ -35,7 +33,6 @@ export const Dashboard = () => {
     queryFn: getAllUsers,
     enabled: isAdmin,
   });
-
   const {
     data: equipment = [],
     isLoading: equipmentLoading,
@@ -104,7 +101,6 @@ export const Dashboard = () => {
   const userRequestCounts = requests.reduce((acc: Record<string, any>, req: any) => {
     const userName = req.userName || 'Usuário Desconhecido';
     const userId = req.userId || 'unknown';
-    
     if (!acc[userId]) {
       acc[userId] = {
         userId,
@@ -112,32 +108,32 @@ export const Dashboard = () => {
         requestCount: 0
       };
     }
-    
     acc[userId].requestCount++;
     return acc;
   }, {});
 
   const topUsersData = Object.values(userRequestCounts)
-  .sort((a: any, b: any) => b.requestCount - a.requestCount)
-  .slice(0, 5)
-  .map((user: any) => ({
-    userId: user.userId,      
-    userName: user.userName,
-    requestCount: user.requestCount,
-  }));
+    .sort((a: any, b: any) => b.requestCount - a.requestCount)
+    .slice(0, 5)
+    .map((user: any) => ({
+      userId: user.userId,
+      userName: user.userName,
+      requestCount: user.requestCount,
+    }));
 
-return (
+  return (
     <AppLayout>
       <div className="space-y-8">
         <h1 className="text-3xl font-bold flex items-center gap-2">
           <Home className="text-black" size={35} /> {/* Ícone adicionado */}
           Dashboard Administrativo
         </h1>
+
         <DashboardLoading isLoading={isLoading} isError={isError} />
-        
+
         {!isLoading && !isError && (
           <div className="space-y-8">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
               <Card className={cn(
                 "bg-background text-card-foreground hover:bg-accent/20 cursor-pointer",
                 "border-0 border-l-4 border-blue-500 hover:border-blue-600",
@@ -156,50 +152,6 @@ return (
                   <div className="text-2xl font-bold">{activeUsers}</div>
                   <Badge variant="outline" className="mt-2">
                     Contas
-                  </Badge>
-                </CardContent>
-              </Card>
-
-              <Card className={cn(
-                "bg-background text-card-foreground hover:bg-accent/20 cursor-pointer",
-                "border-0 border-l-4 border-blue-500 hover:border-blue-600",
-                "shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px",
-                "transition-all duration-300 relative w-full h-full flex flex-col",
-                "before:content-[''] before:absolute before:left-0 before:top-0",
-                "before:w-[2px] before:h-full before:bg-gradient-to-b",
-                "before:from-transparent before:via-white/10 before:to-transparent before:opacity-30"
-              )}>
-                <CardHeader className="pb-2 flex-1 flex items-center justify-center">
-                  <CardTitle className="text-sm font-medium text-center">
-                    Chromebooks
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex-1 flex flex-col items-center justify-center text-center">
-                  <div className="text-2xl font-bold">{chromebooks}</div>
-                  <Badge variant="outline" className="mt-2">
-                    Disponíveis
-                  </Badge>
-                </CardContent>
-              </Card>
-
-              <Card className={cn(
-                "bg-background text-card-foreground hover:bg-accent/20 cursor-pointer",
-                "border-0 border-l-4 border-blue-500 hover:border-blue-600",
-                "shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px",
-                "transition-all duration-300 relative w-full h-full flex flex-col",
-                "before:content-[''] before:absolute before:left-0 before:top-0",
-                "before:w-[2px] before:h-full before:bg-gradient-to-b",
-                "before:from-transparent before:via-white/10 before:to-transparent before:opacity-30"
-              )}>
-                <CardHeader className="pb-2 flex-1 flex items-center justify-center">
-                  <CardTitle className="text-sm font-medium text-center">
-                    iPads
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex-1 flex flex-col items-center justify-center text-center">
-                  <div className="text-2xl font-bold">{ipads}</div>
-                  <Badge variant="outline" className="mt-2">
-                    Disponíveis
                   </Badge>
                 </CardContent>
               </Card>
@@ -270,7 +222,7 @@ return (
                 </CardContent>
               </Card>
             </div>
-            
+
             <DashboardCharts 
               requestStatusData={requestStatusData}
               equipmentTypeData={equipmentTypeData}

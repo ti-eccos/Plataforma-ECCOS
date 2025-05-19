@@ -51,74 +51,70 @@ export function DashboardCharts({
 
   return (
     <div className={cn("grid grid-cols-1 lg:grid-cols-2 gap-6", chartWrapperClass)}>
-      {/* Gráfico de Status */}
-      {requestStatusData && (
-        <Card className={cardClass}>
-          <CardHeader>
-            <CardTitle className={cn("text-xl font-bold", headerClass)}>
-              Status das Solicitações
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pb-4 flex-1">
-            <div className="h-full">
-              <RequestStatusChart data={requestStatusData} />
-            </div>
-          </CardContent>
-        </Card>
-      )}
+  {/* Gráfico de Tipos de Equipamentos */}
+  {equipmentTypeData && (
+    <Card className={cardClass}>
+      <CardHeader>
+        <CardTitle className={cn("text-xl font-bold", headerClass)}>
+          Tipos de Equipamentos
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pb-4 flex-1">
+        <div className="h-full">
+          <RequestStatusChart data={equipmentTypeData} />
+        </div>
+      </CardContent>
+    </Card>
+  )}
 
-      {/* Gráfico de Tipos de Solicitação */}
-      {requestTypeData && (
-        <Card className={cardClass}>
-          <CardHeader>
-            <CardTitle className={cn("text-xl font-bold", headerClass)}>
-              Tipos de Solicitações
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pb-4 flex-1">
-            <div className="h-full">
-              <RequestStatusChart data={requestTypeData} />
-            </div>
-          </CardContent>
-        </Card>
-      )}
+  {/* Gráfico de Tipos de Solicitação */}
+  {requestTypeData && (
+    <Card className={cardClass}>
+      <CardHeader>
+        <CardTitle className={cn("text-xl font-bold", headerClass)}>
+          Tipos de Solicitações
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pb-4 flex-1">
+        <div className="h-full">
+          <RequestStatusChart data={requestTypeData} />
+        </div>
+      </CardContent>
+    </Card>
+  )}
+  
+  {/* Gráfico de Status das Solicitações */}
+  {requestStatusData && (
+    <Card className={cardClass}>
+      <CardHeader>
+        <CardTitle className={cn("text-xl font-bold", headerClass)}>
+          Status das Solicitações
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pb-4 flex-1">
+        <div className="h-full">
+          <RequestStatusChart data={requestStatusData} />
+        </div>
+      </CardContent>
+    </Card>
+  )}
 
-      {/* Gráficos específicos do admin */}
-      {!hideOtherCharts && (
-        <>
-          {/* Gráfico de Equipamentos */}
-          {equipmentTypeData && (
-            <Card className={cardClass}>
-              <CardHeader>
-                <CardTitle className={cn("text-xl font-bold", headerClass)}>
-                  Tipos de Equipamentos
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pb-4 flex-1">
-                <div className="h-full">
-                  <RequestStatusChart data={equipmentTypeData} />
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
-          {/* Gráfico de Usuários Ativos */}
-          {topUsersData && (
-            <Card className={cardClass}>
-              <CardHeader>
-                <CardTitle className={cn("text-xl font-bold", headerClass)}>
-                  Usuários Mais Ativos
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pb-4 flex-1">
-                <div className="h-full">
-                  <TopUsersChart data={topUsersData} />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </>
-      )}
-    </div>
+  {/* Gráfico de Usuários Ativos */}
+  {topUsersData && (
+    <Card className={cardClass}>
+      <CardHeader>
+        <CardTitle className={cn("text-xl font-bold", headerClass)}>
+          Usuários Mais Ativos
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pb-4 flex-1">
+        <div className="h-full">
+          <TopUsersChart data={topUsersData} />
+        </div>
+      </CardContent>
+    </Card>
+  )}
+</div>
   );
 }

@@ -1,96 +1,79 @@
+// src/components/dashboard/TopUsersChart.tsx
+
 import React from "react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+
+interface TopUser {
+  userId: string;
+  userName: string;
+  requestCount: number;
+}
 
 interface TopUsersChartProps {
-  data: Array<{
-    userName: string;
-    requestCount: number;
-  }>;
+  data: TopUser[];
   darkMode?: boolean;
 }
 
-export function TopUsersChart({ data, darkMode = false }: TopUsersChartProps) {
-  const COLORS = ['#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899'];
-  
-  const chartData = data.map((item, index) => ({
-    ...item,
-    color: COLORS[index % COLORS.length]
+const COLORS = ['#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899'];
+
+export const TopUsersChart: React.FC<TopUsersChartProps> = ({ data, darkMode = false }) => {
+  const chartData = data.map((user, index) => ({
+    ...user,
+    color: COLORS[index % COLORS.length],
   }));
 
-  const truncateName = (name: string) => {
-    return name.length > 12 
-      ? `${name.substring(0, 10)}...`
-      : name;
-  };
-
   return (
-    <div className="h-[300px] w-full relative">
-      {data.length === 0 ? (
-        <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-          Nenhum dado disponível
-        </div>
-      ) : (
+    <div className="h-full w-full flex flex-col">
+      {/* Gráfico */}
+      <div className="flex-1 min-h-[250px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={chartData}
               cx="50%"
               cy="50%"
-              innerRadius={60}
+              labelLine={false}
               outerRadius={80}
-              paddingAngle={2}
+              innerRadius={50} // ← estilo em forma de donut
+              fill="#8884d8"
               dataKey="requestCount"
               nameKey="userName"
-              label={({ name, percent }) => 
-                `${truncateName(name)}: ${(percent * 100).toFixed(0)}%`
+              label={({ percent }) =>
+                `${(percent * 100).toFixed(0)}%`
               }
             >
-              {chartData.map((entry, index) => (
-                <Cell 
-                  key={`cell-${index}`} 
-                  fill={entry.color}
-                  stroke="#1f2937"
-                  strokeWidth={2}
-                />
+              {chartData.map((entry) => (
+                <Cell key={`cell-${entry.userId}`} fill={entry.color} />
               ))}
             </Pie>
-            <Legend 
-              layout="horizontal"
-              verticalAlign="bottom"
-              align="center"
-              wrapperStyle={{
-                paddingTop: '20px',
-                fontSize: '14px'
-              }}
-              formatter={(value: string) => (
-                <span className="text-gray-400">
-                  {truncateName(value)}
-                </span>
-              )}
-            />
-            <Tooltip 
+            <Tooltip
               contentStyle={{
-                backgroundColor: darkMode ? '#1f2937' : '#ffffff',
-                border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`,
-                borderRadius: '8px',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                backgroundColor: darkMode ? "#1f2937" : "#fff",
+                border: darkMode ? "1px solid #374151" : "1px solid #e5e7eb",
+                borderRadius: "8px",
               }}
-              itemStyle={{ 
-                color: darkMode ? '#e5e7eb' : '#374151',
-                fontSize: '14px'
-              }}
-              formatter={(value: number, name: string, entry: any) => [
-                <span key={`value-${name}`} className="text-indigo-400">
-                  {value} solicitações
-                </span>,
-                <span key={`name-${name}`} style={{ color: entry.payload.color }}>
-                  {name} {/* Nome completo no tooltip */}
-                </span>
-              ]}
+              itemStyle={{ color: darkMode ? "#e5e7eb" : "#374151" }}
             />
           </PieChart>
         </ResponsiveContainer>
-      )}
+      </div>
+
+      {/* Legenda personalizada */}
+      <div className="mt-4 px-2 text-sm">
+        <ul className="space-y-2">
+          {chartData.map((entry, index) => (
+            <li key={index} className="flex items-center gap-2">
+              <span
+                className="inline-block w-3 h-3 rounded-full"
+                style={{ backgroundColor: entry.color }}
+              ></span>
+              <span className={darkMode ? "text-gray-300" : "text-gray-600"}>
+                {entry.userName}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
-}
+};
