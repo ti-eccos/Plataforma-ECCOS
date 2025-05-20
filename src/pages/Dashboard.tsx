@@ -12,39 +12,68 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Home } from 'lucide-react';
+import { Button } from "@/components/ui/button";
 
 export const Dashboard = () => {
   const { currentUser, isAdmin } = useAuth();
 
+  // Configuração para tentar refetch caso os dados venham vazios
   const { 
     data: requests = [], 
     isLoading: requestsLoading, 
-    isError: requestsError 
+    isError: requestsError,
+    refetch: refetchRequests
   } = useQuery({
     queryKey: ['adminAllRequests'],
     queryFn: () => getAllRequests(true),
     enabled: isAdmin,
+    retry: 2,
   });
 
   const {
     data: users = [],
     isLoading: usersLoading,
-    isError: usersError
+    isError: usersError,
+    refetch: refetchUsers
   } = useQuery({
     queryKey: ['adminAllUsers'],
     queryFn: getAllUsers,
     enabled: isAdmin,
+    retry: 2,
   });
 
   const {
     data: equipment = [],
     isLoading: equipmentLoading,
-    isError: equipmentError
+    isError: equipmentError,
+    refetch: refetchEquipment
   } = useQuery({
     queryKey: ['adminAllEquipment'],
     queryFn: getAllEquipment,
     enabled: isAdmin,
+    retry: 2,
   });
+
+  // Tentar recarregar dados se algum deles vier vazio
+  useEffect(() => {
+    if (isAdmin && !requestsLoading && !requestsError && requests.length === 0) {
+      console.log("Tentando recarregar solicitações...");
+      refetchRequests();
+    }
+    
+    if (isAdmin && !usersLoading && !usersError && users.length === 0) {
+      console.log("Tentando recarregar usuários...");
+      refetchUsers();
+    }
+    
+    if (isAdmin && !equipmentLoading && !equipmentError && equipment.length === 0) {
+      console.log("Tentando recarregar equipamentos...");
+      refetchEquipment();
+    }
+  }, [isAdmin, 
+      requests.length, requestsLoading, requestsError, 
+      users.length, usersLoading, usersError, 
+      equipment.length, equipmentLoading, equipmentError]);
 
   // Animação de entrada (fade-up)
   useEffect(() => {
@@ -70,7 +99,11 @@ export const Dashboard = () => {
 
   const isLoading = requestsLoading || usersLoading || equipmentLoading;
   const isError = requestsError || usersError || equipmentError;
+  
+  // Verifica se há dados válidos
+  const hasValidData = requests.length > 0 && users.length > 0 && equipment.length > 0;
 
+  // Calcula estatísticas apenas se houver dados válidos
   const activeUsers = users.filter((user: any) => !user.blocked).length;
   const pendingRequests = requests.filter((req: any) => req.status === 'pending').length;
   const approvedRequests = requests.filter((req: any) => req.status === 'approved').length;
@@ -82,6 +115,7 @@ export const Dashboard = () => {
   const purchaseRequests = requests.filter((req: any) => req.type === 'purchase').length;
   const supportRequests = requests.filter((req: any) => req.type === 'support').length;
 
+  // Trate dados para os gráficos
   const requestStatusData = [
     { name: 'Pendentes', value: pendingRequests, color: '#eab308' },
     { name: 'Aprovadas', value: approvedRequests, color: '#22c55e' },
@@ -99,6 +133,7 @@ export const Dashboard = () => {
     { name: 'Suporte', value: supportRequests, color: '#ec4899' }
   ];
 
+  // Calcule as estatísticas de usuários
   const userRequestCounts = requests.reduce((acc: Record<string, any>, req: any) => {
     const userId = req.userId || 'unknown';
     if (!acc[userId]) {
@@ -232,6 +267,24 @@ export const Dashboard = () => {
                   requests={requests}
                 />
               </div>
+            </div>
+          )}
+
+          {!isLoading && !isError && !hasValidData && (
+            <div className="bg-white border border-gray-100 rounded-2xl shadow-lg p-8 text-center">
+              <p className="text-lg text-gray-500 mb-4">
+                Não há dados suficientes para exibir o dashboard completo.
+              </p>
+              <Button 
+                onClick={() => {
+                  refetchRequests();
+                  refetchUsers();
+                  refetchEquipment();
+                }}
+                className="bg-eccos-purple hover:bg-sidebar text-white"
+              >
+                Recarregar dados
+              </Button>
             </div>
           )}
         </div>

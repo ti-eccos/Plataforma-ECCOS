@@ -49,31 +49,6 @@ const formSchema = z.object({
   description: z.string().min(10, "A descrição deve ter pelo menos 10 caracteres"),
 });
 
-const inputStyle = cn(
-  "shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px",
-  "transition-all duration-300 relative border-0 border-l-4 border-blue-500 pl-8",
-  "before:content-[''] before:absolute before:left-0 before:top-0",
-  "before:w-[2px] before:h-full before:bg-gradient-to-b",
-  "before:from-transparent before:via-white/10 before:to-transparent before:opacity-30",
-  "hover:bg-accent/20 bg-background"
-);
-
-const selectTriggerStyle = cn(
-  "shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px",
-  "transition-all duration-300 relative border-0 border-l-4 border-blue-500",
-  "before:content-[''] before:absolute before:left-0 before:top-0",
-  "before:w-[2px] before:h-full before:bg-gradient-to-b",
-  "before:from-transparent before:via-white/10 before:to-transparent before:opacity-30",
-  "hover:bg-accent/20 bg-background"
-);
-
-const buttonPrimaryStyle = cn(
-  "shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px",
-  "transition-all duration-300 relative",
-  "bg-blue-500 hover:bg-blue-600 text-white",
-  "hover:scale-[1.02]"
-);
-
 const NovaSuporte = () => {
   const { currentUser: user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -120,250 +95,257 @@ const NovaSuporte = () => {
 
   return (
     <AppLayout>
-     <motion.div
-  initial={{ opacity: 0, y: 20 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ duration: 0.5 }}
-  className="bg-white space-y-6" // Removido padding extra e arredondamento
->
-       <div className="space-y-8">
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-           <Wrench className="text-black" size={35} /> {/* Ícone adicionado */}
-          Nova Suporte
-        </h1>
-    <p className="text-muted-foreground mt-1">
-      Preencha todos os campos obrigatórios (*) para registrar sua solicitação
-    </p>
-  </div>
+      <div className="min-h-screen bg-white overflow-hidden relative">
+        {/* Fundos decorativos */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-sidebar blur-3xl opacity-5"></div>
+          <div className="absolute right-1/4 bottom-1/4 h-80 w-80 rounded-full bg-eccos-purple blur-3xl opacity-5"></div>
+        </div>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="unit"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Unidade *</FormLabel>
-                    <Select
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        setSelectedUnit(value);
-                        form.resetField("location");
-                      }}
-                      defaultValue={field.value}
-                    >
+        {/* Conteúdo principal */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="relative z-10 space-y-8 p-6 md:p-12 fade-up"
+        >
+          <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+            <Wrench className="text-eccos-purple" size={35} />
+            Novo Suporte
+          </h1>
+          <p className="text-gray-600 mt-1">
+            Preencha todos os campos obrigatórios (*) para registrar sua solicitação
+          </p>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="unit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-700">Unidade *</FormLabel>
+                      <Select
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          setSelectedUnit(value);
+                          form.resetField("location");
+                        }}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="rounded-xl border-gray-200 focus:ring-eccos-purple">
+                            <SelectValue placeholder="Selecione sua unidade" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="rounded-xl border-gray-200">
+                          <SelectItem value="Berçário e Educação Infantil">
+                            Berçário e Educação Infantil
+                          </SelectItem>
+                          <SelectItem value="Fundamental">Fundamental</SelectItem>
+                          <SelectItem value="Anexo">Anexo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="tipo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-700">Tipo de Suporte *</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="rounded-xl border-gray-200 focus:ring-eccos-purple">
+                            <SelectValue placeholder="Selecione o tipo de suporte" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="rounded-xl border-gray-200">
+                          <SelectItem value="Manutenção">Manutenção</SelectItem>
+                          <SelectItem value="Tecnologia">Tecnologia</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-700">Localização Exata *</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={!selectedUnit}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="rounded-xl border-gray-200 focus:ring-eccos-purple">
+                            <SelectValue 
+                              placeholder={selectedUnit 
+                                ? "Selecione o local específico" 
+                                : "Selecione a unidade primeiro"}
+                            />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="rounded-xl border-gray-200">
+                          {selectedUnit && 
+                            locationsByUnit[selectedUnit as keyof typeof locationsByUnit].map((location) => (
+                              <SelectItem key={location} value={location}>
+                                {location}
+                              </SelectItem>
+                            ))
+                          }
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-700">Tipo de Problema *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="rounded-xl border-gray-200 focus:ring-eccos-purple">
+                            <SelectValue placeholder="Selecione a categoria do problema" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="rounded-xl border-gray-200">
+                          <SelectItem value="Internet">Problemas de Internet</SelectItem>
+                          <SelectItem value="Hardware">Defeito em Equipamento</SelectItem>
+                          <SelectItem value="Software">Erro de Sistema</SelectItem>
+                          <SelectItem value="Projeção">Problemas de Projeção</SelectItem>
+                          <SelectItem value="Áudio">Falhas de Áudio</SelectItem>
+                          <SelectItem value="Outros">Outros Problemas</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="priority"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-700">Nível de Urgência *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="rounded-xl border-gray-200 focus:ring-eccos-purple">
+                            <SelectValue placeholder="Qual a urgência do atendimento?" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="rounded-xl border-gray-200">
+                          <SelectItem value="low">
+                            Baixa - Não interfere nas atividades
+                          </SelectItem>
+                          <SelectItem value="medium">
+                            Média - Afeta parcialmente o trabalho
+                          </SelectItem>
+                          <SelectItem value="high">
+                            Alta - Impede atividades importantes
+                          </SelectItem>
+                          <SelectItem value="critical">
+                            Crítica - Paralisação total
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="deviceInfo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-700">Identificação do Equipamento</FormLabel>
                       <FormControl>
-                        <SelectTrigger className={selectTriggerStyle}>
-                          <SelectValue placeholder="Selecione sua unidade" />
-                        </SelectTrigger>
+                        <Input 
+                          placeholder="Ex: Notebook Dell Latitude 3420, Mouse bluetooth" 
+                          className="rounded-xl border-gray-200 focus:ring-eccos-purple"
+                          {...field} 
+                        />
                       </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Berçário e Educação Infantil">
-                          Berçário e Educação Infantil
-                        </SelectItem>
-                        <SelectItem value="Fundamental">Fundamental</SelectItem>
-                        <SelectItem value="Anexo">Anexo</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-<FormField
-  control={form.control}
-  name="tipo"
-  render={({ field }) => (
-    <FormItem>
-      <FormLabel>Tipo de Suporte *</FormLabel>
-      <Select
-        onValueChange={field.onChange}
-        defaultValue={field.value}
-      >
-        <FormControl>
-          <SelectTrigger className={selectTriggerStyle}>
-            <SelectValue placeholder="Selecione o tipo de suporte" />
-          </SelectTrigger>
-        </FormControl>
-        <SelectContent>
-          <SelectItem value="Manutenção">Manutenção</SelectItem>
-          <SelectItem value="Tecnologia">Tecnologia</SelectItem>
-        </SelectContent>
-      </Select>
-      <FormMessage />
-    </FormItem>
-  )}
-/>
+                      <FormDescription className="text-gray-500">
+                        Forneça modelo ou identificação completa
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}
-                name="location"
+                name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Localização Exata *</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      disabled={!selectedUnit}
-                    >
-                      <FormControl>
-                        <SelectTrigger className={selectTriggerStyle}>
-                          <SelectValue 
-                            placeholder={selectedUnit 
-                              ? "Selecione o local específico" 
-                              : "Selecione a unidade primeiro"}
-                          />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {selectedUnit && 
-                          locationsByUnit[selectedUnit as keyof typeof locationsByUnit].map((location) => (
-                            <SelectItem key={location} value={location}>
-                              {location}
-                            </SelectItem>
-                          ))
-                        }
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tipo de Problema *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className={selectTriggerStyle}>
-                          <SelectValue placeholder="Selecione a categoria do problema" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Internet">Problemas de Internet</SelectItem>
-                        <SelectItem value="Hardware">Defeito em Equipamento</SelectItem>
-                        <SelectItem value="Software">Erro de Sistema</SelectItem>
-                        <SelectItem value="Projeção">Problemas de Projeção</SelectItem>
-                        <SelectItem value="Áudio">Falhas de Áudio</SelectItem>
-                        <SelectItem value="Outros">Outros Problemas</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="priority"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nível de Urgência *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className={selectTriggerStyle}>
-                          <SelectValue placeholder="Qual a urgência do atendimento?" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="low">
-                          Baixa - Não interfere nas atividades
-                        </SelectItem>
-                        <SelectItem value="medium">
-                          Média - Afeta parcialmente o trabalho
-                        </SelectItem>
-                        <SelectItem value="high">
-                          Alta - Impede atividades importantes
-                        </SelectItem>
-                        <SelectItem value="critical">
-                          Crítica - Paralisação total
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="deviceInfo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Identificação do Equipamento</FormLabel>
+                    <FormLabel className="text-gray-700">Descrição Completa do Problema *</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="Ex: Notebook Dell Latitude 3420, Mouse bluetooth" 
-                        className={inputStyle}
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormDescription className="text-gray-500">
-                      Forneça modelo ou identificação completa
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descrição Completa do Problema *</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Descreva detalhadamente: 
+                      <Textarea
+                        placeholder="Descreva detalhadamente: 
 - O que está acontecendo?
 - Quando começou o problema?
 - Quais mensagens de erro aparecem?
 - Quais tentativas de solução já foram feitas?"
-                      className={cn(inputStyle, "min-h-[150px]")}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                        className="rounded-xl border-gray-200 focus:ring-eccos-purple min-h-[150px]"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <div className="flex justify-end gap-4 border-t pt-6">
-              <Button 
-                type="button" 
-                variant="ghost"
-                onClick={() => {
-                  form.reset();
-                  setSelectedUnit("");
-                }}
-                className="text-gray-600 hover:bg-gray-50"
-              >
-                Limpar Campos
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={isSubmitting}
-                className={buttonPrimaryStyle}
-              >
-                {isSubmitting ? (
-                  <span className="flex items-center">
-                    <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                    </svg>
-                    Enviando...
-                  </span>
-                ) : "Enviar Solicitação"}
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </motion.div>
+              <div className="flex justify-end gap-4 border-t pt-6">
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  onClick={() => {
+                    form.reset();
+                    setSelectedUnit("");
+                  }}
+                  className="rounded-xl border-gray-200 hover:bg-gray-50 text-gray-700"
+                >
+                  Limpar Campos
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={isSubmitting}
+                  className="rounded-xl bg-eccos-purple hover:bg-sidebar text-white px-8 py-6 text-lg font-semibold transition-all"
+                >
+                  {isSubmitting ? (
+                    <span className="flex items-center">
+                      <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                      </svg>
+                      Enviando...
+                    </span>
+                  ) : "Enviar Solicitação"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </motion.div>
+      </div>
     </AppLayout>
   );
 };

@@ -16,34 +16,34 @@ function Calendar({
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
-      className={cn("p-3 pointer-events-auto w-full", className)}
+      className={cn("p-2 pointer-events-auto w-full h-full rounded-2xl", className)}
       classNames={{
-        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 w-full",
-        month: "space-y-4 w-full",
-        caption: "flex justify-center pt-1 relative items-center",
+        months: "flex flex-col sm:flex-row space-y-2 sm:space-x-2 sm:space-y-0 w-full h-full",
+        month: "space-y-2 w-full px-2 pb-2",
+        caption: "flex justify-center pt-2 relative items-center",
         caption_label: "text-sm font-medium text-foreground",
         nav: "space-x-1 flex items-center",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent border-gray-700 p-0 opacity-70 hover:opacity-100"
+          "h-7 w-7 bg-transparent border-gray-200 p-0 opacity-70 hover:opacity-100 rounded-lg"
         ),
-        nav_button_previous: "absolute left-1",
-        nav_button_next: "absolute right-1",
+        nav_button_previous: "absolute left-2",
+        nav_button_next: "absolute right-2",
         table: "w-full border-collapse space-y-1",
         head_row: "grid grid-cols-7 gap-px w-full",
-        head_cell: "text-gray-400 text-[0.8rem] font-medium px-0 py-1.5",
-        row: "grid grid-cols-7 w-full mt-1 gap-px",
-        cell: "h-9 text-center text-sm p-0 relative flex-1",
+        head_cell: "text-gray-400 text-[0.7rem] font-medium px-0 py-1",
+        row: "grid grid-cols-7 w-full gap-px",
+        cell: "h-9 text-center text-sm p-0 relative",
         day: cn(
           buttonVariants({ variant: "ghost" }),
-          "h-9 w-full p-0 font-normal hover:bg-gray-800 relative"
+          "h-9 w-9 p-0 font-normal hover:bg-gray-100 rounded-lg transition-colors"
         ),
         day_range_end: "day-range-end",
-        day_selected: "bg-transparent text-foreground hover:bg-gray-800",
-        day_today: "text-gray-500 opacity-50 after:absolute after:top-0 after:right-0 after:left-0 after:bottom-0 after:content-[''] after:bg-blue-500 after:h-2 after:w-2 after:rounded-full after:mx-auto after:bottom-0.5",
-        day_outside: "day-outside text-gray-500 opacity-50 aria-selected:bg-gray-800 aria-selected:text-gray-400 aria-selected:opacity-30",
-        day_disabled: "text-gray-500 opacity-50",
-        day_range_middle: "aria-selected:bg-gray-800 aria-selected:text-foreground",
+        day_selected: "bg-eccos-purple text-white hover:bg-eccos-purple/90",
+        day_today: "bg-gray-100 text-foreground font-semibold",
+        day_outside: "text-gray-400 opacity-50",
+        day_disabled: "text-gray-400 opacity-50",
+        day_range_middle: "aria-selected:bg-gray-100 aria-selected:text-foreground",
         day_hidden: "invisible",
         ...classNames,
       }}
@@ -53,8 +53,6 @@ function Calendar({
       }}
       modifiersClassNames={{
         available: "border-2 border-green-500",
-        selectedAdd: "relative",
-        selectedRemove: "relative",
         ...props.modifiersClassNames,
       }}
       {...props}

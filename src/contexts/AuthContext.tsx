@@ -71,7 +71,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         if (!firebaseUser.email?.endsWith("@colegioeccos.com.br")) return null;
 
-        // Garante role 'user' para novos usuários
         const role: UserRole = firebaseUser.email === "suporte@colegioeccos.com.br" 
           ? "superadmin" 
           : "user";
@@ -97,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: firebaseUser.email || "",
         displayName: firebaseUser.displayName || "Usuário sem nome",
         photoURL: firebaseUser.photoURL,
-        role: userData.role || "user" // Fallback explícito
+        role: userData.role || "user"
       } as AuthUser;
 
     } catch (error) {
@@ -175,6 +174,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await firebaseSignOut(auth);
       setCurrentUser(null);
+      
+      // Limpeza completa de caminhos armazenados
+      sessionStorage.removeItem("redirectPath");
+      localStorage.removeItem("redirectPath");
+      
       toast({
         title: "Logout realizado",
         description: "Até breve!",

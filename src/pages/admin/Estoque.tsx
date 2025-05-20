@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   useQuery,
   useMutation,
@@ -27,6 +27,8 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 // Componentes modularizados
 import Filtros from '@/components/Estoque/Filtros';
@@ -35,7 +37,6 @@ import DetalhesModal from '@/components/Estoque/DetalhesModal';
 import CadastroEdicaoModal from '@/components/Estoque/CadastroEdicaoModal';
 import ConfirmacaoExclusaoModal from '@/components/Estoque/ConfirmacaoExclusaoModal';
 import AlertaDuplicidadeModal from '@/components/Estoque/AlertaDuplicidadeModal';
-import CadastroMultiploModal from '@/components/Estoque/CadastroMultiploModal';
 
 // Firebase e Tipos
 import { db } from '@/lib/firebase';
@@ -175,6 +176,24 @@ const Estoque = () => {
     localizacao: '',
     estado: 'Bom' as EstadoEstoque,
   });
+
+  // Animação fade-up
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+
+    document.querySelectorAll('.fade-up').forEach((el) => observer.observe(el));
+
+    return () => observer.disconnect();
+  }, []);
 
   // Queries e Mutations
   const { data: itens = [], isLoading } = useQuery({
@@ -408,98 +427,114 @@ const Estoque = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-8">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Warehouse className="h-8 w-8" />
-            Controle de Estoque
-          </h1>
-          <div className="flex gap-2">
-            <Button onClick={() => setIsDialogOpen(true)}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Novo Item
-            </Button>
-          </div>
+      <div className="min-h-screen bg-white overflow-hidden relative">
+        {/* Fundos decorativos */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-sidebar blur-3xl opacity-5"></div>
+          <div className="absolute right-1/4 bottom-1/4 h-80 w-80 rounded-full bg-eccos-purple blur-3xl opacity-5"></div>
         </div>
 
-        {/* Filtros */}
-        <Filtros
-          filtroCategoria={filtroCategoria}
-          filtroLocalizacao={filtroLocalizacao}
-          filtroNomeDescricao={filtroNomeDescricao}
-          setFiltroCategoria={setFiltroCategoria}
-          setFiltroLocalizacao={setFiltroLocalizacao}
-          setFiltroNomeDescricao={setFiltroNomeDescricao}
-          todasCategorias={todasCategorias}
-          localizacoesCadastradas={localizacoesCadastradas}
-        />
+        {/* Conteúdo principal */}
+        <div className="relative z-10 space-y-8 p-6 md:p-12 fade-up">
+          <div className="flex justify-between items-center">
+            <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+              <Warehouse className="text-eccos-purple" size={36} />
+              Controle de Estoque
+            </h1>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => setIsDialogOpen(true)}
+                className="bg-eccos-purple hover:bg-sidebar text-white transition-all duration-300"
+              >
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Novo Item
+              </Button>
+            </div>
+          </div>
 
-        {/* Tabela de Itens */}
-        <TabelaItens
-          itensFiltrados={itensFiltrados}
-          setIsDetailModalOpen={setIsDetailModalOpen}
-          setSelectedItemDetails={setSelectedItemDetails}
-        />
+          {/* Filtros */}
+          <div className="bg-white border border-gray-100 rounded-2xl shadow-lg p-6 fade-up">
+            <h2 className="text-lg font-semibold mb-4 text-gray-700">Filtros</h2>
+            <Filtros
+              filtroCategoria={filtroCategoria}
+              filtroLocalizacao={filtroLocalizacao}
+              filtroNomeDescricao={filtroNomeDescricao}
+              setFiltroCategoria={setFiltroCategoria}
+              setFiltroLocalizacao={setFiltroLocalizacao}
+              setFiltroNomeDescricao={setFiltroNomeDescricao}
+              todasCategorias={todasCategorias}
+              localizacoesCadastradas={localizacoesCadastradas}
+            />
+          </div>
 
-        {/* Modal Detalhes */}
-        <DetalhesModal
-          isOpen={isDetailModalOpen}
-          onClose={() => setIsDetailModalOpen(false)}
-          selectedItemDetails={selectedItemDetails}
-          onDelete={() => {
-            setSelectedItem(selectedItemDetails);
-            setIsDeleteDialogOpen(true);
-          }}
-          onClone={() => handleClone(selectedItemDetails!)}
-          onEdit={() => handleEdit(selectedItemDetails!)}
-        />
+          {/* Tabela de Itens */}
+          <div className="bg-white border border-gray-100 rounded-2xl shadow-lg overflow-hidden fade-up">
+            <TabelaItens
+              itensFiltrados={itensFiltrados}
+              setIsDetailModalOpen={setIsDetailModalOpen}
+              setSelectedItemDetails={setSelectedItemDetails}
+            />
+          </div>
 
-        {/* Modal Cadastro/Edição */}
-        <CadastroEdicaoModal
-          isOpen={isDialogOpen}
-          onClose={() => setIsDialogOpen(false)}
-          formState={formState}
-          editingItem={editingItem}
-          handleSubmit={handleSubmit}
-          handleChange={handleChange}
-          locationsByUnit={locationsByUnit}
-        />
+          {/* Modal Detalhes */}
+          <DetalhesModal
+            isOpen={isDetailModalOpen}
+            onClose={() => setIsDetailModalOpen(false)}
+            selectedItemDetails={selectedItemDetails}
+            onDelete={() => {
+              setSelectedItem(selectedItemDetails);
+              setIsDeleteDialogOpen(true);
+            }}
+            onClone={() => handleClone(selectedItemDetails!)}
+            onEdit={() => handleEdit(selectedItemDetails!)}
+          />
 
-        {/* Confirmação de Exclusão */}
-        <ConfirmacaoExclusaoModal
-          isOpen={isDeleteDialogOpen}
-          onClose={() => setIsDeleteDialogOpen(false)}
-          itemName={selectedItem?.nome || ''}
-          onConfirm={() => {
-            if (selectedItem?.id) {
-              deleteMutation.mutate(selectedItem.id);
-            }
-            setIsDeleteDialogOpen(false);
-            setIsDetailModalOpen(false);
-            setIsDialogOpen(false);
-          }}
-        />
+          {/* Modal Cadastro/Edição */}
+          <CadastroEdicaoModal
+            isOpen={isDialogOpen}
+            onClose={() => setIsDialogOpen(false)}
+            formState={formState}
+            editingItem={editingItem}
+            handleSubmit={handleSubmit}
+            handleChange={handleChange}
+            locationsByUnit={locationsByUnit}
+          />
 
-        {/* Alerta de Duplicidade */}
-        <AlertaDuplicidadeModal
-          isOpen={showDuplicateDialog}
-          onClose={() => setShowDuplicateDialog(false)}
-          itemName={formState.nome}
-          onCreateAnyway={handleCreateAnyway}
-          onEditExisting={handleEditExisting}
-        />
+          {/* Confirmação de Exclusão */}
+          <ConfirmacaoExclusaoModal
+            isOpen={isDeleteDialogOpen}
+            onClose={() => setIsDeleteDialogOpen(false)}
+            itemName={selectedItem?.nome || ''}
+            onConfirm={() => {
+              if (selectedItem?.id) {
+                deleteMutation.mutate(selectedItem.id);
+              }
+              setIsDeleteDialogOpen(false);
+              setIsDetailModalOpen(false);
+              setIsDialogOpen(false);
+            }}
+          />
 
-        {/* Cadastro Múltiplo */}
-        <CadastroMultiploModal
-          isOpen={isBulkModalOpen}
-          onClose={() => setIsBulkModalOpen(false)}
-          bulkFormState={bulkFormState}
-          handleBulkChange={(field, value) =>
-            setBulkFormState((prev) => ({ ...prev, [field]: value }))
-          }
-          handleBulkSubmit={handleBulkSubmit}
-          locationsByUnit={locationsByUnit}
-        />
+          {/* Alerta de Duplicidade */}
+          <AlertaDuplicidadeModal
+            isOpen={showDuplicateDialog}
+            onClose={() => setShowDuplicateDialog(false)}
+            itemName={formState.nome}
+            onCreateAnyway={handleCreateAnyway}
+            onEditExisting={handleEditExisting}
+          />
+        </div>
+
+        {/* Rodapé */}
+        <footer className="relative z-10 bg-gray-50 py-10 px-4 md:px-12 fade-up">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center">
+              <p className="text-gray-500 text-sm">
+                © 2025 Colégio ECCOS - Todos os direitos reservados
+              </p>
+            </div>
+          </div>
+        </footer>
       </div>
     </AppLayout>
   );

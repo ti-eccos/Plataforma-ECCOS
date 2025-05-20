@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Logo from '@/images/logo-eccos.jpg';
 
-// Definindo tipos claros para evitar erros de comparação
 type UserRole = "admin" | "financeiro" | "operacional" | "";
 interface User {
   role: UserRole;
@@ -153,7 +152,6 @@ export const AppSidebar = () => {
   const location = useLocation();
   const { isAdmin, signOut, currentUser } = useAuth();
 
-  // Garantir tipagem segura
   const userRole = currentUser?.role || "";
 
   const userMenuItems = [
@@ -171,10 +169,12 @@ export const AppSidebar = () => {
   ];
 
   const adminMenuItems = [
+    { icon: Calendar, label: "Calendário", href: "/calendario" },
     { icon: Laptop, label: "Equipamentos", href: "/equipamentos" },
     { icon: Calendar, label: "Disponibilidade", href: "/disponibilidade" },
     { icon: Users, label: "Usuários", href: "/usuarios" },
     { icon: FileText, label: "Solicitações", href: "/solicitacoes" },
+    { icon: Bell, label: "Notificações", href: "/notificacoes" },
     { icon: Warehouse, label: "Estoque", href: "/estoque" },
   ];
 
@@ -200,7 +200,6 @@ export const AppSidebar = () => {
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-2 scrollbar-none">
-        {/* Menu Principal */}
         {userMenuItems.map((item, index) => {
           if ('items' in item) {
             return (
@@ -237,7 +236,6 @@ export const AppSidebar = () => {
           }
         })}
 
-        {/* Menus Condicionais */}
         {(isAdmin || ['financeiro', 'operacional'].includes(userRole)) && (
           <>
             <div className="h-[1px] bg-gradient-to-r from-transparent via-border/30 to-transparent my-4" />
@@ -252,7 +250,6 @@ export const AppSidebar = () => {
                userRole === 'operacional' ? "Manutenção" : "Suporte Operacional"}
             </div>
 
-            {/* Admin */}
             {isAdmin && adminMenuItems.map((item, index) => (
               <SidebarItem
                 key={`admin-${index}`}
@@ -264,7 +261,6 @@ export const AppSidebar = () => {
               />
             ))}
 
-            {/* Financeiro */}
             {userRole === 'financeiro' && (
               <>
                 <SidebarItem
@@ -282,16 +278,15 @@ export const AppSidebar = () => {
                   expanded={expanded}
                 />
                 <SidebarItem
-                  icon={Bell}
-                  label="Notificações"
-                  href="/notificacoes"
-                  active={location.pathname === "/notificacoes"}
-                  expanded={expanded}
-                />
-              </>
-            )}
+                    icon={Bell}
+                    label="Notificações"
+                    href="/notificacoes"
+                    active={location.pathname === "/notificacoes"}
+                    expanded={expanded}
+                  />
+                </>
+              )}
 
-            {/* Operacional */}
             {userRole === 'operacional' && (
               <>
                 <SidebarItem
@@ -313,7 +308,6 @@ export const AppSidebar = () => {
           </>
         )}
 
-        {/* Botão de saída */}
         <div className="mt-auto pt-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

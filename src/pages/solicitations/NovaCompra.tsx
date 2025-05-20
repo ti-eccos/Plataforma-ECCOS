@@ -45,31 +45,6 @@ const formSchema = z.object({
   additionalInfo: z.string().optional(),
 });
 
-const inputStyle = cn(
-  "shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px",
-  "transition-all duration-300 relative border-0 border-l-4 border-blue-500 pl-8",
-  "before:content-[''] before:absolute before:left-0 before:top-0",
-  "before:w-[2px] before:h-full before:bg-gradient-to-b",
-  "before:from-transparent before:via-white/10 before:to-transparent before:opacity-30",
-  "hover:bg-accent/20 bg-background"
-);
-
-const selectTriggerStyle = cn(
-  "shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px",
-  "transition-all duration-300 relative border-0 border-l-4 border-blue-500",
-  "before:content-[''] before:absolute before:left-0 before:top-0",
-  "before:w-[2px] before:h-full before:bg-gradient-to-b",
-  "before:from-transparent before:via-white/10 before:to-transparent before:opacity-30",
-  "hover:bg-accent/20 bg-background"
-);
-
-const buttonPrimaryStyle = cn(
-  "shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px",
-  "transition-all duration-300 relative",
-  "bg-blue-500 hover:bg-blue-600 text-white",
-  "hover:scale-[1.02]"
-);
-
 const NovaCompra = () => {
   const { currentUser: user } = useAuth();
   const form = useForm<z.infer<typeof formSchema>>({
@@ -107,199 +82,209 @@ const NovaCompra = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-       <div className="space-y-8">
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-           <ShoppingCart className="text-black" size={35} /> {/* Ícone adicionado */}
-          Nova Compra
-        </h1>
-          <p className="text-muted-foreground mt-1">
-            Preencha todos os campos obrigatórios para solicitar novos equipamentos ou materiais
-          </p>
+      <div className="min-h-screen bg-white overflow-hidden relative">
+        {/* Fundos decorativos */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-sidebar blur-3xl opacity-5"></div>
+          <div className="absolute right-1/4 bottom-1/4 h-80 w-80 rounded-full bg-eccos-purple blur-3xl opacity-5"></div>
         </div>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid gap-6 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="itemName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome do Item *</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="Ex: Notebook Dell Latitude 5440" 
-                        className={inputStyle}
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+        {/* Conteúdo principal */}
+        <div className="relative z-10 space-y-8 p-6 md:p-12 fade-up">
+          <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+            <ShoppingCart className="text-eccos-purple" size={35} />
+            Nova Compra
+          </h1>
+          <p className="text-gray-600 mt-1">
+            Preencha todos os campos obrigatórios para solicitar novos equipamentos ou materiais
+          </p>
 
-              <FormField
-                control={form.control}
-                name="tipo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tipo de Compra *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="grid gap-6 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="itemName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-700">Nome do Item *</FormLabel>
                       <FormControl>
-                        <SelectTrigger className={selectTriggerStyle}>
-                          <SelectValue placeholder="Selecione o tipo" />
-                        </SelectTrigger>
+                        <Input 
+                          placeholder="Ex: Notebook Dell Latitude 5440" 
+                          className="rounded-xl border-gray-200 focus:ring-eccos-purple"
+                          {...field} 
+                        />
                       </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Compra Pedagógica">Compra Pedagógica</SelectItem>
-                        <SelectItem value="Compra Administrativa">Compra Administrativa</SelectItem>
-                        <SelectItem value="Compra Infraestrutura">Compra Infraestrutura</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="quantity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Quantidade *</FormLabel>
-                    <FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="tipo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-700">Tipo de Compra *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="rounded-xl border-gray-200 focus:ring-eccos-purple">
+                            <SelectValue placeholder="Selecione o tipo" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="rounded-xl border-gray-200">
+                          <SelectItem value="Compra Pedagógica">Compra Pedagógica</SelectItem>
+                          <SelectItem value="Compra Administrativa">Compra Administrativa</SelectItem>
+                          <SelectItem value="Compra Infraestrutura">Compra Infraestrutura</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="quantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-700">Quantidade *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          className="rounded-xl border-gray-200 focus:ring-eccos-purple"
+                          placeholder="Ex: 5"
+                          value={field.value === 0 ? '' : field.value}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="unitPrice"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-700">Valor Unitário (R$) *</FormLabel>
+                      <FormControl>
                       <Input
                         type="number"
-                        className={inputStyle}
-                        placeholder="Ex: 5"
+                        step="0.01"
+                        min="0.01"
+                        className="rounded-xl border-gray-200 focus:ring-eccos-purple"
+                        placeholder="Ex: 100.00"
                         value={field.value === 0 ? '' : field.value}
                         onChange={(e) => field.onChange(Number(e.target.value))}
                       />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-            <div className="grid gap-6 md:grid-cols-2">
+              <div className="grid gap-6 md:grid-cols-2">
+                <FormItem>
+                  <FormLabel className="text-gray-700">Valor Total Estimado</FormLabel>
+                  <FormControl>
+                    <Input
+                      readOnly
+                      className="rounded-xl border-gray-200 bg-gray-50"
+                      value={new Intl.NumberFormat('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL',
+                      }).format(
+                        (form.watch('unitPrice') || 0) * (form.watch('quantity') || 0)
+                      )}
+                    />
+                  </FormControl>
+                </FormItem>
+
+                <FormField
+                  control={form.control}
+                  name="urgency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-700">Nível de Urgência *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="rounded-xl border-gray-200 focus:ring-eccos-purple">
+                            <SelectValue placeholder="Selecione a urgência" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="rounded-xl border-gray-200">
+                          <SelectItem value="low">Baixa (30+ dias)</SelectItem>
+                          <SelectItem value="medium">Média (15 dias)</SelectItem>
+                          <SelectItem value="high">Alta (7 dias)</SelectItem>
+                          <SelectItem value="critical">Crítica (Imediata)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               <FormField
                 control={form.control}
-                name="unitPrice"
+                name="justification"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Valor Unitário (R$) *</FormLabel>
+                    <FormLabel className="text-gray-700">Justificativa *</FormLabel>
                     <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      className={inputStyle}
-                      placeholder="Ex: 100.00"
-                      value={field.value === 0 ? '' : field.value}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                    />
+                      <Textarea
+                        placeholder="Descreva detalhadamente a necessidade desta compra..."
+                        className="rounded-xl border-gray-200 focus:ring-eccos-purple min-h-[120px]"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <FormItem>
-                <FormLabel>Valor Total Estimado</FormLabel>
-                <FormControl>
-                  <Input
-                    readOnly
-                    className={inputStyle}
-                    value={new Intl.NumberFormat('pt-BR', {
-                      style: 'currency',
-                      currency: 'BRL',
-                    }).format(
-                      (form.watch('unitPrice') || 0) * (form.watch('quantity') || 0)
-                    )}
-                  />
-                </FormControl>
-              </FormItem>
-            </div>
-
-            <FormField
-              control={form.control}
-              name="urgency"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nível de Urgência *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <FormField
+                control={form.control}
+                name="additionalInfo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700">Informações Adicionais</FormLabel>
                     <FormControl>
-                      <SelectTrigger className={selectTriggerStyle}>
-                        <SelectValue placeholder="Selecione a urgência" />
-                      </SelectTrigger>
+                      <Textarea
+                        placeholder="Links de referência, especificações técnicas..."
+                        className="rounded-xl border-gray-200 focus:ring-eccos-purple min-h-[100px]"
+                        {...field}
+                      />
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem value="low">Baixa (30+ dias)</SelectItem>
-                      <SelectItem value="medium">Média (15 dias)</SelectItem>
-                      <SelectItem value="high">Alta (7 dias)</SelectItem>
-                      <SelectItem value="critical">Crítica (Imediata)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="justification"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Justificativa *</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Descreva detalhadamente a necessidade desta compra..."
-                      className={cn(inputStyle, "min-h-[120px]")}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="additionalInfo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Informações Adicionais</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Links de referência, especificações técnicas..."
-                      className={cn(inputStyle, "min-h-[100px]")}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="flex justify-end gap-4">
-              <Button 
-                type="button" 
-                variant="ghost"
-                onClick={() => form.reset()}
-                className="shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px"
-              >
-                Limpar Formulário
-              </Button>
-              <Button 
-                type="submit" 
-                className={buttonPrimaryStyle}
-              >
-                Enviar Solicitação
-              </Button>
-            </div>
-          </form>
-        </Form>
+              <div className="flex justify-end gap-4">
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  onClick={() => form.reset()}
+                  className="rounded-xl border-gray-200 hover:bg-gray-50 text-gray-700"
+                >
+                  Limpar Formulário
+                </Button>
+                <Button 
+                  type="submit" 
+                  className="rounded-xl bg-eccos-purple hover:bg-sidebar text-white px-8 py-6 text-lg font-semibold transition-all"
+                >
+                  Enviar Solicitação
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </div>
       </div>
     </AppLayout>
   );

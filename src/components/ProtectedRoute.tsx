@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEffect } from "react";
 
 export type UserRole = "user" | "admin" | "superadmin" | "financeiro" | "operacional";
 
@@ -11,6 +12,12 @@ interface ProtectedRouteProps {
 const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
   const { currentUser, loading } = useAuth();
   const location = useLocation();
+
+  useEffect(() => {
+    if (!loading && !currentUser) {
+      sessionStorage.removeItem("redirectPath");
+    }
+  }, [loading, currentUser]);
 
   if (loading) {
     return (
@@ -25,7 +32,6 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
     return <Navigate to="/login" replace />;
   }
 
-  // Verificação corrigida: só aplica regras se houver roles definidas
   if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(currentUser.role)) {
     return <Navigate to="/unauthorized" replace />;
   }

@@ -66,14 +66,20 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Card } from "@/components/ui/card";
 
 const getStatusBadge = (status: RequestStatus) => {
   switch (status) {
-    case "pending": return <Badge variant="outline">Pendente</Badge>;
-    case "in-progress": return <Badge className="bg-blue-500 text-foreground">Em Andamento</Badge>;
-    case "completed": return <Badge className="bg-slate-500 text-foreground">Concluído</Badge>;
-    case "canceled": return <Badge className="bg-amber-500 text-foreground">Cancelado</Badge>;
-    default: return <Badge variant="outline">Desconhecido</Badge>;
+    case "pending": 
+      return <Badge variant="outline" className="border-amber-500 text-amber-600">Pendente</Badge>;
+    case "in-progress": 
+      return <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">Em Andamento</Badge>;
+    case "completed": 
+      return <Badge className="bg-gradient-to-r from-gray-600 to-gray-700 text-white">Concluído</Badge>;
+    case "canceled": 
+      return <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white">Cancelado</Badge>;
+    default: 
+      return <Badge variant="outline">Desconhecido</Badge>;
   }
 };
 
@@ -232,142 +238,147 @@ const SuporteOperacional = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Wrench className="text-black" size={35} /> {/* Ícone adicionado */}
-          Dashboard Administrativo
-        </h1>
+      <div className="min-h-screen bg-white relative overflow-hidden">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-sidebar blur-3xl opacity-5"></div>
+          <div className="absolute right-1/4 bottom-1/4 h-80 w-80 rounded-full bg-eccos-purple blur-3xl opacity-5"></div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Pesquisar por nome ou descrição..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+        <div className="relative z-10 space-y-8 p-6 md:p-12">
+          <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+            <Wrench className="text-eccos-purple" size={35} />
+            Chamados de Suporte
+          </h1>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="flex items-center gap-2">
-                <Filter className="h-4 w-4" /> Tipo ({selectedTypes.length})
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-background">
-              {supportTypes.map((type) => (
-                <DropdownMenuCheckboxItem
-                  key={type}
-                  checked={selectedTypes.includes(type)}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setSelectedTypes([...selectedTypes, type]);
-                    } else {
-                      setSelectedTypes(selectedTypes.filter(t => t !== type));
-                    }
-                  }}
-                >
-                  {type}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Pesquisar por nome ou descrição..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-12 rounded-xl border-gray-200 focus:ring-eccos-purple"
+              />
+            </div>
 
-        {isLoading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-          </div>
-        ) : isError ? (
-          <div className="text-center text-destructive p-4 border border-destructive rounded-md">
-            Erro ao carregar chamados
-          </div>
-        ) : filteredRequests.length === 0 ? (
-          <div className="text-center text-muted-foreground p-8 border border-dashed rounded-md">
-            Nenhum chamado encontrado
-          </div>
-        ) : (
-          <div className="rounded-md border overflow-hidden bg-background shadow-[rgba(0,0,0,0.10)_2px_2px_3px_0px] hover:shadow-[rgba(0,0,0,0.12)_4px_4px_5px_0px transition-all duration-300 relative border-0 border-l-4 border-blue-500 before:content-[''] before:absolute before:left-0 before:top-0 before:w-[2px] before:h-full before:bg-gradient-to-b before:from-transparent before:via-white/10 before:to-transparent before:opacity-30">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-center align-middle w-[30%]">Usuário</TableHead>
-                  <TableHead className="text-center align-middle w-[40%]">Descrição</TableHead>
-                  <TableHead className="text-center align-middle w-[20%]">Status</TableHead>
-                  <TableHead className="text-center align-middle w-[10%]">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredRequests.map((request) => (
-                  <TableRow key={`${request.collectionName}-${request.id}`}>
-                    <TableCell className="text-center align-middle truncate">
-                      {request.userName || request.userEmail}
-                    </TableCell>
-                    <TableCell className="text-center align-middle truncate max-w-[300px]">
-                      {request.description || "Sem descrição"}
-                    </TableCell>
-                    <TableCell className="text-center align-middle">
-                      {getStatusBadge(request.status)}
-                    </TableCell>
-                    <TableCell className="text-center align-middle">
-                      <div className="flex justify-center items-center space-x-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleViewDetails(request)}
-                          title="Detalhes"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 relative"
-                          onClick={() => handleOpenChat(request)}
-                          title="Chat"
-                        >
-                          <MessageSquare className="h-4 w-4" />
-                          {unreadMessages[request.id] > 0 && (
-                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                              {unreadMessages[request.id]}
-                            </span>
-                          )}
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2 h-12 rounded-xl border-gray-200">
+                  <Filter className="h-4 w-4" /> Tipo ({selectedTypes.length})
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-white rounded-xl shadow-lg">
+                {supportTypes.map((type) => (
+                  <DropdownMenuCheckboxItem
+                    key={type}
+                    checked={selectedTypes.includes(type)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedTypes([...selectedTypes, type]);
+                      } else {
+                        setSelectedTypes(selectedTypes.filter(t => t !== type));
+                      }
+                    }}
+                    className="focus:bg-gray-50"
+                  >
+                    {type}
+                  </DropdownMenuCheckboxItem>
                 ))}
-              </TableBody>
-            </Table>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-        )}
 
-        <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-          <DialogContent className="max-w-3xl overflow-y-auto max-h-[90vh]">
-            {isDetailsLoading ? (
-              <div className="space-y-4">
-                <div className="animate-pulse h-8 bg-muted rounded w-1/3" />
-                <div className="space-y-2">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="animate-pulse h-4 bg-muted rounded w-full" />
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-eccos-purple"></div>
+            </div>
+          ) : isError ? (
+            <div className="text-center text-red-600 p-4 border border-red-200 rounded-2xl bg-red-50">
+              Erro ao carregar chamados
+            </div>
+          ) : filteredRequests.length === 0 ? (
+            <div className="text-center text-gray-500 p-8 border-2 border-dashed rounded-2xl bg-gray-50">
+              Nenhum chamado encontrado
+            </div>
+          ) : (
+            <Card className="border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
+              <Table>
+                <TableHeader className="bg-gray-50">
+                  <TableRow>
+                    <TableHead className="text-center w-[30%] font-semibold text-gray-600">Usuário</TableHead>
+                    <TableHead className="text-center w-[40%] font-semibold text-gray-600">Descrição</TableHead>
+                    <TableHead className="text-center w-[20%] font-semibold text-gray-600">Status</TableHead>
+                    <TableHead className="text-center w-[10%] font-semibold text-gray-600">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredRequests.map((request) => (
+                    <TableRow key={`${request.collectionName}-${request.id}`} className="hover:bg-gray-50">
+                      <TableCell className="text-center truncate font-medium">
+                        {request.userName || request.userEmail}
+                      </TableCell>
+                      <TableCell className="text-center truncate max-w-[300px] text-gray-600">
+                        {request.description || "Sem descrição"}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {getStatusBadge(request.status)}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex justify-center items-center space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 rounded-lg hover:bg-gray-100"
+                            onClick={() => handleViewDetails(request)}
+                            title="Detalhes"
+                          >
+                            <Eye className="h-4 w-4 text-gray-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 rounded-lg hover:bg-gray-100 relative"
+                            onClick={() => handleOpenChat(request)}
+                            title="Chat"
+                          >
+                            <MessageSquare className="h-4 w-4 text-gray-600" />
+                            {unreadMessages[request.id] > 0 && (
+                              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                                {unreadMessages[request.id]}
+                              </span>
+                            )}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
                   ))}
+                </TableBody>
+              </Table>
+            </Card>
+          )}
+
+          <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+            <DialogContent className="max-w-3xl rounded-2xl border-gray-100 shadow-xl">
+              {isDetailsLoading ? (
+                <div className="space-y-4">
+                  <div className="animate-pulse h-8 bg-gray-100 rounded w-1/3"></div>
+                  <div className="space-y-2">
+                    {[...Array(5)].map((_, i) => (
+                      <div key={i} className="animate-pulse h-4 bg-gray-100 rounded w-full"></div>
+                    ))}
+                  </div>
+                  <div className="animate-pulse h-10 bg-gray-100 rounded w-1/2"></div>
                 </div>
-                <div className="animate-pulse h-10 bg-muted rounded w-1/2" />
-              </div>
-            ) : (
-              <>
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <Wrench className="h-5 w-5" />
-                    {selectedRequest?.userName || selectedRequest?.userEmail}
-                  </DialogTitle>
-                  
-                  <DialogDescription asChild>
-                    <div className="text-sm text-muted-foreground px-1">
+              ) : (
+                <>
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2 text-gray-900">
+                      <Wrench className="h-5 w-5 text-eccos-purple" />
+                      {selectedRequest?.userName || selectedRequest?.userEmail}
+                    </DialogTitle>
+                    
+                   <DialogDescription asChild>
+                    <div className="text-gray-600 px-1">
                       {selectedRequest && (
                         <div className="flex items-center justify-between">
                           <div>
@@ -382,92 +393,111 @@ const SuporteOperacional = () => {
                       )}
                     </div>
                   </DialogDescription>
-                </DialogHeader>
-                
-                {selectedRequest && (
-                  <div className="space-y-6 py-4">
-                    <div className="space-y-4 border-b pb-4">
-                      <h3 className="text-lg font-medium">Detalhes do Chamado</h3>
-                      <div className="grid grid-cols-1 gap-4">
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">Tipo</p>
-                          <p>{selectedRequest.tipo || "Não especificado"}</p>
+                  </DialogHeader>
+                  
+                  {selectedRequest && (
+                    <div className="space-y-6 py-4">
+                      <div className="space-y-4 border-b pb-4">
+                        <h3 className="text-lg font-medium text-gray-900">Detalhes do Chamado</h3>
+                        <div className="grid grid-cols-1 gap-4">
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">Tipo</p>
+                            <p className="text-gray-700">{selectedRequest.tipo || "Não especificado"}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">Local</p>
+                            <p className="text-gray-700">{selectedRequest.location}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">Descrição Completa</p>
+                            <pre className="whitespace-pre-wrap font-sans text-sm p-2 bg-gray-50 rounded-lg">
+                              {selectedRequest.description || "Nenhuma descrição fornecida"}
+                            </pre>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">Local</p>
-                          <p>{selectedRequest.location}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">Descrição Completa</p>
-                          <pre className="whitespace-pre-wrap font-sans text-sm p-2">
-                            {selectedRequest.description || "Nenhuma descrição fornecida"}
-                          </pre>
+                      </div>
+
+                      <div className="space-y-4 border-b pb-4">
+                        <h3 className="text-lg font-medium text-gray-900">Alterar Status</h3>
+                        <div className="flex gap-4 items-center">
+                          <Select value={newStatus} onValueChange={(value) => setNewStatus(value as RequestStatus)}>
+                            <SelectTrigger className="w-[180px] h-12 rounded-xl">
+                              <SelectValue placeholder="Selecionar status" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl">
+                              <SelectItem value="pending" className="rounded-lg">Pendente</SelectItem>
+                              <SelectItem value="in-progress" className="rounded-lg">Em Andamento</SelectItem>
+                              <SelectItem value="completed" className="rounded-lg">Concluído</SelectItem>
+                              <SelectItem value="canceled" className="rounded-lg">Cancelado</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button 
+                            onClick={handleStatusChange}
+                            className="h-12 rounded-xl bg-gradient-to-r from-sidebar to-eccos-purple text-white hover:from-eccos-purple hover:to-sidebar"
+                          >
+                            Atualizar Status
+                          </Button>
                         </div>
                       </div>
                     </div>
+                  )}
+                  
+                  <DialogFooter className="gap-2">
+                    <Button 
+                      variant="destructive" 
+                      onClick={() => selectedRequest && handleDeleteRequest(selectedRequest)}
+                      className="h-12 rounded-xl"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" /> Excluir
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setIsDetailsOpen(false)}
+                      className="h-12 rounded-xl border-gray-200"
+                    >
+                      Fechar
+                    </Button>
+                  </DialogFooter>
+                </>
+              )}
+            </DialogContent>
+          </Dialog>
 
-                    <div className="space-y-4 border-b pb-4">
-                      <h3 className="text-lg font-medium">Alterar Status</h3>
-                      <div className="flex gap-4">
-                        <Select value={newStatus} onValueChange={(value) => setNewStatus(value as RequestStatus)}>
-                          <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Selecionar status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pending">Pendente</SelectItem>
-                            <SelectItem value="in-progress">Em Andamento</SelectItem>
-                            <SelectItem value="completed">Concluído</SelectItem>
-                            <SelectItem value="canceled">Cancelado</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button onClick={handleStatusChange}>Atualizar Status</Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                <DialogFooter className="gap-2">
-                  <Button 
-                    variant="destructive" 
-                    onClick={() => selectedRequest && handleDeleteRequest(selectedRequest)}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" /> Excluir
-                  </Button>
-                  <Button variant="outline" onClick={() => setIsDetailsOpen(false)}>
-                    Fechar
-                  </Button>
-                </DialogFooter>
-              </>
-            )}
-          </DialogContent>
-        </Dialog>
+          <ChatAdmin 
+            request={chatRequest} 
+            isOpen={isChatOpen} 
+            onOpenChange={setIsChatOpen}
+            onMessageSent={refetch}
+          />
 
-        <ChatAdmin 
-          request={chatRequest} 
-          isOpen={isChatOpen} 
-          onOpenChange={setIsChatOpen}
-          onMessageSent={refetch}
-        />
+          <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <AlertDialogContent className="rounded-2xl border-gray-100">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-gray-900">Confirmar exclusão</AlertDialogTitle>
+                <AlertDialogDescription className="text-gray-600">
+                  Tem certeza que deseja excluir permanentemente este chamado?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="rounded-xl h-12 border-gray-200">Cancelar</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={handleDeleteConfirm} 
+                  className="rounded-xl h-12 bg-red-600 hover:bg-red-700 text-white"
+                >
+                  Confirmar Exclusão
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
 
-        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-              <AlertDialogDescription>
-                Tem certeza que deseja excluir permanentemente este chamado?
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={handleDeleteConfirm} 
-                className="bg-destructive hover:bg-destructive/90"
-              >
-                Confirmar Exclusão
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <footer className="relative z-10 bg-gray-50 py-10 px-4 md:px-12">
+          <div className="max-w-6xl mx-auto text-center">
+            <p className="text-gray-500 text-sm">
+              © 2025 Colégio ECCOS - Todos os direitos reservados
+            </p>
+          </div>
+        </footer>
       </div>
     </AppLayout>
   );

@@ -26,6 +26,7 @@ import NovaCompra from "./pages/solicitations/NovaCompra";
 import NovaSuporte from "./pages/solicitations/NovaSuporte";
 import SuporteOperacional from "./pages/SuporteOperacional";
 import Estoque from "./pages/admin/Estoque";
+import CalendarioReservas from "@/pages/admin/CalendarioReservas";
 
 const queryClient = new QueryClient();
 
@@ -50,7 +51,7 @@ const router = createBrowserRouter(
         {
           index: true,
           element: (
-            <ProtectedRoute> {/* Permite qualquer usuário autenticado */}
+            <ProtectedRoute>
               <Dashboard />
             </ProtectedRoute>
           ),
@@ -92,6 +93,14 @@ const router = createBrowserRouter(
           element: (
             <ProtectedRoute allowedRoles={['financeiro']}>
               <ComprasFinanceiro />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "calendario",
+          element: (
+            <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+              <CalendarioReservas />
             </ProtectedRoute>
           ),
         },

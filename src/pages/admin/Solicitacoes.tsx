@@ -9,19 +9,15 @@ import {
   Filter, 
   Search, 
   Eye, 
-  EyeOff,
   Trash2,
   MessageSquare,
-  ChevronUp,
   ChevronDown,
   Clock,
   CheckCircle2,
   XCircle,
   RefreshCw,
-  User as UserIcon,
-  AlertCircle,
+  AlertTriangle,
   List,
-  AlertTriangle
 } from "lucide-react";
 import { toast } from "sonner";
 import { 
@@ -68,55 +64,55 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, deleteDoc, arrayUnion, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { createNotification } from '@/services/notificationService';
 import ChatAdmin from "@/components/admin/ChatAdmin";
 
 const getRequestTypeIcon = (type: RequestType) => {
   switch (type) {
-    case "reservation": return <Calendar className="h-4 w-4" />;
-    case "purchase": return <ShoppingCart className="h-4 w-4" />;
-    case "support": return <Wrench className="h-4 w-4" />;
-    default: return <List className="h-4 w-4" />;
+    case "reservation": return <Calendar className="h-4 w-4 text-blue-500" />;
+    case "purchase": return <ShoppingCart className="h-4 w-4 text-purple-500" />;
+    case "support": return <Wrench className="h-4 w-4 text-pink-500" />;
+    default: return <List className="h-4 w-4 text-gray-500" />;
   }
 };
 
 const getStatusBadge = (status: RequestStatus) => {
   switch (status) {
     case "pending": return (
-      <Badge variant="outline" className="flex items-center gap-1">
-        <Clock className="h-4 w-4" />
+      <Badge className="bg-amber-50 text-amber-600 border-amber-100">
+        <Clock className="h-4 w-4 mr-1" />
         Pendente
       </Badge>
     );
     case "approved": return (
-      <Badge className="bg-green-500 text-foreground flex items-center gap-1">
-        <CheckCircle2 className="h-4 w-4" />
+      <Badge className="bg-green-50 text-green-600 border-green-100">
+        <CheckCircle2 className="h-4 w-4 mr-1" />
         Aprovada
       </Badge>
     );
     case "rejected": return (
-      <Badge variant="destructive" className="flex items-center gap-1">
-        <XCircle className="h-4 w-4" />
+      <Badge variant="destructive">
+        <XCircle className="h-4 w-4 mr-1" />
         Reprovada
       </Badge>
     );
     case "in-progress": return (
-      <Badge className="bg-blue-500 text-foreground flex items-center gap-1">
-        <RefreshCw className="h-4 w-4" />
+      <Badge className="bg-blue-50 text-blue-600 border-blue-100">
+        <RefreshCw className="h-4 w-4 mr-1" />
         Em Andamento
       </Badge>
     );
     case "completed": return (
-      <Badge className="bg-slate-500 text-foreground flex items-center gap-1">
-        <CheckCircle2 className="h-4 w-4" />
+      <Badge className="bg-slate-100 text-slate-600 border-slate-200">
+        <CheckCircle2 className="h-4 w-4 mr-1" />
         Concluída
       </Badge>
     );
     default: return (
-      <Badge variant="outline" className="flex items-center gap-1">
-        <AlertTriangle className="h-4 w-4" />
+      <Badge variant="outline">
+        <AlertTriangle className="h-4 w-4 mr-1" />
         Desconhecido
       </Badge>
     );
@@ -140,8 +136,7 @@ const Solicitacoes = () => {
   const [selectedCategories, setSelectedCategories] = useState<RequestType[]>(["reservation", "purchase", "support"]);
   const [selectedStatuses, setSelectedStatuses] = useState<RequestStatus[]>(["pending", "approved", "in-progress"]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>(["Manutenção", "Tecnologia", "Compra Pedagógica", "Compra Administrativa", "Compra Infraestrutura"]);
-  const [equipmentCounts, setEquipmentCounts] = useState({ ipads: 0, chromebooks: 0, others: 0 });
-  const [showEquipmentList, setShowEquipmentList] = useState(false);
+  const [equipmentNames, setEquipmentNames] = useState<string[]>([]);
   const [newStatus, setNewStatus] = useState<RequestStatus>();
   const equipmentCache = useRef(new Map<string, any>());
   const [selectedRequest, setSelectedRequest] = useState<RequestData | null>(null);
@@ -149,13 +144,13 @@ const Solicitacoes = () => {
   const [isDetailsLoading, setIsDetailsLoading] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState<Record<string, number>>({});
   const [viewedRequests, setViewedRequests] = useState<Set<string>>(() => {
-    const saved = typeof window !== 'undefined' ? localStorage.getItem('adminViewedRequests') : null;
+    const saved = localStorage.getItem('adminViewedRequests');
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatRequest, setChatRequest] = useState<RequestData | null>(null);
-  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
-  const [requestToCancel, setRequestToCancel] = useState<RequestData | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [requestToDelete, setRequestToDelete] = useState<RequestData | null>(null);
 
   useEffect(() => {
     if (selectedRequest) {
@@ -177,69 +172,47 @@ const Solicitacoes = () => {
   useEffect(() => {
     const checkUnreadMessages = () => {
       const newUnread: Record<string, number> = {};
-      
       requests.forEach(req => {
         const messages = req.messages || [];
         const unreadCount = messages.filter(msg => 
           !msg.isAdmin && 
-          msg.timestamp?.toMillis && // Verificação adicional
-          !viewedRequests.has(`${req.id}-${msg.timestamp.toMillis()}`)
-        ).length;
-        if (unreadCount > 0) {
-          newUnread[req.id] = unreadCount;
-        }
+          !viewedRequests.has(`${req.id}-${msg.timestamp.toMillis()}`))
+          .length;
+        if (unreadCount > 0) newUnread[req.id] = unreadCount;
       });
-      
       setUnreadMessages(newUnread);
     };
-
     checkUnreadMessages();
   }, [requests, viewedRequests]);
 
-  const countEquipment = async (equipmentIds: string[] = []) => {
+  const getEquipmentDetails = async (equipmentIds: string[] = []) => {
     try {
       const docs = await Promise.all(
         equipmentIds.map(async (id) => {
-          if (equipmentCache.current.has(id)) {
-            return equipmentCache.current.get(id);
-          }
+          if (equipmentCache.current.has(id)) return equipmentCache.current.get(id);
           const docRef = doc(db, 'equipment', id);
           const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            equipmentCache.current.set(id, docSnap);
-          }
-          return docSnap;
+          if (docSnap.exists()) equipmentCache.current.set(id, docSnap.data());
+          return docSnap.data();
         })
       );
-
-      return docs.reduce((acc, docSnap) => {
-        if (docSnap.exists()) {
-          const type = docSnap.data().type.toLowerCase();
-          if (type.includes('ipad')) acc.ipads++;
-          else if (type.includes('chromebook')) acc.chromebooks++;
-          else acc.others++;
-        }
-        return acc;
-      }, { ipads: 0, chromebooks: 0, others: 0 });
+      return docs.filter(Boolean).map(equip => equip?.name || 'Equipamento desconhecido');
     } catch (error) {
-      console.error("Error counting equipment:", error);
-      return { ipads: 0, chromebooks: 0, others: 0 };
+      console.error("Error getting equipment details:", error);
+      return [];
     }
   };
 
   const handleViewDetails = async (request: RequestData) => {
     try {
       setIsDetailsLoading(true);
-      setShowEquipmentList(false);
       const fullRequest = await getRequestById(request.id, request.collectionName);
-      
-      let counts = { ipads: 0, chromebooks: 0, others: 0 };
+      let names: string[] = [];
       if (fullRequest.type === 'reservation' && fullRequest.equipmentIds) {
-        counts = await countEquipment(fullRequest.equipmentIds);
+        names = await getEquipmentDetails(fullRequest.equipmentIds);
       }
-      
       setSelectedRequest(fullRequest);
-      setEquipmentCounts(counts);
+      setEquipmentNames(names);
       setIsDetailsOpen(true);
     } catch (error) {
       toast.error("Erro ao carregar detalhes");
@@ -253,24 +226,13 @@ const Solicitacoes = () => {
     try {
       const fullRequest = await getRequestById(request.id, request.collectionName);
       setChatRequest(fullRequest);
-      
-      setViewedRequests(prev => {
-        const newSet = new Set(prev);
-        (fullRequest.messages || []).forEach(msg => {
-          if (!msg.isAdmin) {
-            newSet.add(`${fullRequest.id}-${msg.timestamp.toMillis()}`);
-          }
-        });
-        localStorage.setItem('adminViewedRequests', JSON.stringify(Array.from(newSet)));
-        return newSet;
+      const newSet = new Set(viewedRequests);
+      (fullRequest.messages || []).forEach(msg => {
+        if (!msg.isAdmin) newSet.add(`${fullRequest.id}-${msg.timestamp.toMillis()}`);
       });
-      
-      setUnreadMessages(prev => {
-        const newUnread = {...prev};
-        delete newUnread[fullRequest.id];
-        return newUnread;
-      });
-      
+      localStorage.setItem('adminViewedRequests', JSON.stringify(Array.from(newSet)));
+      setViewedRequests(newSet);
+      setUnreadMessages(prev => ({ ...prev, [fullRequest.id]: 0 }));
       setIsChatOpen(true);
     } catch (error) {
       toast.error("Erro ao abrir chat");
@@ -278,37 +240,61 @@ const Solicitacoes = () => {
     }
   };
 
-  const handleCancelConfirmation = (request: RequestData) => {
-    setRequestToCancel(request);
-    setIsCancelDialogOpen(true);
+  const handleDeleteConfirmation = (request: RequestData) => {
+    setRequestToDelete(request);
+    setIsDeleteDialogOpen(true);
   };
 
-  const handleCancelRequest = async () => {
-    if (!requestToCancel) return;
-
+  const handleDeleteRequest = async () => {
+    if (!requestToDelete) return;
     try {
-      const docRef = doc(db, requestToCancel.collectionName, requestToCancel.id);
-      await updateDoc(docRef, { status: "canceled" });
-
+      await deleteDoc(doc(db, requestToDelete.collectionName, requestToDelete.id));
       await createNotification({
-        title: 'Solicitação Cancelada',
-        message: `Sua solicitação foi cancelada.`,
+        title: 'Solicitação Excluída',
+        message: `Sua solicitação foi excluída pelo administrador.`,
         link: 'minhas-solicitacoes',
-        createdAt: new Date(),
+        recipients: [requestToDelete.userEmail],
+        createdAt: undefined,
         readBy: [],
-        recipients: [requestToCancel.userEmail],
         isBatch: false
       });
-
       refetch();
       setIsDetailsOpen(false);
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     } catch (error) {
-      toast.error("Erro ao cancelar solicitação");
+      toast.error("Erro ao excluir solicitação");
       console.error("Error:", error);
     } finally {
-      setIsCancelDialogOpen(false);
-      setRequestToCancel(null);
+      setIsDeleteDialogOpen(false);
+      setRequestToDelete(null);
+    }
+  };
+
+  const handleStatusUpdate = async () => {
+    if (!selectedRequest || !newStatus) return;
+    try {
+      await updateDoc(doc(db, selectedRequest.collectionName, selectedRequest.id), { 
+        status: newStatus,
+        history: arrayUnion({
+          status: newStatus,
+          message: `Status alterado por ${user?.displayName || user?.email}`,
+          timestamp: Timestamp.now()
+        })
+      });
+      await createNotification({
+        title: 'Status Atualizado',
+        message: `Sua solicitação teve o status alterado para ${newStatus}.`,
+        link: 'minhas-solicitacoes',
+        recipients: [selectedRequest.userEmail],
+        createdAt: undefined,
+        readBy: [],
+        isBatch: false
+      });
+      refetch();
+      toast.success("Status atualizado com sucesso");
+    } catch (error) {
+      toast.error("Erro ao atualizar status");
+      console.error("Error:", error);
     }
   };
 
@@ -333,464 +319,442 @@ const Solicitacoes = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Wrench className="h-8 w-8 text:black" />
-            Gerenciamento de Solicitações
-          </h1>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setShowHidden(!showHidden);
-              setSelectedCategories(["reservation", "purchase", "support"]);
-              setSelectedStatuses(isAdmin 
-                ? ["pending", "approved", "rejected", "in-progress", "completed", "canceled"]
-                : ["pending", "approved", "in-progress", "completed"]
-              );
-              setSelectedTypes(["Manutenção", "Tecnologia", "Compra Pedagógica", "Compra Administrativa", "Compra Infraestrutura"]);
-            }}
-            className="flex items-center gap-2"
-          >
-            {showHidden ? (
-              <>
-                <EyeOff className="h-4 w-4" />
-                Ocultar Finalizadas
-              </>
-            ) : (
-              <>
-                <Eye className="h-4 w-4" />
-                Mostrar Todas
-              </>
-            )}
-          </Button>
+      <div className="min-h-screen bg-white overflow-hidden relative">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-sidebar blur-3xl opacity-5"></div>
+          <div className="absolute right-1/4 bottom-1/4 h-80 w-80 rounded-full bg-eccos-purple blur-3xl opacity-5"></div>
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Pesquisar por nome, email, finalidade ou local..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+        <div className="relative z-10 space-y-8 p-6 md:p-12">
+          {/* Header e controles de filtro */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+              <Wrench className="text-eccos-purple" size={35} />
+              Gerenciamento de Solicitações
+            </h1>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowHidden(!showHidden);
+                setSelectedCategories(["reservation", "purchase", "support"]);
+                setSelectedStatuses(isAdmin 
+                  ? ["pending", "approved", "rejected", "in-progress", "completed", "canceled"]
+                  : ["pending", "approved", "in-progress", "completed"]
+                );
+                setSelectedTypes(["Manutenção", "Tecnologia", "Compra Pedagógica", "Compra Administrativa", "Compra Infraestrutura"]);
+              }}
+              className="flex items-center gap-2 border-gray-200 hover:bg-gray-50 text-gray-700"
+            >
+              {showHidden ? (
+                <>
+                  <Eye className="h-4 w-4" />
+                  Ocultar Finalizadas
+                </>
+              ) : (
+                <>
+                  <Eye className="h-4 w-4" />
+                  Mostrar Todas
+                </>
+              )}
+            </Button>
           </div>
-          
-          <div className="flex flex-wrap gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
-                  <Filter className="h-4 w-4" /> Categoria
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-background">
-                {["reservation", "purchase", "support"].map((type) => (
-                  <DropdownMenuCheckboxItem
-                    key={type}
-                    checked={selectedCategories.includes(type as RequestType)}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedCategories([...selectedCategories, type as RequestType]);
-                      } else {
-                        setSelectedCategories(selectedCategories.filter(t => t !== type));
-                      }
-                    }}
-                    className="flex items-center gap-2"
-                  >
-                    {getRequestTypeIcon(type as RequestType)}
-                    {getReadableRequestType(type as RequestType)}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
-                  <Filter className="h-4 w-4" /> Status
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-background">
-                {["pending", "approved", "rejected", "in-progress", "completed"].map((status) => (
-                  <DropdownMenuCheckboxItem
-                    key={status}
-                    checked={selectedStatuses.includes(status as RequestStatus)}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedStatuses([...selectedStatuses, status as RequestStatus]);
-                      } else {
-                        setSelectedStatuses(selectedStatuses.filter(s => s !== status));
-                      }
-                    }}
-                  >
-                    {getStatusBadge(status as RequestStatus)}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+          {/* Filtros e busca */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Pesquisar por nome, email, finalidade ou local..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 rounded-lg border-gray-200 focus:border-eccos-purple"
+              />
+            </div>
+            
+            <div className="flex flex-wrap gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2 border-gray-200 hover:bg-gray-50 text-gray-700">
+                    <Filter className="h-4 w-4 text-eccos-purple" />
+                    Categoria
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-white border border-gray-100">
+                  {["reservation", "purchase", "support"].map((type) => (
+                    <DropdownMenuCheckboxItem
+                      key={type}
+                      checked={selectedCategories.includes(type as RequestType)}
+                      onCheckedChange={(checked) => {
+                        setSelectedCategories(checked ? 
+                          [...selectedCategories, type as RequestType] : 
+                          selectedCategories.filter(t => t !== type))
+                      }}
+                      className="flex items-center gap-2 hover:bg-gray-50"
+                    >
+                      {getRequestTypeIcon(type as RequestType)}
+                      {getReadableRequestType(type as RequestType)}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
-                  <Filter className="h-4 w-4" /> Tipo
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-background">
-                {["Compra Pedagógica", "Compra Administrativa", "Compra Infraestrutura","Manutenção", "Tecnologia"].map((type) => (
-                  <DropdownMenuCheckboxItem
-                    key={type}
-                    checked={selectedTypes.includes(type)}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedTypes([...selectedTypes, type]);
-                      } else {
-                        setSelectedTypes(selectedTypes.filter(t => t !== type));
-                      }
-                    }}
-                  >
-                    {type}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2 border-gray-200 hover:bg-gray-50 text-gray-700">
+                    <Filter className="h-4 w-4 text-eccos-purple" />
+                    Status
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-white border border-gray-100">
+                  {["pending", "approved", "rejected", "in-progress", "completed"].map((status) => (
+                    <DropdownMenuCheckboxItem
+                      key={status}
+                      checked={selectedStatuses.includes(status as RequestStatus)}
+                      onCheckedChange={(checked) => {
+                        setSelectedStatuses(checked ? 
+                          [...selectedStatuses, status as RequestStatus] : 
+                          selectedStatuses.filter(s => s !== status))
+                      }}
+                      className="hover:bg-gray-50"
+                    >
+                      {getStatusBadge(status as RequestStatus)}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2 border-gray-200 hover:bg-gray-50 text-gray-700">
+                    <Filter className="h-4 w-4 text-eccos-purple" />
+                    Tipo
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-white border border-gray-100">
+                  {["Compra Pedagógica", "Compra Administrativa", "Compra Infraestrutura","Manutenção", "Tecnologia"].map((type) => (
+                    <DropdownMenuCheckboxItem
+                      key={type}
+                      checked={selectedTypes.includes(type)}
+                      onCheckedChange={(checked) => {
+                        setSelectedTypes(checked ? 
+                          [...selectedTypes, type] : 
+                          selectedTypes.filter(t => t !== type))
+                      }}
+                      className="hover:bg-gray-50"
+                    >
+                      {type}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
-        </div>
 
-        {isLoading ? (
-          <div className="flex justify-center items-center h-64">
-            <RefreshCw className="h-12 w-12 animate-spin text-primary" />
-          </div>
-        ) : isError ? (
-          <div className="text-center text-destructive p-4 border border-destructive rounded-md flex flex-col items-center">
-            <AlertCircle className="h-8 w-8 mb-2" />
-            Erro ao carregar solicitações
-          </div>
-        ) : filteredRequests.length === 0 ? (
-          <div className="text-center text-muted-foreground p-8 border border-dashed rounded-md flex flex-col items-center">
-            <Search className="h-8 w-8 mb-2" />
-            Nenhuma solicitação encontrada
-          </div>
-        ) : (
-          <div className="rounded-md border overflow-hidden bg-background">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-center align-middle">
-                    <div className="flex items-center justify-center gap-1">
-                      <List className="h-4 w-4" />
-                      Tipo
-                    </div>
-                  </TableHead>
-                  <TableHead className="text-center align-middle">
-                    <div className="flex items-center justify-center gap-1">
-                      <UserIcon className="h-4 w-4" />
-                      Solicitante
-                    </div>
-                  </TableHead>
-                  <TableHead className="text-center align-middle">
-                    <div className="flex items-center justify-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      Status
-                    </div>
-                  </TableHead>
-                  <TableHead className="text-center align-middle">
-                    <div className="flex items-center justify-center gap-1">
-                      <MessageSquare className="h-4 w-4" />
-                      Ações
-                    </div>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredRequests.map((request) => (
-                  <TableRow key={`${request.collectionName}-${request.id}`}>
-                    <TableCell className="text-center align-middle">
-                      <div className="flex items-center justify-center gap-2">
-                        {getRequestTypeIcon(request.type)}
-                        <span className="hidden sm:inline truncate">
-                          {getReadableRequestType(request.type)}
-                        </span>
-                      </div>
-                    </TableCell>
-
-                    <TableCell className="text-center align-middle truncate max-w-[180px] flex items-center justify-center gap-1">
-                      <UserIcon className="h-4 w-4 text-muted-foreground" />
-                      {request.userName || request.userEmail}
-                    </TableCell>
-
-                    <TableCell className="text-center align-middle">
-                      <div className="flex justify-center">
-                        {getStatusBadge(request.status)}
-                      </div>
-                    </TableCell>
-
-                    <TableCell className="text-center align-middle">
-                      <div className="flex justify-center items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleViewDetails(request)}
-                          title="Detalhes"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 relative"
-                          onClick={() => handleOpenChat(request)}
-                          title="Chat"
-                        >
-                          <MessageSquare className="h-4 w-4" />
-                          {unreadMessages[request.id] > 0 && (
-                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                              {unreadMessages[request.id]}
-                            </span>
-                          )}
-                        </Button>
-                      </div>
-                    </TableCell>
+          {/* Tabela de solicitações */}
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-eccos-purple"></div>
+            </div>
+          ) : isError ? (
+            <div className="text-center text-red-500 p-4 border border-red-200 rounded-xl bg-red-50">
+              Erro ao carregar solicitações
+            </div>
+          ) : filteredRequests.length === 0 ? (
+            <div className="text-center text-gray-500 p-8 border border-dashed rounded-xl bg-gray-50">
+              Nenhuma solicitação encontrada
+            </div>
+          ) : (
+            <div className="rounded-lg border border-gray-100 overflow-hidden bg-white shadow-sm">
+              <Table>
+                <TableHeader className="bg-gray-50">
+                  <TableRow>
+                    <TableHead className="text-center font-medium text-gray-600 w-[20%]">Tipo</TableHead>
+                    <TableHead className="text-center font-medium text-gray-600 w-[25%]">Usuário</TableHead>
+                    <TableHead className="text-center font-medium text-gray-600 w-[25%]">Status</TableHead>
+                    <TableHead className="text-center font-medium text-gray-600 w-[30%]">Ações</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-
-        <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-          <DialogContent className="max-w-3xl overflow-y-auto max-h-[90vh]">
-            {isDetailsLoading ? (
-              <div className="space-y-4">
-                <div className="animate-pulse h-8 bg-muted rounded w-1/3" />
-                <div className="space-y-2">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="animate-pulse h-4 bg-muted rounded w-full" />
-                  ))}
-                </div>
-                <div className="animate-pulse h-10 bg-muted rounded w-1/2" />
-                <div className="space-y-2">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="animate-pulse h-4 bg-muted rounded w-full" />
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <>
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    {selectedRequest && (
-                      <>
-                        {getRequestTypeIcon(selectedRequest.type)}
-                        <span>
-                          {getReadableRequestType(selectedRequest.type)} - {selectedRequest.userName || selectedRequest.userEmail}
-                        </span>
-                      </>
-                    )}
-                  </DialogTitle>
-                  
-                  <DialogDescription asChild>
-                    <div className="text-sm text-muted-foreground px-1">
-                      {selectedRequest && (
-                        <div className="flex items-center justify-between flex-wrap gap-2">
-                          <div>
-                            {selectedRequest.createdAt 
-                              ? format(
-                                  new Date(selectedRequest.createdAt.toMillis()), 
-                                  "dd 'de' MMMM 'de' yyyy 'às' HH:mm", 
-                                  { locale: ptBR }
-                                )
-                              : "Data não disponível"}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <select
-                              value={newStatus || selectedRequest.status}
-                              onChange={(e) => setNewStatus(e.target.value as RequestStatus)}
-                              className="bg-background border rounded-md px-2 py-1 text-sm"
-                            >
-                              {["pending", "approved", "rejected", "in-progress", "completed"].map((status) => (
-                                <option key={status} value={status}>
-                                  {getStatusBadge(status as RequestStatus).props.children[1]}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
+                </TableHeader>
+                <TableBody>
+                  {filteredRequests.map((request) => (
+                    <TableRow key={`${request.collectionName}-${request.id}`} className="hover:bg-gray-50">
+                      <TableCell className="text-center align-middle">
+                        <div className="flex items-center justify-center gap-2">
+                          {getRequestTypeIcon(request.type)}
+                          <span className="font-medium">
+                            {getReadableRequestType(request.type)}
+                          </span>
                         </div>
-                      )}
-                    </div>
-                  </DialogDescription>
-                </DialogHeader>
-                
-                {selectedRequest && (
-                  <div className="space-y-6 py-4">
-                    <div className="space-y-4 border-b pb-4">
-                      <h3 className="text-lg font-medium">Detalhes da Solicitação</h3>
-                      {selectedRequest.type === "reservation" && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <label className="text-sm font-medium text-muted-foreground">Finalidade</label>
-                            <p className="text-foreground">{selectedRequest.purpose}</p>
-                          </div>
-                          
-                          <div className="space-y-1">
-                            <label className="text-sm font-medium text-muted-foreground">Local</label>
-                            <p className="text-foreground">{selectedRequest.location}</p>
-                          </div>
-                          
-                          <div className="space-y-1">
-                            <label className="text-sm font-medium text-muted-foreground">Período</label>
-                            <p className="text-foreground">
-                            {selectedRequest.createdAt 
-  ? format(new Date(selectedRequest.createdAt.toMillis()), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })
-  : "Data não disponível"}
+                      </TableCell>
+
+                      <TableCell className="text-center align-middle">
+                        {request.userName}
+                      </TableCell>
+
+                      <TableCell className="text-center align-middle">
+                        <div className="flex justify-center">
+                          {getStatusBadge(request.status)}
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="text-center align-middle">
+                        <div className="flex justify-center items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-gray-600 hover:bg-gray-100"
+                            onClick={() => handleViewDetails(request)}
+                            title="Detalhes"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 relative text-gray-600 hover:bg-gray-100"
+                            onClick={() => handleOpenChat(request)}
+                            title="Chat"
+                          >
+                            <MessageSquare className="h-4 w-4" />
+                            {unreadMessages[request.id] > 0 && (
+                              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                                {unreadMessages[request.id]}
+                              </span>
+                            )}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
+          {/* Diálogo de detalhes */}
+          <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+            <DialogContent className="max-w-3xl bg-white border border-gray-100 max-h-[90vh] flex flex-col">
+              {isDetailsLoading ? (
+                <div className="flex justify-center items-center h-64">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-eccos-purple"></div>
+                </div>
+              ) : selectedRequest ? (
+                <>
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      {getRequestTypeIcon(selectedRequest.type)}
+                      <span className="bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+                        {getReadableRequestType(selectedRequest.type)} - {selectedRequest.userName || selectedRequest.userEmail}
+                      </span>
+                    </DialogTitle>
+                    <DialogDescription asChild>
+                      <div className="flex items-center justify-between text-gray-500 px-1">
+                        <div>
+                          {format(selectedRequest.createdAt.toDate(), "dd/MM/yyyy HH:mm")}
+                        </div>
+                        <div>{getStatusBadge(selectedRequest.status)}</div>
+                      </div>
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="flex-1 overflow-y-auto space-y-6 py-4">
+                    {/* Conteúdo detalhado */}
+                    {selectedRequest.type === "reservation" && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Campos de reserva */}
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">Data</p>
+                          <p className="text-gray-700">
+                            {format(selectedRequest.date.toDate(), "dd/MM/yyyy")}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">Horário</p>
+                          <p className="text-gray-700">
+                            {selectedRequest.startTime} - {selectedRequest.endTime}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">Finalidade</p>
+                          <p className="text-gray-700">{selectedRequest.purpose}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">Local</p>
+                          <p className="text-gray-700">{selectedRequest.location}</p>
+                        </div>
+                        <div className="col-span-2">
+                          <p className="text-sm font-medium text-gray-500">Equipamentos</p>
+                          <ul className="list-disc pl-5 text-gray-700">
+                            {equipmentNames.map((name, index) => (
+                              <li key={index}>{name}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedRequest.type === "purchase" && (
+                      <div className="grid grid-cols-1 gap-4">
+                        {/* Campos de compra */}
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">Item</p>
+                          <p className="text-gray-700">{selectedRequest.itemName}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">Quantidade</p>
+                          <p className="text-gray-700">{selectedRequest.quantity}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">Valor Unitário</p>
+                          <p className="text-gray-700">
+                            {selectedRequest.unitPrice?.toLocaleString('pt-BR', { 
+                              style: 'currency', 
+                              currency: 'BRL' 
+                            })}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">Valor Total</p>
+                          <div className="bg-eccos-purple/10 p-2 rounded-md">
+                            <p className="text-lg font-semibold text-eccos-purple">
+                              {(selectedRequest.quantity * selectedRequest.unitPrice)?.toLocaleString('pt-BR', { 
+                                style: 'currency', 
+                                currency: 'BRL' 
+                              })}
                             </p>
                           </div>
-
-                          <div className="space-y-1">
-                            <label className="text-sm font-medium text-muted-foreground">Equipamentos</label>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="gap-1"
-                              onClick={() => setShowEquipmentList(!showEquipmentList)}
-                            >
-                              {showEquipmentList ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                              {equipmentCounts.ipads + equipmentCounts.chromebooks + equipmentCounts.others} itens
-                            </Button>
-                            
-                            {showEquipmentList && (
-                              <div className="space-y-1">
-                                {equipmentCounts.ipads > 0 && <p>• {equipmentCounts.ipads} iPads</p>}
-                                {equipmentCounts.chromebooks > 0 && <p>• {equipmentCounts.chromebooks} Chromebooks</p>}
-                                {equipmentCounts.others > 0 && <p>• {equipmentCounts.others} Outros</p>}
-                              </div>
-                            )}
-                          </div>
                         </div>
-                      )}
+                      </div>
+                    )}
 
-                      {selectedRequest.type === "purchase" && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <label className="text-sm font-medium text-muted-foreground">Item</label>
-                            <p className="text-foreground">{selectedRequest.itemName}</p>
-                          </div>
-                          
-                          <div className="space-y-1">
-                            <label className="text-sm font-medium text-muted-foreground">Quantidade</label>
-                            <p className="text-foreground">{selectedRequest.quantity}</p>
-                          </div>
-                          
-                          <div className="space-y-1">
-                            <label className="text-sm font-medium text-muted-foreground">Justificativa</label>
-                            <p className="text-foreground">{selectedRequest.justification}</p>
-                          </div>
+                    {selectedRequest.type === "support" && (
+                      <div className="grid grid-cols-1 gap-4">
+                        {/* Campos de suporte */}
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">Tipo</p>
+                          <p className="text-gray-700">{selectedRequest.tipo}</p>
                         </div>
-                      )}
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">Prioridade</p>
+                          <p className="text-gray-700">{selectedRequest.priority}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">Local</p>
+                          <p className="text-gray-700">{selectedRequest.location}</p>
+                        </div>
+                        <div className="col-span-full">
+                          <p className="text-sm font-medium text-gray-500">Descrição</p>
+                          <pre className="whitespace-pre-wrap font-sans text-gray-700">
+                            {selectedRequest.description}
+                          </pre>
+                        </div>
+                      </div>
+                    )}
 
-                      {selectedRequest.type === "support" && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <label className="text-sm font-medium text-muted-foreground">Tipo de Suporte</label>
-                            <p className="text-foreground">{selectedRequest.tipo}</p>
+                    {/* Histórico */}
+                    <div className="space-y-4 pt-4 border-t border-gray-100">
+                      <h3 className="text-lg font-medium text-gray-800">Histórico</h3>
+                      <div className="space-y-2">
+                        {selectedRequest.history?.map((event: any, index: number) => (
+                          <div key={index} className="flex items-center gap-3 p-2 bg-gray-50 rounded">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-600">
+                                {format(event.timestamp.toDate(), "dd/MM/yyyy HH:mm")}
+                              </p>
+                              <p className="text-sm text-gray-500">{event.message}</p>
+                            </div>
+                            {getStatusBadge(event.status)}
                           </div>
-                          
-                          <div className="space-y-1">
-                            <label className="text-sm font-medium text-muted-foreground">Descrição</label>
-                            <p className="text-foreground">{selectedRequest.description}</p>
-                          </div>
-                          
-                          <div className="space-y-1">
-                            <label className="text-sm font-medium text-muted-foreground">Prioridade</label>
-                            <p className="text-foreground">{selectedRequest.priority}</p>
-                          </div>
-                        </div>
-                      )}
+                        )) || (
+                          <p className="text-gray-500 text-sm">Nenhum histórico registrado</p>
+                        )}
+                      </div>
                     </div>
                   </div>
-                )}
-                
-                <DialogFooter className="gap-2">
-                  <Button 
-                    onClick={async () => {
-                      if (!selectedRequest || !newStatus) return;
+
+                  {/* Rodapé com controles */}
+                  <DialogFooter className="pt-4 border-t border-gray-100 gap-2">
+                    <div className="flex items-center gap-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" className="flex items-center gap-2">
+                            Alterar Status
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          {["pending", "approved", "rejected", "in-progress", "completed"].map((status) => (
+                            <DropdownMenuCheckboxItem
+                              key={status}
+                              checked={newStatus === status}
+                              onCheckedChange={() => setNewStatus(status as RequestStatus)}
+                            >
+                              {getStatusBadge(status as RequestStatus)}
+                            </DropdownMenuCheckboxItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                       
-                      try {
-                        const docRef = doc(db, selectedRequest.collectionName, selectedRequest.id);
-                        await updateDoc(docRef, { status: newStatus });
-                        
-                        await createNotification({
-                          title: 'Status Atualizado',
-                          message: `O status da sua solicitação foi alterado para ${newStatus}.`,
-                          link: 'minhas-solicitacoes',
-                          createdAt: new Date(),
-                          readBy: [],
-                          recipients: [selectedRequest.userEmail],
-                          isBatch: false
-                        });
+                      <Button 
+                        onClick={handleStatusUpdate}
+                        disabled={!newStatus || newStatus === selectedRequest.status}
+                      >
+                        Salvar
+                      </Button>
+                    </div>
 
-                        refetch();
-                        queryClient.invalidateQueries({ queryKey: ['allRequests'] });
-                        toast.success("Status atualizado com sucesso");
-                      } catch (error) {
-                        toast.error("Erro ao atualizar status");
-                        console.error("Error:", error);
-                      }
-                    }}
-                    disabled={!newStatus || newStatus === selectedRequest?.status}
-                  >
-                    Salvar Alterações
-                  </Button>
+                    <Button 
+                      variant="destructive"
+                      onClick={() => handleDeleteConfirmation(selectedRequest)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir Solicitação
+                    </Button>
+                  </DialogFooter>
+                </>
+              ) : (
+                <div className="text-center p-4 text-red-500">
+                  Nenhuma solicitação selecionada
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
 
-                  <Button 
-                    variant="destructive" 
-                    onClick={() => selectedRequest && handleCancelConfirmation(selectedRequest)}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" /> Cancelar Solicitação
-                  </Button>
-                  <Button variant="outline" onClick={() => setIsDetailsOpen(false)}>
-                    Fechar
-                  </Button>
-                </DialogFooter>
-              </>
-            )}
-          </DialogContent>
-        </Dialog>
+          {/* Diálogo de confirmação de exclusão */}
+          <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <AlertDialogContent className="bg-white border border-gray-100">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-gray-800">
+                  Confirmar exclusão
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-gray-600">
+                  Tem certeza que deseja excluir permanentemente esta solicitação?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="border-gray-200 text-gray-700">
+                  Cancelar
+                </AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={handleDeleteRequest}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  Confirmar Exclusão
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
-        <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-destructive" />
-                Confirmar cancelamento
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                Tem certeza que deseja cancelar esta solicitação? Esta ação não pode ser desfeita.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel className="flex items-center gap-2">
-                <XCircle className="h-4 w-4" />
-                Cancelar
-              </AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={handleCancelRequest}
-                className="bg-destructive hover:bg-destructive/90 flex items-center gap-2"
-              >
-                <CheckCircle2 className="h-4 w-4" />
-                Confirmar
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        <ChatAdmin 
-          request={chatRequest} 
-          isOpen={isChatOpen} 
-          onOpenChange={setIsChatOpen}
-          onMessageSent={refetch}
-        />
+          {/* Componente de chat */}
+          <ChatAdmin 
+            request={chatRequest} 
+            isOpen={isChatOpen} 
+            onOpenChange={setIsChatOpen}
+            onMessageSent={refetch}
+          />
+        </div>
       </div>
     </AppLayout>
   );
