@@ -178,28 +178,36 @@ export const AppSidebar = () => {
     { icon: Warehouse, label: "Estoque", href: "/estoque" },
   ];
 
-  return (
+   return (
     <div
       className={cn(
-        "h-screen bg-background/95 border-r border-border/40 flex-col",
+        "h-screen bg-background/95 border-r border-border/40 flex flex-col",
         "transition-all duration-300 z-10 backdrop-blur-lg shadow-xl rounded-r-xl",
         expanded ? "w-72" : "w-20",
       )}
     >
-      <div className="flex items-center justify-between p-1 h-24">
-        <div className="flex items-center justify-center overflow-hidden px-4 py-0 w-full">
+      {/* Cabeçalho Fixo */}
+      <div className="h-24 shrink-0 flex items-center justify-between p-1">
+        <Link 
+          to="/"
+          className={cn(
+            "flex items-center justify-center overflow-hidden px-4 py-0 w-full",
+            expanded ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+          )}
+        >
           <img
             src={Logo}
             alt="Logo ECCOS"
             className={cn(
               "h-32 w-32 object-contain transition-all duration-300 shrink-0",
-              expanded ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
+              "cursor-pointer hover:scale-105" // Efeito de hover
             )}
           />
-        </div>
+        </Link>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-2 scrollbar-none">
+      {/* Conteúdo Rolável */}
+      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-2">
         {userMenuItems.map((item, index) => {
           if ('items' in item) {
             return (
@@ -307,44 +315,45 @@ export const AppSidebar = () => {
             )}
           </>
         )}
+      </div>
 
-        <div className="mt-auto pt-4">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                className={cn(
-                  "w-full p-2 hover:bg-primary/10 rounded-xl transition-colors",
-                  "focus:outline-none flex items-center gap-2 text-foreground",
-                  expanded ? "px-3 justify-start" : "justify-center"
-                )}
-                aria-label="Menu de logout"
-              >
-                <LogOut className="h-5 w-5 shrink-0 stroke-[1.5] stroke-foreground" />
-                {expanded && (
-                  <span className="text-sm transition-all duration-300 font-medium">
-                    Sair
-                  </span>
-                )}
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align={expanded ? "start" : "center"}
-              className="rounded-xl shadow-lg border-border/40"
+      {/* Footer Fixo */}
+      <div className="shrink-0 pt-4 pb-2 px-3 border-t border-border/40">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className={cn(
+                "w-full p-2 hover:bg-primary/10 rounded-xl transition-colors",
+                "focus:outline-none flex items-center gap-2 text-foreground",
+                expanded ? "px-3 justify-start" : "justify-center"
+              )}
+              aria-label="Menu de logout"
             >
-              <DropdownMenuLabel className="text-xs font-medium text-foreground/80">
-                Ações da Conta
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-border/40" />
-              <DropdownMenuItem
-                onClick={signOut}
-                className="text-destructive cursor-pointer focus:bg-destructive/5 rounded-lg"
-              >
-                <LogOut className="mr-2 h-4 w-4 stroke-[1.5]" />
-                <span className="text-sm font-medium">Confirmar Saída</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+              <LogOut className="h-5 w-5 shrink-0 stroke-[1.5] stroke-foreground" />
+              {expanded && (
+                <span className="text-sm transition-all duration-300 font-medium">
+                  Sair
+                </span>
+              )}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align={expanded ? "start" : "center"}
+            className="rounded-xl shadow-lg border-border/40"
+          >
+            <DropdownMenuLabel className="text-xs font-medium text-foreground/80">
+              Ações da Conta
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator className="bg-border/40" />
+            <DropdownMenuItem
+              onClick={signOut}
+              className="text-destructive cursor-pointer focus:bg-destructive/5 rounded-lg"
+            >
+              <LogOut className="mr-2 h-4 w-4 stroke-[1.5]" />
+              <span className="text-sm font-medium">Confirmar Saída</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );
