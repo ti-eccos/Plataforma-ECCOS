@@ -13,9 +13,11 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Home } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 export const Dashboard = () => {
   const { currentUser, isAdmin } = useAuth();
+  const navigate = useNavigate();
 
   // Configuração para tentar refetch caso os dados venham vazios
   const { 
@@ -174,7 +176,69 @@ export const Dashboard = () => {
 
           <DashboardLoading isLoading={isLoading} isError={isError} />
 
-          {!isLoading && !isError && (
+          {!isLoading && !isError && requests.length === 0 ? (
+            <div className="p-8 bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-center fade-up">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-eccos-purple/10 text-eccos-purple mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+
+              <h3 className="text-2xl font-bold mb-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+                Nenhuma solicitação no sistema
+              </h3>
+              <p className="text-gray-600 mb-6 max-w-md mx-auto leading-relaxed">
+                O sistema ainda não possui solicitações cadastradas. Como administrador, você pode gerenciar todas as solicitações que forem criadas pelos usuários.
+              </p>
+
+              <div className="flex flex-col sm:flex-row justify-center gap-3">
+                <Button
+                  onClick={() => navigate('/gerenciar-solicitacoes')}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-eccos-purple hover:bg-sidebar text-white rounded-lg transition-all shadow-md hover:shadow-lg focus:outline-none min-w-[200px]"
+                >
+                  <span className="flex items-center justify-center w-5 h-5">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 12l2 2 4-4"></path>
+                      <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"></path>
+                      <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3"></path>
+                      <path d="M21 12c-1 0-3 1-3 3s2 3 3 3 3-1 3-3-2-3-3-3"></path>
+                      <path d="M3 12c1 0 3 1 3 3s-2 3-3 3-3-1-3-3 2-3 3-3"></path>
+                    </svg>
+                  </span>
+                  Gerenciar Solicitações
+                </Button>
+
+                <Button
+                  onClick={() => navigate('/usuarios')}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all shadow-md hover:shadow-lg focus:outline-none min-w-[200px]"
+                >
+                  <span className="flex items-center justify-center w-5 h-5">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="9" cy="7" r="4"></circle>
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                  </span>
+                  Gerenciar Usuários
+                </Button>
+
+                <Button
+                  onClick={() => navigate('/equipamentos')}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-all shadow-md hover:shadow-lg focus:outline-none min-w-[200px]"
+                >
+                  <span className="flex items-center justify-center w-5 h-5">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                      <line x1="8" y1="21" x2="16" y2="21"></line>
+                      <line x1="12" y1="17" x2="12" y2="21"></line>
+                    </svg>
+                  </span>
+                  Gerenciar Equipamentos
+                </Button>
+              </div>
+            </div>
+          ) : !isLoading && !isError && hasValidData && (
             <div className="space-y-8 fade-up">
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
                 {/* Card Usuários Ativos */}
@@ -270,7 +334,7 @@ export const Dashboard = () => {
             </div>
           )}
 
-          {!isLoading && !isError && !hasValidData && (
+          {!isLoading && !isError && !hasValidData && requests.length > 0 && (
             <div className="bg-white border border-gray-100 rounded-2xl shadow-lg p-8 text-center">
               <p className="text-lg text-gray-500 mb-4">
                 Não há dados suficientes para exibir o dashboard completo.
