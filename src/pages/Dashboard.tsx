@@ -8,6 +8,7 @@ import { getAllEquipment } from "@/services/equipmentService";
 import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
 import UserDashboard from "../components/dashboard/UserDashboard";
 import { DashboardLoading } from "@/components/dashboard/DashboardLoading";
+import NoticeBoard from "@/components/NoticeBoard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -173,6 +174,11 @@ export const Dashboard = () => {
             <Home className="text-eccos-purple" size={35} />
             Dashboard Administrativo
           </h1>
+
+          {/* NoticeBoard fixo no topo */}
+          <div className="fade-up">
+            <NoticeBoard />
+          </div>
 
           <DashboardLoading isLoading={isLoading} isError={isError} />
 

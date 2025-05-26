@@ -12,6 +12,7 @@ import { Timestamp } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { Home } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import NoticeBoard from "@/components/NoticeBoard";
 
 enum RequestStatus {
   pending = 'pending',
@@ -135,7 +136,6 @@ const UserDashboard = () => {
     enabled: !!currentUser,
   });
 
-  // Animação de entrada (fade-up)
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -149,7 +149,6 @@ const UserDashboard = () => {
     );
 
     document.querySelectorAll('.fade-up').forEach((el) => observer.observe(el));
-
     return () => observer.disconnect();
   }, []);
 
@@ -194,123 +193,139 @@ const UserDashboard = () => {
   return (
     <AppLayout>
       <div className="min-h-screen bg-white overflow-hidden relative">
-        {/* Fundos decorativos */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-sidebar blur-3xl opacity-5"></div>
           <div className="absolute right-1/4 bottom-1/4 h-80 w-80 rounded-full bg-eccos-purple blur-3xl opacity-5"></div>
         </div>
 
-        {/* Conteúdo principal */}
-        <div className="relative z-10 space-y-8 p-6 md:p-12 fade-up">
-          <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
-            <Home className="text-eccos-purple" size={35} />
-            Dashboard
-          </h1>
+        <div className="relative z-10 p-6 md:p-12">
+          {/* Título Fixo */}
+          <div className="mb-8 fade-up">
+            <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+              <Home className="text-eccos-purple" size={35} />
+              Dashboard
+            </h1>
+          </div>
 
+          {/* NoticeBoard - Sempre visível após o título */}
+          <div className="fade-up mb-8">
+  <NoticeBoard />
+</div>
+
+          {/* Loading State */}
           <DashboardLoading isLoading={isLoading} isError={isError} />
 
-          {!isLoading && !isError && requests.length === 0 ? (
-            <div className="p-8 bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-center fade-up">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-eccos-purple/10 text-eccos-purple mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-
-              <h3 className="text-2xl font-bold mb-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
-                Nenhuma solicitação encontrada
-              </h3>
-              <p className="text-gray-600 mb-6 max-w-md mx-auto leading-relaxed">
-                Parece que você ainda não fez nenhuma solicitação. Escolha o tipo de solicitação abaixo para começar!
-              </p>
-
-              <div className="flex flex-col sm:flex-row justify-center gap-3">
-                <Button
-                  onClick={() => navigate('/nova-solicitacao/reserva')}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all shadow-md hover:shadow-lg focus:outline-none min-w-[160px]"
-                >
-                  <span className="flex items-center justify-center w-5 h-5">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                      <line x1="16" y1="2" x2="16" y2="6"></line>
-                      <line x1="8" y1="2" x2="8" y2="6"></line>
-                      <line x1="3" y1="10" x2="21" y2="10"></line>
+          {/* Conteúdo Principal */}
+          {!isLoading && !isError && (
+            <>
+              {requests.length === 0 ? (
+                /* Estado Vazio */
+                <div className="p-8 bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-center fade-up">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-eccos-purple/10 text-eccos-purple mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
-                  </span>
-                  Reserva
-                </Button>
+                  </div>
 
-                <Button
-                  onClick={() => navigate('/nova-solicitacao/compra')}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-all shadow-md hover:shadow-lg focus:outline-none min-w-[160px]"
-                >
-                  <span className="flex items-center justify-center w-5 h-5">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="9" cy="21" r="1"></circle>
-                      <circle cx="20" cy="21" r="1"></circle>
-                      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.74a2 2 0 0 0 2-1.61L23 6H6"></path>
-                    </svg>
-                  </span>
-                  Compra
-                </Button>
+                  <h3 className="text-2xl font-bold mb-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+                    Nenhuma solicitação encontrada
+                  </h3>
+                  <p className="text-gray-600 mb-6 max-w-md mx-auto leading-relaxed">
+                    Parece que você ainda não fez nenhuma solicitação. Escolha o tipo de solicitação abaixo para começar!
+                  </p>
 
-                <Button
-                  onClick={() => navigate('/nova-solicitacao/suporte')}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-lg transition-all shadow-md hover:shadow-lg focus:outline-none min-w-[160px]"
-                >
-                  <span className="flex items-center justify-center w-5 h-5">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <line x1="12" y1="16" x2="12" y2="12"></line>
-                      <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                    </svg>
-                  </span>
-                  Suporte
-                </Button>
-              </div>
-            </div>
-          ) : !isLoading && !isError && (
-            <div className="space-y-8 fade-up">
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-                {Object.values(RequestStatus).map((status) => (
-                  <Card
-                    key={status}
-                    className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 relative group overflow-hidden cursor-pointer"
-                    onClick={handleNavigateToRequests}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-gray-600">
-                        {statusLabels[status]}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
-                        {statusCounts[status]}
-                      </div>
-                      <Badge variant="outline" className="mt-2 border-eccos-purple text-eccos-purple">
-                        Solicitações
-                      </Badge>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                  <div className="flex flex-col sm:flex-row justify-center gap-3">
+                    <Button
+                      onClick={() => navigate('/nova-solicitacao/reserva')}
+                      className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all shadow-md hover:shadow-lg focus:outline-none min-w-[160px]"
+                    >
+                      <span className="flex items-center justify-center w-5 h-5">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                          <line x1="16" y1="2" x2="16" y2="6"></line>
+                          <line x1="8" y1="2" x2="8" y2="6"></line>
+                          <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                      </span>
+                      Reserva
+                    </Button>
 
-              <div className="fade-up">
-                <DashboardCharts
-                  requestStatusData={statusChartData}
-                  requestTypeData={requestTypeData}
-                  chartWrapperClass="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300"
-                  headerClass="text-lg font-semibold text-gray-600"
-                  hideOtherCharts={true}
-                  darkMode={false}
-                />
-              </div>
-            </div>
+                    <Button
+                      onClick={() => navigate('/nova-solicitacao/compra')}
+                      className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-all shadow-md hover:shadow-lg focus:outline-none min-w-[160px]"
+                    >
+                      <span className="flex items-center justify-center w-5 h-5">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="9" cy="21" r="1"></circle>
+                          <circle cx="20" cy="21" r="1"></circle>
+                          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.74a2 2 0 0 0 2-1.61L23 6H6"></path>
+                        </svg>
+                      </span>
+                      Compra
+                    </Button>
+
+                    <Button
+                      onClick={() => navigate('/nova-solicitacao/suporte')}
+                      className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-lg transition-all shadow-md hover:shadow-lg focus:outline-none min-w-[160px]"
+                    >
+                      <span className="flex items-center justify-center w-5 h-5">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <line x1="12" y1="16" x2="12" y2="12"></line>
+                          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                      </span>
+                      Suporte
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                /* Conteúdo com Solicitações */
+                <div className="space-y-8 fade-up">
+                  {/* Cards de Status */}
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+                    {Object.values(RequestStatus).map((status) => (
+                      <Card
+                        key={status}
+                        className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 relative group overflow-hidden cursor-pointer"
+                        onClick={handleNavigateToRequests}
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm font-medium text-gray-600">
+                            {statusLabels[status]}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-2xl font-bold bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+                            {statusCounts[status]}
+                          </div>
+                          <Badge variant="outline" className="mt-2 border-eccos-purple text-eccos-purple">
+                            Solicitações
+                          </Badge>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+
+                  {/* Gráficos */}
+                  <div>
+                    <DashboardCharts
+                      requestStatusData={statusChartData}
+                      requestTypeData={requestTypeData}
+                      chartWrapperClass="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300"
+                      headerClass="text-lg font-semibold text-gray-600"
+                      hideOtherCharts={true}
+                      darkMode={false}
+                    />
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
 
-        {/* Rodapé */}
+        {/* Footer */}
         <footer className="relative z-10 bg-gray-50 py-10 px-4 md:px-12 fade-up">
           <div className="max-w-6xl mx-auto">
             <div className="text-center">

@@ -37,7 +37,7 @@ import {
   Notification,
 } from "@/services/notificationService";
 import { Badge } from "@/components/ui/badge";
-import { MultiSelect } from "@/components/ui/multi-select";
+import { UserMultiSelectWithConfirm } from "@/components/UserMultiSelectWithConfirm";
 import { getAllUsers } from "@/services/userService";
 import {
   AlertDialog,
@@ -232,21 +232,22 @@ const AdminNotificacoes = () => {
                   </div>
 
                   {!isGlobal && (
-                    <div className="space-y-3">
-                      <label className="text-sm font-semibold text-gray-700">Destinatários</label>
-                      <MultiSelect
-                        values={selectedEmails}
-                        onValuesChange={setSelectedEmails}
-                        placeholder="Selecione os usuários..."
-                        options={users
-                          .filter((user) => user.email)
-                          .map((user) => ({
-                            value: user.email!,
-                            label: user.displayName || user.email!,
-                          }))}
-                      />
-                    </div>
-                  )}
+  <div className="space-y-3">
+    <label className="text-sm font-semibold text-gray-700">Destinatários</label>
+    <UserMultiSelectWithConfirm
+  selected={selectedEmails}
+  onChange={setSelectedEmails}
+  placeholder="Selecione os usuários..."
+  clearLabel="Remover Todos"
+  options={users
+    .filter((user) => user.email)
+    .map((user) => ({
+      value: user.email!,
+      label: user.displayName || user.email!,
+    }))}
+/>
+  </div>
+)}
 
                   <div className="space-y-3">
                     <label className="text-sm font-semibold text-gray-700">Título</label>

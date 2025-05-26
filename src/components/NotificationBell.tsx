@@ -60,96 +60,141 @@ export const NotificationBell = () => {
   }
 
   if (isLoading) {
-    return <Skeleton className="h-9 w-9 rounded-full" />;
+    return <Skeleton className="h-12 w-12 rounded-full" />;
   }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative rounded-full bg-primary hover:bg-primary/90">
+        <Button 
+          variant="default" 
+          size="icon"
+          className="relative rounded-full w-12 h-12 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-sidebar to-eccos-purple hover:from-eccos-purple hover:to-sidebar group overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           {unreadCount > 0 ? (
-            <BellRing className="h-5 w-5 text-white animate-pulse" />
+            <BellRing className="h-6 w-6 text-white animate-pulse relative z-10" />
           ) : (
-            <Bell className="h-5 w-5 text-white" />
+            <Bell className="h-6 w-6 text-white relative z-10" />
           )}
           {unreadCount > 0 && (
-            <Badge variant="destructive" className="absolute -top-2 -right-2 px-1.5 py-0.5">
-              {unreadCount}
-            </Badge>
+            <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center font-semibold shadow-lg animate-pulse">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </div>
           )}
         </Button>
       </PopoverTrigger>
       
-      <PopoverContent className="w-96 p-0 border-blue-100 shadow-xl" align="end">
-        <div className="grid gap-4 p-4">
-          <div className="flex items-center justify-between border-b pb-2">
-            <h4 className="font-medium text-blue-800">Notificações</h4>
+      <PopoverContent className="w-96 p-0 border border-gray-100 shadow-2xl rounded-2xl bg-white" align="end">
+        {/* Background decorative elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-2xl">
+          <div className="absolute left-1/4 top-1/4 h-32 w-32 rounded-full bg-sidebar blur-3xl opacity-5"></div>
+          <div className="absolute right-1/4 bottom-1/4 h-24 w-24 rounded-full bg-eccos-purple blur-3xl opacity-5"></div>
+        </div>
+
+        <div className="relative z-10 p-6">
+          <div className="flex items-center justify-between border-b border-gray-100 pb-4 mb-6">
+            <h4 className="font-bold text-xl flex items-center gap-3 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+              <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-eccos-purple/10 text-eccos-purple">
+                <Bell className="h-4 w-4" />
+              </div>
+              Notificações
+            </h4>
             {unreadCount > 0 && (
               <Button 
-                variant="ghost" 
+                variant="outline" 
                 size="sm" 
                 onClick={handleMarkAllAsRead}
                 disabled={isMarkingAll}
-                className="flex items-center gap-1 text-xs"
+                className="border-eccos-purple text-eccos-purple hover:bg-eccos-purple hover:text-white transition-all duration-200 rounded-lg"
               >
-                <CheckCheck className="h-4 w-4" />
-                {isMarkingAll ? "Marcando..." : "Marcar todas como lidas"}
+                {isMarkingAll ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-3 w-3 border-2 border-current border-t-transparent"></div>
+                    Marcando...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <CheckCheck className="h-4 w-4" />
+                    Marcar todas
+                  </div>
+                )}
               </Button>
             )}
           </div>
-          <div className="max-h-[400px] overflow-y-auto">
+
+          <div className="max-h-[400px] overflow-y-auto space-y-3">
             {notifications.length > 0 ? (
-              notifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  onClick={() => handleNotificationClick(notification)}
-                  className={`p-3 rounded-lg mb-2 cursor-pointer transition-colors relative
-                    ${!notification.readBy?.includes(currentUser?.email || '') 
-                      ? 'bg-blue-100 border-2 border-blue-500 shadow-sm' 
-                      : 'bg-muted opacity-75'}`}
-                >
-                  {!notification.readBy?.includes(currentUser?.email || '') && (
-                    <div className="absolute top-2 right-2 w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
-                  )}
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2">
-                      {notification.title === 'Alteração de Status' ? (
-                        <Badge className="self-start bg-purple-500 hover:bg-purple-600 flex items-center gap-1">
-                          <RefreshCw className="h-3 w-3" />
-                          <span>Status</span>
-                        </Badge>
-                      ) : notification.recipients.length === 0 ? (
-                        <Badge className="self-start bg-blue-500 hover:bg-blue-600 flex items-center gap-1">
-                          <Globe className="h-3 w-3" />
-                          <span>Global</span>
-                        </Badge>
-                      ) : (
-                        <Badge className="self-start bg-emerald-500 hover:bg-emerald-600 flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          <span>Individual</span>
-                        </Badge>
-                      )}
-                    </div>
-                    <h5 className="font-medium">{notification.title}</h5>
-                    <p className="text-sm">{notification.message}</p>
-                    {notification.link && (
-                      <a
-                        href={notification.link}
-                        className="text-primary text-sm underline"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        Ver detalhes
-                      </a>
+              notifications.map((notification) => {
+                const isUnread = !notification.readBy?.includes(currentUser?.email || '');
+                return (
+                  <div
+                    key={notification.id}
+                    onClick={() => handleNotificationClick(notification)}
+                    className={`p-4 rounded-xl cursor-pointer transition-all duration-300 border relative group ${
+                      isUnread 
+                        ? 'bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 hover:border-eccos-purple shadow-sm hover:shadow-md' 
+                        : 'bg-gray-50 border-gray-100 hover:bg-gray-100 opacity-75'
+                    }`}
+                  >
+                    {isUnread && (
+                      <div className="absolute top-3 right-3 w-3 h-3 bg-gradient-to-r from-sidebar to-eccos-purple rounded-full animate-pulse shadow-lg"></div>
                     )}
-                    <time className="text-xs text-muted-foreground">
-                      {format(new Date(notification.createdAt), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}
-                    </time>
+                    
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center gap-2">
+                        {notification.title === 'Alteração de Status' ? (
+                          <Badge className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white shadow-sm">
+                            <RefreshCw className="h-3 w-3 mr-1" />
+                            Status
+                          </Badge>
+                        ) : notification.recipients.length === 0 ? (
+                          <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-sm">
+                            <Globe className="h-3 w-3 mr-1" />
+                            Global
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-sm">
+                            <User className="h-3 w-3 mr-1" />
+                            Individual
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <h5 className="font-semibold text-gray-900 leading-tight">
+                          {notification.title}
+                        </h5>
+                        <p className="text-sm text-gray-700 leading-relaxed">
+                          {notification.message}
+                        </p>
+                        {notification.link && (
+                          <a
+                            href={notification.link}
+                            className="inline-flex items-center text-sm text-eccos-purple hover:text-sidebar font-medium transition-colors underline decoration-2 underline-offset-2"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            Ver detalhes
+                          </a>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <time className="text-xs text-gray-500 font-medium bg-white px-2 py-1 rounded-lg border border-gray-100">
+                          {format(new Date(notification.createdAt), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}
+                        </time>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
-              <div className="text-center text-muted-foreground py-4">
-                Nenhuma notificação recente
+              <div className="text-center py-12">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 text-gray-400 mb-4">
+                  <Bell className="h-8 w-8" />
+                </div>
+                <p className="text-gray-500 font-medium text-lg">Nenhuma notificação</p>
+                <p className="text-gray-400 text-sm mt-1">As notificações aparecerão aqui quando chegarem</p>
               </div>
             )}
           </div>

@@ -27,6 +27,7 @@ import NovaSuporte from "./pages/solicitations/NovaSuporte";
 import SuporteOperacional from "./pages/SuporteOperacional";
 import Estoque from "./pages/admin/Estoque";
 import CalendarioReservas from "@/pages/admin/CalendarioReservas";
+import SuportePlataforma from "@/pages/admin/SuportePlataforma";
 
 const queryClient = new QueryClient();
 
@@ -141,6 +142,14 @@ const router = createBrowserRouter(
           element: (
             <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
               <Solicitacoes />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "suporte-plataforma",
+          element: (
+            <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+              <SuportePlataforma />
             </ProtectedRoute>
           ),
         },

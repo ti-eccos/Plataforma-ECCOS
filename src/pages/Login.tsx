@@ -14,7 +14,7 @@ import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import logo from '@/images/Logo-eccos.jpg';
+import logo from '@/images/Logo-eccos.png';
 
 const Login = () => {
   const { signInWithGoogle, currentUser, loading } = useAuth();
