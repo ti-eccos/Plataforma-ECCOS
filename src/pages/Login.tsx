@@ -25,7 +25,6 @@ const Login = () => {
   const cardRef = useRef<HTMLDivElement>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
-  // Atualiza posição do mouse para efeito de brilho
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       setMousePosition({ x: e.clientX, y: e.clientY });
@@ -34,43 +33,51 @@ const Login = () => {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  // Redireciona após login bem-sucedido
-    useEffect(() => {
-    const handlePostLogin = async () => {
-      if (!currentUser || isRedirecting) return;
-      try {
-        const userRef = doc(db, "users", currentUser.uid);
-        await updateDoc(userRef, {
-          lastActive: serverTimestamp()
-        });
+  useEffect(() => {
+  const handlePostLogin = async () => {
+    if (!currentUser || isRedirecting) return;
+    try {
+      const userRef = doc(db, "users", currentUser.uid);
+      await updateDoc(userRef, {
+        lastActive: serverTimestamp()
+      });
 
-        // Redirecionamento corrigido
-        const redirectPath = sessionStorage.getItem("redirectPath") || 
-                         location.state?.from?.pathname || 
-                         "/"; // Fallback explícito para raiz
-
-        sessionStorage.removeItem("redirectPath");
-        navigate(redirectPath, { replace: true });
-
-        toast({
-          title: "Login bem-sucedido",
-          description: `Bem-vindo, ${currentUser.displayName || 'usuário'}!`,
-        });
-      } catch (error) {
-        console.error("Erro no redirecionamento:", error);
-        toast({
-          title: "Erro",
-          description: "Ocorreu um problema durante o login",
-          variant: "destructive"
-        });
-        navigate("/", { replace: true });
-      } finally {
-        setIsRedirecting(false);
+      // Obter o caminho base correto para o ambiente atual
+      const base = import.meta.env.BASE_URL;
+      let redirectPath = sessionStorage.getItem("redirectPath") || 
+                       location.state?.from?.pathname || 
+                       "/";
+      
+      // Remover o base path se estiver presente
+      if (base && redirectPath.startsWith(base)) {
+        redirectPath = redirectPath.slice(base.length);
       }
-    };
+      
+      // Garantir que comece com /
+      redirectPath = redirectPath.startsWith('/') ? redirectPath : `/${redirectPath}`;
+      
+      sessionStorage.removeItem("redirectPath");
+      navigate(redirectPath, { replace: true });
 
-    if (currentUser) handlePostLogin();
-  }, [currentUser, navigate, toast, location, isRedirecting]);
+      toast({
+        title: "Login bem-sucedido",
+        description: `Bem-vindo, ${currentUser.displayName || 'usuário'}!`,
+      });
+    } catch (error) {
+      console.error("Erro no redirecionamento:", error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um problema durante o login",
+        variant: "destructive"
+      });
+      navigate("/", { replace: true });
+    } finally {
+      setIsRedirecting(false);
+    }
+  };
+
+  if (currentUser) handlePostLogin();
+}, [currentUser, navigate, toast, location, isRedirecting]);
 
   // Calcula posição do efeito de brilho
   const calculateShineEffect = () => {

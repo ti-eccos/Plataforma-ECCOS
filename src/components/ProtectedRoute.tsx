@@ -28,9 +28,10 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
   }
 
   if (!currentUser) {
-    sessionStorage.setItem("redirectPath", location.pathname);
-    return <Navigate to="/login" replace />;
-  }
+  const redirectPath = location.pathname.replace(/^\/+/g, '');
+  sessionStorage.setItem("redirectPath", redirectPath);
+  return <Navigate to="/login" replace />;
+}
 
   if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(currentUser.role)) {
     return <Navigate to="/unauthorized" replace />;

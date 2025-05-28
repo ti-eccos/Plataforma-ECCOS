@@ -7,7 +7,7 @@ import { viteStaticCopy } from 'vite-plugin-static-copy';
 const repoName = "Tecnologia-ECCOS";
 
 export default defineConfig(({ mode }) => ({
-  base: '/Tecnologia-ECCOS/', 
+  base: process.env.VITE_BASE_URL || '/Tecnologia-ECCOS/',
   
   server: {
     host: "::",

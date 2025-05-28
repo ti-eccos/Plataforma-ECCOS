@@ -181,7 +181,7 @@ const router = createBrowserRouter(
     },
   ],
   {
-    basename: import.meta.env.BASE_URL || "/Tecnologia-ECCOS",
+    basename: import.meta.env.BASE_URL,
   }
 );
 

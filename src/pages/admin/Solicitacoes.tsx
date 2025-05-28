@@ -3,12 +3,20 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
-  Calendar, 
-  ShoppingCart, 
-  Wrench, 
-  Filter, 
-  Search, 
-  Eye, 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle,
+  CardDescription,
+  CardFooter 
+} from "@/components/ui/card";
+import {
+  Calendar,
+  ShoppingCart,
+  Wrench,
+  Filter,
+  Search,
+  Eye,
   Trash2,
   MessageSquare,
   ChevronDown,
@@ -20,22 +28,22 @@ import {
   List,
 } from "lucide-react";
 import { toast } from "sonner";
-import { 
+import {
   getAllRequests,
   getRequestById,
   RequestStatus,
   RequestData,
-  RequestType
+  RequestType,
 } from "@/services/reservationService";
 import { useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/components/AppLayout";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -66,8 +74,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { doc, getDoc, updateDoc, deleteDoc, arrayUnion, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { createNotification } from '@/services/notificationService';
+import { createNotification } from "@/services/notificationService";
 import ChatAdmin from "@/components/admin/ChatAdmin";
+
+// Funções auxiliares
 
 const getRequestTypeIcon = (type: RequestType) => {
   switch (type) {
@@ -128,6 +138,7 @@ const getReadableRequestType = (type: RequestType): string => {
   }
 };
 
+// Componente Principal
 const Solicitacoes = () => {
   const queryClient = useQueryClient();
   const { currentUser: user, isAdmin } = useAuth();
@@ -152,30 +163,28 @@ const Solicitacoes = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<RequestData | null>(null);
 
+  // Carregar novo status ao selecionar uma solicitação
   useEffect(() => {
     if (selectedRequest) {
       setNewStatus(selectedRequest.status);
     }
   }, [selectedRequest]);
 
-  const { 
-    data: requests = [], 
-    isLoading, 
-    isError,
-    refetch 
-  } = useQuery({
+  // Buscar todas as solicitações
+  const { data: requests = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['allRequests', showHidden],
     queryFn: () => getAllRequests(showHidden),
     enabled: isAdmin,
   });
 
+  // Atualiza mensagens não lidas
   useEffect(() => {
     const checkUnreadMessages = () => {
       const newUnread: Record<string, number> = {};
       requests.forEach(req => {
         const messages = req.messages || [];
-        const unreadCount = messages.filter(msg => 
-          !msg.isAdmin && 
+        const unreadCount = messages.filter(msg =>
+          !msg.isAdmin &&
           !viewedRequests.has(`${req.id}-${msg.timestamp.toMillis()}`))
           .length;
         if (unreadCount > 0) newUnread[req.id] = unreadCount;
@@ -185,6 +194,7 @@ const Solicitacoes = () => {
     checkUnreadMessages();
   }, [requests, viewedRequests]);
 
+  // Busca detalhes dos equipamentos
   const getEquipmentDetails = async (equipmentIds: string[] = []) => {
     try {
       const docs = await Promise.all(
@@ -203,6 +213,8 @@ const Solicitacoes = () => {
     }
   };
 
+  // Manipuladores
+
   const handleViewDetails = async (request: RequestData) => {
     try {
       setIsDetailsLoading(true);
@@ -216,7 +228,6 @@ const Solicitacoes = () => {
       setIsDetailsOpen(true);
     } catch (error) {
       toast.error("Erro ao carregar detalhes");
-      console.error("Error:", error);
     } finally {
       setIsDetailsLoading(false);
     }
@@ -236,7 +247,6 @@ const Solicitacoes = () => {
       setIsChatOpen(true);
     } catch (error) {
       toast.error("Erro ao abrir chat");
-      console.error("Error:", error);
     }
   };
 
@@ -263,7 +273,6 @@ const Solicitacoes = () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     } catch (error) {
       toast.error("Erro ao excluir solicitação");
-      console.error("Error:", error);
     } finally {
       setIsDeleteDialogOpen(false);
       setRequestToDelete(null);
@@ -273,7 +282,7 @@ const Solicitacoes = () => {
   const handleStatusUpdate = async () => {
     if (!selectedRequest || !newStatus) return;
     try {
-      await updateDoc(doc(db, selectedRequest.collectionName, selectedRequest.id), { 
+      await updateDoc(doc(db, selectedRequest.collectionName, selectedRequest.id), {
         status: newStatus,
         history: arrayUnion({
           status: newStatus,
@@ -294,19 +303,24 @@ const Solicitacoes = () => {
       toast.success("Status atualizado com sucesso");
     } catch (error) {
       toast.error("Erro ao atualizar status");
-      console.error("Error:", error);
     }
   };
 
+  // Cálculo das estatísticas
+  const pendingRequests = requests.filter((req) => req.status === "pending").length;
+  const approvedRequests = requests.filter((req) => req.status === "approved").length;
+  const inProgressRequests = requests.filter((req) => req.status === "in-progress").length;
+
+  // Filtro de solicitações
   const filteredRequests = requests.filter(req => {
     const search = searchTerm.toLowerCase();
     return (
       (req.userName?.toLowerCase().includes(search) ||
-      req.userEmail?.toLowerCase().includes(search) ||
-      req.purpose?.toLowerCase().includes(search) ||
-      req.itemName?.toLowerCase().includes(search) ||
-      req.location?.toLowerCase().includes(search)) &&
-      selectedCategories.includes(req.type) && 
+       req.userEmail?.toLowerCase().includes(search) ||
+       req.purpose?.toLowerCase().includes(search) ||
+       req.itemName?.toLowerCase().includes(search) ||
+       req.location?.toLowerCase().includes(search)) &&
+      selectedCategories.includes(req.type) &&
       selectedStatuses.includes(req.status) &&
       (isAdmin || req.status !== "canceled") &&
       (
@@ -320,24 +334,148 @@ const Solicitacoes = () => {
   return (
     <AppLayout>
       <div className="min-h-screen bg-white overflow-hidden relative">
+                    <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+              <Wrench className="text-eccos-purple" size={35} />
+              Gerenciamento de Solicitações
+            </h1>
+        {/* Fundos decorativos */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-sidebar blur-3xl opacity-5"></div>
           <div className="absolute right-1/4 bottom-1/4 h-80 w-80 rounded-full bg-eccos-purple blur-3xl opacity-5"></div>
         </div>
 
+        {/* Conteúdo principal */}
         <div className="relative z-10 space-y-8 p-6 md:p-12">
-          {/* Header e controles de filtro */}
+          {/* Cards de Estatísticas */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+            {/* Card Pendentes */}
+            <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">Pendentes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-sidebar">{pendingRequests}</div>
+                <Badge variant="outline" className="mt-2 border-sidebar text-sidebar">Pendências</Badge>
+              </CardContent>
+            </Card>
+
+            {/* Card Aprovadas */}
+            <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">Aprovadas</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-sidebar">{approvedRequests}</div>
+                <Badge variant="outline" className="mt-2 border-sidebar text-sidebar">Concluídas</Badge>
+              </CardContent>
+            </Card>
+
+            {/* Card Em Progresso */}
+            <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">Em Progresso</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-sidebar">{inProgressRequests}</div>
+                <Badge variant="outline" className="mt-2 border-sidebar text-sidebar">Processando</Badge>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Filtros e busca */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
-              <Wrench className="text-eccos-purple" size={35} />
-              Gerenciamento de Solicitações
-            </h1>
-            <Button
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Pesquisar por nome, email, finalidade ou local..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 rounded-lg border-gray-200 focus:border-eccos-purple"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2 border-gray-200 hover:bg-gray-50 text-gray-700">
+                    <Filter className="h-4 w-4 text-eccos-purple" />
+                    Categoria
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-white border border-gray-100">
+                  {["reservation", "purchase", "support"].map((type) => (
+                    <DropdownMenuCheckboxItem
+                      key={type}
+                      checked={selectedCategories.includes(type as RequestType)}
+                      onCheckedChange={(checked) => {
+                        setSelectedCategories(checked ?
+                          [...selectedCategories, type as RequestType] :
+                          selectedCategories.filter(t => t !== type))
+                      }}
+                      className="flex items-center gap-2 hover:bg-gray-50"
+                    >
+                      {getRequestTypeIcon(type as RequestType)}
+                      {getReadableRequestType(type as RequestType)}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2 border-gray-200 hover:bg-gray-50 text-gray-700">
+                    <Filter className="h-4 w-4 text-eccos-purple" />
+                    Status
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-white border border-gray-100">
+                  {["pending", "approved", "rejected", "in-progress", "completed"].map((status) => (
+                    <DropdownMenuCheckboxItem
+                      key={status}
+                      checked={selectedStatuses.includes(status as RequestStatus)}
+                      onCheckedChange={(checked) => {
+                        setSelectedStatuses(checked ?
+                          [...selectedStatuses, status as RequestStatus] :
+                          selectedStatuses.filter(s => s !== status))
+                      }}
+                      className="hover:bg-gray-50"
+                    >
+                      {getStatusBadge(status as RequestStatus)}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2 border-gray-200 hover:bg-gray-50 text-gray-700">
+                    <Filter className="h-4 w-4 text-eccos-purple" />
+                    Tipo
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-white border border-gray-100">
+                  {["Compra Pedagógica", "Compra Administrativa", "Compra Infraestrutura", "Manutenção", "Tecnologia"].map((type) => (
+                    <DropdownMenuCheckboxItem
+                      key={type}
+                      checked={selectedTypes.includes(type)}
+                      onCheckedChange={(checked) => {
+                        setSelectedTypes(checked ?
+                          [...selectedTypes, type] :
+                          selectedTypes.filter(t => t !== type))
+                      }}
+                      className="hover:bg-gray-50"
+                    >
+                      {type}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
               variant="outline"
               onClick={() => {
                 setShowHidden(!showHidden);
                 setSelectedCategories(["reservation", "purchase", "support"]);
-                setSelectedStatuses(isAdmin 
+                setSelectedStatuses(isAdmin
                   ? ["pending", "approved", "rejected", "in-progress", "completed", "canceled"]
                   : ["pending", "approved", "in-progress", "completed"]
                 );
@@ -357,99 +495,6 @@ const Solicitacoes = () => {
                 </>
               )}
             </Button>
-          </div>
-
-          {/* Filtros e busca */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Pesquisar por nome, email, finalidade ou local..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 rounded-lg border-gray-200 focus:border-eccos-purple"
-              />
-            </div>
-            
-            <div className="flex flex-wrap gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex items-center gap-2 border-gray-200 hover:bg-gray-50 text-gray-700">
-                    <Filter className="h-4 w-4 text-eccos-purple" />
-                    Categoria
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-white border border-gray-100">
-                  {["reservation", "purchase", "support"].map((type) => (
-                    <DropdownMenuCheckboxItem
-                      key={type}
-                      checked={selectedCategories.includes(type as RequestType)}
-                      onCheckedChange={(checked) => {
-                        setSelectedCategories(checked ? 
-                          [...selectedCategories, type as RequestType] : 
-                          selectedCategories.filter(t => t !== type))
-                      }}
-                      className="flex items-center gap-2 hover:bg-gray-50"
-                    >
-                      {getRequestTypeIcon(type as RequestType)}
-                      {getReadableRequestType(type as RequestType)}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex items-center gap-2 border-gray-200 hover:bg-gray-50 text-gray-700">
-                    <Filter className="h-4 w-4 text-eccos-purple" />
-                    Status
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-white border border-gray-100">
-                  {["pending", "approved", "rejected", "in-progress", "completed"].map((status) => (
-                    <DropdownMenuCheckboxItem
-                      key={status}
-                      checked={selectedStatuses.includes(status as RequestStatus)}
-                      onCheckedChange={(checked) => {
-                        setSelectedStatuses(checked ? 
-                          [...selectedStatuses, status as RequestStatus] : 
-                          selectedStatuses.filter(s => s !== status))
-                      }}
-                      className="hover:bg-gray-50"
-                    >
-                      {getStatusBadge(status as RequestStatus)}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex items-center gap-2 border-gray-200 hover:bg-gray-50 text-gray-700">
-                    <Filter className="h-4 w-4 text-eccos-purple" />
-                    Tipo
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-white border border-gray-100">
-                  {["Compra Pedagógica", "Compra Administrativa", "Compra Infraestrutura","Manutenção", "Tecnologia"].map((type) => (
-                    <DropdownMenuCheckboxItem
-                      key={type}
-                      checked={selectedTypes.includes(type)}
-                      onCheckedChange={(checked) => {
-                        setSelectedTypes(checked ? 
-                          [...selectedTypes, type] : 
-                          selectedTypes.filter(t => t !== type))
-                      }}
-                      className="hover:bg-gray-50"
-                    >
-                      {type}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
           </div>
 
@@ -488,17 +533,14 @@ const Solicitacoes = () => {
                           </span>
                         </div>
                       </TableCell>
-
                       <TableCell className="text-center align-middle">
                         {request.userName}
                       </TableCell>
-
                       <TableCell className="text-center align-middle">
                         <div className="flex justify-center">
                           {getStatusBadge(request.status)}
                         </div>
                       </TableCell>
-
                       <TableCell className="text-center align-middle">
                         <div className="flex justify-center items-center gap-2">
                           <Button
@@ -558,12 +600,10 @@ const Solicitacoes = () => {
                       </div>
                     </DialogDescription>
                   </DialogHeader>
-                  
                   <div className="flex-1 overflow-y-auto space-y-6 py-4">
                     {/* Conteúdo detalhado */}
                     {selectedRequest.type === "reservation" && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Campos de reserva */}
                         <div>
                           <p className="text-sm font-medium text-gray-500">Data</p>
                           <p className="text-gray-700">
@@ -594,10 +634,8 @@ const Solicitacoes = () => {
                         </div>
                       </div>
                     )}
-
                     {selectedRequest.type === "purchase" && (
                       <div className="grid grid-cols-1 gap-4">
-                        {/* Campos de compra */}
                         <div>
                           <p className="text-sm font-medium text-gray-500">Item</p>
                           <p className="text-gray-700">{selectedRequest.itemName}</p>
@@ -609,9 +647,9 @@ const Solicitacoes = () => {
                         <div>
                           <p className="text-sm font-medium text-gray-500">Valor Unitário</p>
                           <p className="text-gray-700">
-                            {selectedRequest.unitPrice?.toLocaleString('pt-BR', { 
-                              style: 'currency', 
-                              currency: 'BRL' 
+                            {selectedRequest.unitPrice?.toLocaleString('pt-BR', {
+                              style: 'currency',
+                              currency: 'BRL'
                             })}
                           </p>
                         </div>
@@ -619,19 +657,17 @@ const Solicitacoes = () => {
                           <p className="text-sm font-medium text-gray-500">Valor Total</p>
                           <div className="bg-eccos-purple/10 p-2 rounded-md">
                             <p className="text-lg font-semibold text-eccos-purple">
-                              {(selectedRequest.quantity * selectedRequest.unitPrice)?.toLocaleString('pt-BR', { 
-                                style: 'currency', 
-                                currency: 'BRL' 
+                              {(selectedRequest.quantity * selectedRequest.unitPrice)?.toLocaleString('pt-BR', {
+                                style: 'currency',
+                                currency: 'BRL'
                               })}
                             </p>
                           </div>
                         </div>
                       </div>
                     )}
-
                     {selectedRequest.type === "support" && (
                       <div className="grid grid-cols-1 gap-4">
-                        {/* Campos de suporte */}
                         <div>
                           <p className="text-sm font-medium text-gray-500">Tipo</p>
                           <p className="text-gray-700">{selectedRequest.tipo}</p>
@@ -652,7 +688,6 @@ const Solicitacoes = () => {
                         </div>
                       </div>
                     )}
-
                     {/* Histórico */}
                     <div className="space-y-4 pt-4 border-t border-gray-100">
                       <h3 className="text-lg font-medium text-gray-800">Histórico</h3>
@@ -673,7 +708,6 @@ const Solicitacoes = () => {
                       </div>
                     </div>
                   </div>
-
                   {/* Rodapé com controles */}
                   <DialogFooter className="pt-4 border-t border-gray-100 gap-2">
                     <div className="flex items-center gap-2">
@@ -696,16 +730,14 @@ const Solicitacoes = () => {
                           ))}
                         </DropdownMenuContent>
                       </DropdownMenu>
-                      
-                      <Button 
+                      <Button
                         onClick={handleStatusUpdate}
                         disabled={!newStatus || newStatus === selectedRequest.status}
                       >
                         Salvar
                       </Button>
                     </div>
-
-                    <Button 
+                    <Button
                       variant="destructive"
                       onClick={() => handleDeleteConfirmation(selectedRequest)}
                     >
@@ -737,7 +769,7 @@ const Solicitacoes = () => {
                 <AlertDialogCancel className="border-gray-200 text-gray-700">
                   Cancelar
                 </AlertDialogCancel>
-                <AlertDialogAction 
+                <AlertDialogAction
                   onClick={handleDeleteRequest}
                   className="bg-red-600 hover:bg-red-700 text-white"
                 >
@@ -748,9 +780,9 @@ const Solicitacoes = () => {
           </AlertDialog>
 
           {/* Componente de chat */}
-          <ChatAdmin 
-            request={chatRequest} 
-            isOpen={isChatOpen} 
+          <ChatAdmin
+            request={chatRequest}
+            isOpen={isChatOpen}
             onOpenChange={setIsChatOpen}
             onMessageSent={refetch}
           />
