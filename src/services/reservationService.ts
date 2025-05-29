@@ -341,14 +341,12 @@ export const addPurchaseRequest = async (data: Omit<RequestData, 'id' | 'collect
 export const addSupportRequest = async (data: Omit<RequestData, 'id' | 'collectionName'>): Promise<string> => {
   try {
     const docRef = await addDoc(collection(db, 'supports'), {
-      tipo: data.tipo, 
-      ...data,
+      ...data,  // Recebe TODOS os campos do objeto
       type: 'support',
       status: 'pending',
       createdAt: Timestamp.now(),
       hidden: false
     });
-
     return docRef.id;
   } catch (error) {
     console.error("Erro ao criar solicitação de suporte:", error);

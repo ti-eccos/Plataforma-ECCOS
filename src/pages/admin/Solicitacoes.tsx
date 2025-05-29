@@ -76,8 +76,35 @@ import { doc, getDoc, updateDoc, deleteDoc, arrayUnion, Timestamp } from "fireba
 import { db } from "@/lib/firebase";
 import { createNotification } from "@/services/notificationService";
 import ChatAdmin from "@/components/admin/ChatAdmin";
+import { cn } from "@/lib/utils";
 
 // Funções auxiliares
+
+const getPriorityLevelBadge = (level?: string) => {
+  if (!level) return <Badge variant="outline">Não especificado</Badge>;
+  
+  const config = {
+    labels: {
+      critical: "Crítica",
+      high: "Alta",
+      medium: "Média",
+      low: "Baixa",
+    },
+    colors: {
+      critical: "bg-red-100 text-red-600 border-red-200",
+      high: "bg-orange-100 text-orange-600 border-orange-200",
+      medium: "bg-amber-100 text-amber-600 border-amber-200",
+      low: "bg-green-100 text-green-600 border-green-200",
+    },
+  };
+  
+  const normalizedLevel = level.toLowerCase();
+  return (
+    <Badge className={cn("border", config.colors[normalizedLevel])}>
+      {config.labels[normalizedLevel] || level}
+    </Badge>
+  );
+};
 
 const getRequestTypeIcon = (type: RequestType) => {
   switch (type) {
@@ -667,27 +694,43 @@ const Solicitacoes = () => {
                       </div>
                     )}
                     {selectedRequest.type === "support" && (
-                      <div className="grid grid-cols-1 gap-4">
-                        <div>
-                          <p className="text-sm font-medium text-gray-500">Tipo</p>
-                          <p className="text-gray-700">{selectedRequest.tipo}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-500">Prioridade</p>
-                          <p className="text-gray-700">{selectedRequest.priority}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-500">Local</p>
-                          <p className="text-gray-700">{selectedRequest.location}</p>
-                        </div>
-                        <div className="col-span-full">
-                          <p className="text-sm font-medium text-gray-500">Descrição</p>
-                          <pre className="whitespace-pre-wrap font-sans text-gray-700">
-                            {selectedRequest.description}
-                          </pre>
-                        </div>
-                      </div>
-                    )}
+  <div className="grid grid-cols-1 gap-4">
+    <div>
+      <p className="text-sm font-medium text-gray-500">Tipo</p>
+      <p className="text-gray-700">{selectedRequest.tipo}</p>
+    </div>
+    <div>
+      <p className="text-sm font-medium text-gray-500">Unidade</p>
+      <p className="text-gray-700">{selectedRequest.unit}</p>
+    </div>
+    <div>
+      <p className="text-sm font-medium text-gray-500">Localização</p>
+      <p className="text-gray-700">{selectedRequest.location}</p>
+    </div>
+    <div>
+      <p className="text-sm font-medium text-gray-500">Categoria</p>
+      <p className="text-gray-700">{selectedRequest.category}</p>
+    </div>
+    <div>
+      <p className="text-sm font-medium text-gray-500">Prioridade</p>
+      <p className="text-gray-700">
+        {getPriorityLevelBadge(selectedRequest.priority)}
+      </p>
+    </div>
+    {selectedRequest.deviceInfo && (
+      <div>
+        <p className="text-sm font-medium text-gray-500">Identificação do Equipamento</p>
+        <p className="text-gray-700">{selectedRequest.deviceInfo}</p>
+      </div>
+    )}
+    <div className="col-span-full">
+      <p className="text-sm font-medium text-gray-500">Descrição</p>
+      <pre className="whitespace-pre-wrap font-sans text-gray-700">
+        {selectedRequest.description}
+      </pre>
+    </div>
+  </div>
+)}
                     {/* Histórico */}
                     <div className="space-y-4 pt-4 border-t border-gray-100">
                       <h3 className="text-lg font-medium text-gray-800">Histórico</h3>

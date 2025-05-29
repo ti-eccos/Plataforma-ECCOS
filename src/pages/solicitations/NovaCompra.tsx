@@ -45,9 +45,12 @@ const formSchema = z.object({
   additionalInfo: z.string().optional(),
 });
 
+type FormValues = z.infer<typeof formSchema>;
+
 const NovaCompra = () => {
   const { currentUser: user } = useAuth();
-  const form = useForm<z.infer<typeof formSchema>>({
+
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       itemName: '',
@@ -59,7 +62,7 @@ const NovaCompra = () => {
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: FormValues) => {
     try {
       await addPurchaseRequest({
         ...values,
@@ -70,7 +73,6 @@ const NovaCompra = () => {
         createdAt: new Date(),
         hidden: false
       });
-      
       toast.success('Solicitação de compra enviada com sucesso!');
       form.reset();
       await sendAdminNotification('Compra', user?.displayName || 'Usuário não identificado');
@@ -101,6 +103,7 @@ const NovaCompra = () => {
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {/* Nome do Item + Tipo de Compra */}
               <div className="grid gap-6 md:grid-cols-2">
                 <FormField
                   control={form.control}
@@ -112,7 +115,8 @@ const NovaCompra = () => {
                         <Input 
                           placeholder="Ex: Notebook Dell Latitude 5440" 
                           className="rounded-xl border-gray-200 focus:ring-eccos-purple"
-                          {...field} 
+                          {...field}
+                          autoComplete="off"
                         />
                       </FormControl>
                       <FormMessage />
@@ -144,6 +148,7 @@ const NovaCompra = () => {
                 />
               </div>
 
+              {/* Quantidade + Valor Unitário */}
               <div className="grid gap-6 md:grid-cols-2">
                 <FormField
                   control={form.control}
@@ -158,6 +163,7 @@ const NovaCompra = () => {
                           placeholder="Ex: 5"
                           value={field.value === 0 ? '' : field.value}
                           onChange={(e) => field.onChange(Number(e.target.value))}
+                          autoComplete="off"
                         />
                       </FormControl>
                       <FormMessage />
@@ -172,15 +178,16 @@ const NovaCompra = () => {
                     <FormItem>
                       <FormLabel className="text-gray-700">Valor Unitário (R$) *</FormLabel>
                       <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        className="rounded-xl border-gray-200 focus:ring-eccos-purple"
-                        placeholder="Ex: 100.00"
-                        value={field.value === 0 ? '' : field.value}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          className="rounded-xl border-gray-200 focus:ring-eccos-purple"
+                          placeholder="Ex: 100.00"
+                          value={field.value === 0 ? '' : field.value}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          autoComplete="off"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -188,6 +195,7 @@ const NovaCompra = () => {
                 />
               </div>
 
+              {/* Valor Total Estimado + Urgência */}
               <div className="grid gap-6 md:grid-cols-2">
                 <FormItem>
                   <FormLabel className="text-gray-700">Valor Total Estimado</FormLabel>
@@ -230,6 +238,7 @@ const NovaCompra = () => {
                 />
               </div>
 
+              {/* Justificativa */}
               <FormField
                 control={form.control}
                 name="justification"
@@ -241,6 +250,7 @@ const NovaCompra = () => {
                         placeholder="Descreva detalhadamente a necessidade desta compra..."
                         className="rounded-xl border-gray-200 focus:ring-eccos-purple min-h-[120px]"
                         {...field}
+                        autoComplete="off"
                       />
                     </FormControl>
                     <FormMessage />
@@ -248,6 +258,7 @@ const NovaCompra = () => {
                 )}
               />
 
+              {/* Informações Adicionais */}
               <FormField
                 control={form.control}
                 name="additionalInfo"
@@ -259,6 +270,7 @@ const NovaCompra = () => {
                         placeholder="Links de referência, especificações técnicas..."
                         className="rounded-xl border-gray-200 focus:ring-eccos-purple min-h-[100px]"
                         {...field}
+                        autoComplete="off"
                       />
                     </FormControl>
                     <FormMessage />
@@ -266,6 +278,7 @@ const NovaCompra = () => {
                 )}
               />
 
+              {/* Botões de Ação */}
               <div className="flex justify-end gap-4">
                 <Button 
                   type="button" 

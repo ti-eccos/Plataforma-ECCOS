@@ -125,7 +125,7 @@ const Usuarios = () => {
       case "operacional":
         return (
           <Badge className="bg-orange-500 text-foreground">
-            Operacional
+            Manutenção
           </Badge>
         );
       default:

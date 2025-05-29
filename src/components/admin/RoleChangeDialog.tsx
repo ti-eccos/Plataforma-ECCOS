@@ -22,7 +22,7 @@ interface RoleChangeDialogProps {
 const ROLE_OPTIONS = [
   { value: "user", label: "Usuário Padrão" },
   { value: "financeiro", label: "Financeiro" },
-  { value: "operacional", label: "Operacional" },
+  { value: "operacional", label: "Manutenção" },
   { value: "admin", label: "Administrador" },
 ];
 

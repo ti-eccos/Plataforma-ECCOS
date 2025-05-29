@@ -1,21 +1,35 @@
-import AppLayout from "@/components/AppLayout";
-import { Button } from "@/components/ui/button";
-import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage, Form } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { useState } from "react";
-import * as z from "zod";
-import { motion } from "framer-motion";
-import { toast } from "sonner";
-import { useAuth } from '@/contexts/AuthContext';
+import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import AppLayout from '@/components/AppLayout';
+import { Button } from '@/components/ui/button';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  FormDescription
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { toast } from 'sonner';
 import { addSupportRequest } from '@/services/reservationService';
-import { Timestamp } from 'firebase/firestore';
+import { useAuth } from '@/contexts/AuthContext';
 import { sendAdminNotification } from '@/lib/email';
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 import { Wrench } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Timestamp } from 'firebase/firestore';
 
 const locationsByUnit = {
   'Berçário e Educação Infantil': [
@@ -40,7 +54,9 @@ const locationsByUnit = {
 };
 
 const formSchema = z.object({
-  tipo: z.enum(["Manutenção", "Tecnologia"], {required_error: "Selecione o tipo de suporte"}),
+  tipo: z.enum(["Manutenção", "Tecnologia"], {
+    required_error: "Selecione o tipo de suporte"
+  }),
   unit: z.string({ required_error: "Selecione a unidade" }),
   location: z.string({ required_error: "Selecione a localização" }),
   category: z.string({ required_error: "Selecione a categoria" }),
@@ -49,12 +65,14 @@ const formSchema = z.object({
   description: z.string().min(10, "A descrição deve ter pelo menos 10 caracteres"),
 });
 
+type FormValues = z.infer<typeof formSchema>;
+
 const NovaSuporte = () => {
   const { currentUser: user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedUnit, setSelectedUnit] = useState("");
-  
-  const form = useForm<z.infer<typeof formSchema>>({
+
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       unit: "",
@@ -66,21 +84,19 @@ const NovaSuporte = () => {
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: FormValues) => {
     try {
       setIsSubmitting(true);
-      
-      const payload = {
+      await addSupportRequest({
         ...values,
         userName: user?.displayName || "Usuário não identificado",
         userEmail: user?.email || "email@nao.informado",
-        status: 'pending',
+        userId: user?.uid || "",
         type: 'support',
+        status: 'pending',
         createdAt: Timestamp.now(),
         hidden: false
-      };
-
-      await addSupportRequest(payload);
+      });
       toast.success('Solicitação enviada com sucesso!');
       form.reset();
       setSelectedUnit("");
@@ -111,7 +127,7 @@ const NovaSuporte = () => {
         >
           <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
             <Wrench className="text-eccos-purple" size={35} />
-            Novo Suporte
+            Nova Manutenção
           </h1>
           <p className="text-gray-600 mt-1">
             Preencha todos os campos obrigatórios (*) para registrar sua solicitação
@@ -120,6 +136,7 @@ const NovaSuporte = () => {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                {/* Unidade */}
                 <FormField
                   control={form.control}
                   name="unit"
@@ -152,31 +169,7 @@ const NovaSuporte = () => {
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="tipo"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-gray-700">Tipo de Suporte *</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="rounded-xl border-gray-200 focus:ring-eccos-purple">
-                            <SelectValue placeholder="Selecione o tipo de suporte" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="rounded-xl border-gray-200">
-                          <SelectItem value="Manutenção">Manutenção</SelectItem>
-                          <SelectItem value="Tecnologia">Tecnologia</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
+                                {/* Localização */}
                 <FormField
                   control={form.control}
                   name="location"
@@ -212,25 +205,25 @@ const NovaSuporte = () => {
                   )}
                 />
 
+                {/* Tipo de Suporte */}
                 <FormField
                   control={form.control}
-                  name="category"
+                  name="tipo"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gray-700">Tipo de Problema *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormLabel className="text-gray-700">Tipo de Manutenção *</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger className="rounded-xl border-gray-200 focus:ring-eccos-purple">
-                            <SelectValue placeholder="Selecione a categoria do problema" />
+                            <SelectValue placeholder="Selecione o tipo de suporte" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent className="rounded-xl border-gray-200">
-                          <SelectItem value="Internet">Problemas de Internet</SelectItem>
-                          <SelectItem value="Hardware">Defeito em Equipamento</SelectItem>
-                          <SelectItem value="Software">Erro de Sistema</SelectItem>
-                          <SelectItem value="Projeção">Problemas de Projeção</SelectItem>
-                          <SelectItem value="Áudio">Falhas de Áudio</SelectItem>
-                          <SelectItem value="Outros">Outros Problemas</SelectItem>
+                          <SelectItem value="Manutenção">Infraestrutura</SelectItem>
+                          <SelectItem value="Tecnologia">Tecnologia</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -238,6 +231,32 @@ const NovaSuporte = () => {
                   )}
                 />
 
+
+
+                {/* Categoria */}
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-700">Categoria da Manutenção *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="rounded-xl border-gray-200 focus:ring-eccos-purple">
+                            <SelectValue placeholder="Selecione a categoria do problema" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="rounded-xl border-gray-200">
+                          <SelectItem value="Manutenção Preventiva">Manutenção Preventiva</SelectItem>
+                          <SelectItem value="Manutenção Corretiva">Manutenção Corretiva</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Prioridade */}
                 <FormField
                   control={form.control}
                   name="priority"
@@ -270,6 +289,7 @@ const NovaSuporte = () => {
                   )}
                 />
 
+                {/* Identificação do Equipamento */}
                 <FormField
                   control={form.control}
                   name="deviceInfo"
@@ -281,6 +301,7 @@ const NovaSuporte = () => {
                           placeholder="Ex: Notebook Dell Latitude 3420, Mouse bluetooth" 
                           className="rounded-xl border-gray-200 focus:ring-eccos-purple"
                           {...field} 
+                          autoComplete="off"
                         />
                       </FormControl>
                       <FormDescription className="text-gray-500">
@@ -292,6 +313,7 @@ const NovaSuporte = () => {
                 />
               </div>
 
+              {/* Descrição do Problema */}
               <FormField
                 control={form.control}
                 name="description"
@@ -300,13 +322,10 @@ const NovaSuporte = () => {
                     <FormLabel className="text-gray-700">Descrição Completa do Problema *</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Descreva detalhadamente: 
-- O que está acontecendo?
-- Quando começou o problema?
-- Quais mensagens de erro aparecem?
-- Quais tentativas de solução já foram feitas?"
+                        placeholder="Descreva detalhadamente:&#10;- O que está acontecendo?&#10;- Quando começou o problema?&#10;- Quais mensagens de erro aparecem?&#10;- Quais tentativas de solução já foram feitas?"
                         className="rounded-xl border-gray-200 focus:ring-eccos-purple min-h-[150px]"
                         {...field}
+                        autoComplete="off"
                       />
                     </FormControl>
                     <FormMessage />
@@ -314,32 +333,20 @@ const NovaSuporte = () => {
                 )}
               />
 
-              <div className="flex justify-end gap-4 border-t pt-6">
+             <div className="flex justify-end gap-4">
                 <Button 
                   type="button" 
                   variant="outline"
-                  onClick={() => {
-                    form.reset();
-                    setSelectedUnit("");
-                  }}
+                  onClick={() => form.reset()}
                   className="rounded-xl border-gray-200 hover:bg-gray-50 text-gray-700"
                 >
-                  Limpar Campos
+                  Limpar Formulário
                 </Button>
                 <Button 
                   type="submit" 
-                  disabled={isSubmitting}
                   className="rounded-xl bg-eccos-purple hover:bg-sidebar text-white px-8 py-6 text-lg font-semibold transition-all"
                 >
-                  {isSubmitting ? (
-                    <span className="flex items-center">
-                      <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                      </svg>
-                      Enviando...
-                    </span>
-                  ) : "Enviar Solicitação"}
+                  Enviar Solicitação
                 </Button>
               </div>
             </form>

@@ -803,27 +803,45 @@ const UserSolicitacoes = () => {
                         </div>
                       )}
                       {selectedRequest.type === "support" && (
-                        <div className="grid grid-cols-1 gap-4">
-                          <div>
-                            <p className="text-sm font-medium text-gray-500">Problema</p>
-                            <div className="max-h-[200px] overflow-y-auto rounded-md bg-gray-50 p-3">
-                              <pre className="whitespace-pre-wrap font-sans text-sm text-gray-700">
-                                {selectedRequest.description || "Nenhuma descrição fornecida"}
-                              </pre>
-                            </div>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-500">Local</p>
-                            <p className="text-gray-700">{selectedRequest.location}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-500">Prioridade</p>
-                            <div className="flex items-center gap-2">
-                              {getPriorityLevelBadge(selectedRequest.priority)}
-                            </div>
-                          </div>
-                        </div>
-                      )}
+  <div className="grid grid-cols-1 gap-4">
+    <div>
+      <p className="text-sm font-medium text-gray-500">Tipo</p>
+      <p className="text-gray-700">{selectedRequest.tipo}</p>
+    </div>
+    <div>
+      <p className="text-sm font-medium text-gray-500">Unidade</p>
+      <p className="text-gray-700">{selectedRequest.unit}</p>
+    </div>
+    <div>
+      <p className="text-sm font-medium text-gray-500">Localização</p>
+      <p className="text-gray-700">{selectedRequest.location}</p>
+    </div>
+    <div>
+      <p className="text-sm font-medium text-gray-500">Categoria</p>
+      <p className="text-gray-700">{selectedRequest.category}</p>
+    </div>
+    <div>
+      <p className="text-sm font-medium text-gray-500">Prioridade</p>
+      <div className="flex items-center gap-2">
+        {getPriorityLevelBadge(selectedRequest.priority)}
+      </div>
+    </div>
+    {selectedRequest.deviceInfo && (
+      <div>
+        <p className="text-sm font-medium text-gray-500">Identificação do Equipamento</p>
+        <p className="text-gray-700">{selectedRequest.deviceInfo}</p>
+      </div>
+    )}
+    <div>
+      <p className="text-sm font-medium text-gray-500">Descrição</p>
+      <div className="max-h-[200px] overflow-y-auto rounded-md bg-gray-50 p-3">
+        <pre className="whitespace-pre-wrap font-sans text-sm text-gray-700">
+          {selectedRequest.description || "Nenhuma descrição fornecida"}
+        </pre>
+      </div>
+    </div>
+  </div>
+)}
                     </div>
                   </div>
                   <DialogFooter className="gap-2">

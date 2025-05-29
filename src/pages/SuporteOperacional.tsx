@@ -67,6 +67,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 const getStatusBadge = (status: RequestStatus) => {
   switch (status) {
@@ -114,6 +115,32 @@ const SuporteOperacional = () => {
     queryFn: () => getAllRequests(),
     select: (data) => data.filter(req => req.type === 'support'),
   });
+
+  const getPriorityLevelBadge = (level?: string) => {
+  if (!level) return <Badge variant="outline">Não especificado</Badge>;
+  
+  const config = {
+    labels: {
+      critical: "Crítica",
+      high: "Alta",
+      medium: "Média",
+      low: "Baixa",
+    },
+    colors: {
+      critical: "bg-red-100 text-red-600 border-red-200",
+      high: "bg-orange-100 text-orange-600 border-orange-200",
+      medium: "bg-amber-100 text-amber-600 border-amber-200",
+      low: "bg-green-100 text-green-600 border-green-200",
+    },
+  };
+  
+  const normalizedLevel = level.toLowerCase();
+  return (
+    <Badge className={cn("border", config.colors[normalizedLevel])}>
+      {config.labels[normalizedLevel] || level}
+    </Badge>
+  );
+};
 
   useEffect(() => {
     const checkUnreadMessages = () => {
@@ -396,26 +423,46 @@ const SuporteOperacional = () => {
                   </DialogHeader>
                   
                   {selectedRequest && (
-                    <div className="space-y-6 py-4">
-                      <div className="space-y-4 border-b pb-4">
-                        <h3 className="text-lg font-medium text-gray-900">Detalhes do Chamado</h3>
-                        <div className="grid grid-cols-1 gap-4">
-                          <div>
-                            <p className="text-sm font-medium text-gray-500">Tipo</p>
-                            <p className="text-gray-700">{selectedRequest.tipo || "Não especificado"}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-500">Local</p>
-                            <p className="text-gray-700">{selectedRequest.location}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-500">Descrição Completa</p>
-                            <pre className="whitespace-pre-wrap font-sans text-sm p-2 bg-gray-50 rounded-lg">
-                              {selectedRequest.description || "Nenhuma descrição fornecida"}
-                            </pre>
-                          </div>
-                        </div>
-                      </div>
+  <div className="space-y-6 py-4">
+    <div className="space-y-4 border-b pb-4">
+      <h3 className="text-lg font-medium text-gray-900">Detalhes do Chamado</h3>
+      <div className="grid grid-cols-1 gap-4">
+        <div>
+          <p className="text-sm font-medium text-gray-500">Tipo</p>
+          <p className="text-gray-700">{selectedRequest.tipo || "Não especificado"}</p>
+        </div>
+        <div>
+          <p className="text-sm font-medium text-gray-500">Unidade</p>
+          <p className="text-gray-700">{selectedRequest.unit}</p>
+        </div>
+        <div>
+          <p className="text-sm font-medium text-gray-500">Localização</p>
+          <p className="text-gray-700">{selectedRequest.location}</p>
+        </div>
+        <div>
+          <p className="text-sm font-medium text-gray-500">Categoria</p>
+          <p className="text-gray-700">{selectedRequest.category}</p>
+        </div>
+        <div>
+          <p className="text-sm font-medium text-gray-500">Prioridade</p>
+          <p className="text-gray-700">
+            {getPriorityLevelBadge(selectedRequest.priority)}
+          </p>
+        </div>
+        {selectedRequest.deviceInfo && (
+          <div>
+            <p className="text-sm font-medium text-gray-500">Identificação do Equipamento</p>
+            <p className="text-gray-700">{selectedRequest.deviceInfo}</p>
+          </div>
+        )}
+        <div>
+          <p className="text-sm font-medium text-gray-500">Descrição Completa</p>
+          <pre className="whitespace-pre-wrap font-sans text-sm p-2 bg-gray-50 rounded-lg">
+            {selectedRequest.description || "Nenhuma descrição fornecida"}
+          </pre>
+        </div>
+      </div>
+    </div>
 
                       <div className="space-y-4 border-b pb-4">
                         <h3 className="text-lg font-medium text-gray-900">Alterar Status</h3>

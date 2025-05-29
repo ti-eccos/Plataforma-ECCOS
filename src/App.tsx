@@ -28,6 +28,7 @@ import SuporteOperacional from "./pages/SuporteOperacional";
 import Estoque from "./pages/admin/Estoque";
 import CalendarioReservas from "@/pages/admin/CalendarioReservas";
 import SuportePlataforma from "@/pages/admin/SuportePlataforma";
+import Profile from "@/pages/Profile";
 
 const queryClient = new QueryClient();
 
@@ -172,6 +173,14 @@ const router = createBrowserRouter(
         {
           path: "*",
           element: <Navigate to="/404" replace />,
+        },
+        {
+          path: "perfil",
+          element: (
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          ),
         },
       ],
     },

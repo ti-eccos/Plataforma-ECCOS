@@ -24,11 +24,12 @@ export interface User {
   lastActive: string;
   department?: string;
   pendingRoleChange?: {
-    from: UserRole;
-    to: UserRole;
-    requestedBy: string;
-    approvals: string[];
-    createdAt?: string;
+  from: UserRole;
+  to: UserRole;
+  requestedBy: string;
+  approvals: string[];
+  createdAt?: string;
+  birthDate?: string;
   };
 }
 

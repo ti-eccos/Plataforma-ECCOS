@@ -18,7 +18,7 @@ const AppWrapper = () => {
   return (
     <>
       <Outlet />
-      <SupportFab /> {/* Botão flutuante em todas as páginas */}
+      <SupportFab />
     </>
   );
 };

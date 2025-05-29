@@ -22,6 +22,7 @@ export interface AuthUser {
   lastActive?: Date;
   createdAt?: Date;
   department?: string;
+  birthDate?: string;
 }
 
 interface AuthContextType {

@@ -375,6 +375,40 @@ export const AppSidebar = () => {
 
       {/* Rodapé Fixo */}
       <div className="shrink-0 pt-4 pb-4 px-4 border-t border-gray-100 relative z-10">
+       <Link 
+  to="/perfil"
+  className={cn(
+    "flex items-center gap-3 p-3 mb-3 rounded-xl transition-all duration-300 group relative overflow-hidden",
+    "hover:bg-gradient-to-r hover:from-sidebar/10 hover:to-eccos-purple/10 hover:shadow-md hover:scale-[1.02]",
+    "border border-transparent hover:border-gray-100/50",
+    location.pathname === "/perfil" 
+      ? "bg-gradient-to-r from-sidebar/15 to-eccos-purple/15 text-eccos-purple shadow-lg border-eccos-purple/20 scale-[1.02]" 
+      : "",
+    expanded ? "w-full" : "w-12 justify-center"
+  )}
+>
+  {currentUser?.photoURL ? (
+    <img 
+      src={currentUser.photoURL} 
+      alt="User profile" 
+      className="h-8 w-8 rounded-full object-cover"
+    />
+  ) : (
+    <div className="h-8 w-8 rounded-full flex items-center justify-center bg-gradient-to-br from-sidebar to-eccos-purple text-white font-bold">
+      {currentUser?.displayName?.charAt(0) || currentUser?.email?.charAt(0).toUpperCase() || 'U'}
+    </div>
+  )}
+  {expanded && (
+    <div className="flex flex-col min-w-0">
+      <span className="text-sm font-medium text-gray-700 group-hover:text-eccos-purple transition-colors duration-300 truncate">
+        {currentUser?.displayName || currentUser?.email?.split('@')[0]}
+      </span>
+      <span className="text-xs text-gray-500 group-hover:text-eccos-purple/80 transition-colors duration-300 capitalize">
+        {currentUser?.role}
+      </span>
+    </div>
+  )}
+</Link>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button

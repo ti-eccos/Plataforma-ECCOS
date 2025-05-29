@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarIcon, CalendarCheck } from 'lucide-react';
+import { CalendarIcon, CalendarCheck, ChevronDown, MapPin } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
 import {
   Form,
@@ -45,10 +45,7 @@ const LOCATIONS = [
 ];
 
 const formSchema = z.object({
-  date: z.date({
-    required_error: "Data de reserva é obrigatória",
-    invalid_type_error: "Formato de data inválido"
-  }),
+  date: z.date({ required_error: "Data de reserva é obrigatória", invalid_type_error: "Formato de data inválido" }),
   startTime: z.string({ required_error: "Hora inicial é obrigatória" })
     .regex(/^(0[7-9]|1[0-9]):[0-5]\d$/, "Horário deve ser entre 07:00 e 19:00"),
   endTime: z.string({ required_error: "Hora final é obrigatória" })
@@ -97,6 +94,7 @@ const NovaReserva = () => {
   const [availableDates, setAvailableDates] = useState<Date[]>([]);
   const [equipment, setEquipment] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [locationPopoverOpen, setLocationPopoverOpen] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -206,7 +204,6 @@ const NovaReserva = () => {
           <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-sidebar blur-3xl opacity-5"></div>
           <div className="absolute right-1/4 bottom-1/4 h-80 w-80 rounded-full bg-eccos-purple blur-3xl opacity-5"></div>
         </div>
-
         {/* Conteúdo principal */}
         <div className="relative z-10 space-y-8 p-6 md:p-12">
           <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
@@ -216,9 +213,9 @@ const NovaReserva = () => {
           <p className="text-gray-600 mt-1">
             Preencha o formulário para reservar equipamentos
           </p>
-
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {/* Campo de data */}
               <FormField
                 control={form.control}
                 name="date"
@@ -272,6 +269,7 @@ const NovaReserva = () => {
                 )}
               />
 
+              {/* Horários */}
               <div className="grid gap-6 md:grid-cols-2">
                 <FormField
                   control={form.control}
@@ -284,6 +282,7 @@ const NovaReserva = () => {
                           {...field}
                           placeholder="07:00"
                           maxLength={5}
+                          autoComplete="off"
                           className="rounded-xl border-gray-200 focus:ring-eccos-purple"
                           onChange={(e) => {
                             field.onChange(autoCompleteTime(e.target.value));
@@ -305,6 +304,7 @@ const NovaReserva = () => {
                           {...field}
                           placeholder="19:00"
                           maxLength={5}
+                          autoComplete="off"
                           className="rounded-xl border-gray-200 focus:ring-eccos-purple"
                           onChange={(e) => {
                             field.onChange(autoCompleteTime(e.target.value));
@@ -317,6 +317,7 @@ const NovaReserva = () => {
                 />
               </div>
 
+              {/* Equipamentos */}
               <FormField
                 control={form.control}
                 name="selectedEquipment"
@@ -324,17 +325,13 @@ const NovaReserva = () => {
                   <FormItem>
                     <div className="mb-4 relative">
                       <FormLabel className="text-base text-gray-700">Equipamentos *</FormLabel>
-
-                      {/* Contador fixo na tela */}
                       {(() => {
                         const chromebookCount = equipment.filter(
                           (item) => field.value.includes(item.id) && item.type === 'Chromebook'
                         ).length;
-
                         const iPadCount = equipment.filter(
                           (item) => field.value.includes(item.id) && item.type === 'iPad'
                         ).length;
-
                         if (chromebookCount > 0 || iPadCount > 0) {
                           return (
                             <div className="fixed top-1/2 right-6 -translate-y-1/2 bg-white border border-gray-200 shadow-lg rounded-lg px-5 py-3 z-50 flex flex-col gap-1 transition-all duration-300">
@@ -348,7 +345,6 @@ const NovaReserva = () => {
                           );
                         }
                       })()}
-
                       <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 mt-6">
                         {equipment.map((item) => {
                           const isChecked = field.value.includes(item.id);
@@ -383,26 +379,69 @@ const NovaReserva = () => {
                 control={form.control}
                 name="location"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel className="text-gray-700">Local de Uso *</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="Selecione o local"
-                        list="locations-list"
-                        className="rounded-xl border-gray-200 focus:ring-eccos-purple"
-                      />
-                    </FormControl>
-                    <datalist id="locations-list">
-                      {LOCATIONS.map(location => (
-                        <option key={location} value={location} />
-                      ))}
-                    </datalist>
+                    <Popover open={locationPopoverOpen} onOpenChange={setLocationPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-between pl-3 text-left font-normal rounded-xl",
+                              "bg-white border border-gray-200 hover:border-gray-300",
+                              "shadow-sm hover:shadow-md transition-all duration-300",
+                              "text-gray-700 hover:bg-gray-50",
+                              !field.value && "text-gray-400"
+                            )}
+                          >
+                            <div className="flex items-center gap-2">
+                              <MapPin className="h-4 w-4 text-gray-500" />
+                              {field.value || "Selecione um local"}
+                            </div>
+                            <ChevronDown className="h-4 w-4 text-gray-500" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent 
+                        className="w-[var(--radix-popover-trigger-width)] p-0 border-gray-200 shadow-xl rounded-2xl overflow-hidden max-h-[300px]"
+                        align="start"
+                        sideOffset={4}
+                      >
+                        <div className="bg-white">
+                          <div className="p-2 border-b border-gray-100">
+                            <p className="text-sm font-medium text-gray-600 px-2 py-1">
+                              Selecione um local
+                            </p>
+                          </div>
+                          <div className="max-h-[250px] overflow-y-auto">
+                            {LOCATIONS.map((location) => (
+                              <button
+                                key={location}
+                                type="button"
+                                onClick={() => {
+                                  field.onChange(location);
+                                  setLocationPopoverOpen(false);
+                                }}
+                                className={cn(
+                                  "w-full text-left px-4 py-3 text-sm transition-colors",
+                                  "hover:bg-gray-50 focus:bg-gray-50 focus:outline-none",
+                                  "border-b border-gray-50 last:border-b-0",
+                                  field.value === location && "bg-eccos-purple/5 text-eccos-purple font-medium"
+                                )}
+                              >
+                                {location}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
+              {/* Finalidade */}
               <FormField
                 control={form.control}
                 name="purpose"
@@ -413,6 +452,7 @@ const NovaReserva = () => {
                       <Textarea
                         {...field}
                         placeholder="Descreva o propósito da reserva..."
+                        autoComplete="off"
                         className="rounded-xl border-gray-200 focus:ring-eccos-purple min-h-[120px]"
                       />
                     </FormControl>
@@ -421,18 +461,22 @@ const NovaReserva = () => {
                 )}
               />
 
-              <Button
-                type="submit"
-                className={cn(
-                  "w-full bg-eccos-purple hover:bg-sidebar text-white",
-                  "rounded-xl py-6 text-lg font-semibold",
-                  "transition-all duration-300 hover:shadow-lg",
-                  "disabled:opacity-50 disabled:cursor-not-allowed"
-                )}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "Enviando..." : "Solicitar Reserva"}
-              </Button>
+              <div className="flex justify-end gap-4">
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  onClick={() => form.reset()}
+                  className="rounded-xl border-gray-200 hover:bg-gray-50 text-gray-700"
+                >
+                  Limpar Formulário
+                </Button>
+                <Button 
+                  type="submit" 
+                  className="rounded-xl bg-eccos-purple hover:bg-sidebar text-white px-8 py-6 text-lg font-semibold transition-all"
+                >
+                  Enviar Solicitação
+                </Button>
+              </div>
             </form>
           </Form>
         </div>
