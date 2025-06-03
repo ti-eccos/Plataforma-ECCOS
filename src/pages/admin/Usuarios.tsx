@@ -346,7 +346,7 @@ const Usuarios = () => {
           </h1>
 
           <div className="space-y-6 sm:space-y-8 fade-up">
-            <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-3">
               {/* Card Usuários Ativos */}
               <Card
                 className="bg-white border border-gray-100 rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 relative group overflow-hidden"
@@ -397,24 +397,6 @@ const Usuarios = () => {
                   </div>
                   <Badge variant="outline" className="mt-1 sm:mt-2 border-blue-500 text-blue-500 text-xs">
                     Gestão
-                  </Badge>
-                </div>
-              </Card>
-
-              {/* Card Operacionais */}
-              <Card
-                className="bg-white border border-gray-100 rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 relative group overflow-hidden"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="p-3 sm:p-6">
-                  <h3 className="text-xs sm:text-sm font-medium text-gray-600 mb-2">
-                    Operacionais
-                  </h3>
-                  <div className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
-                    {operationalUsers}
-                  </div>
-                  <Badge variant="outline" className="mt-1 sm:mt-2 border-orange-500 text-orange-500 text-xs">
-                    Suporte
                   </Badge>
                 </div>
               </Card>
