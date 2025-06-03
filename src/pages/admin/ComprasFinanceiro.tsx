@@ -12,7 +12,8 @@ import {
   DollarSign,
   Clock,
   CheckCircle,
-  XCircle
+  XCircle,
+  ChevronDown
 } from "lucide-react";
 import { toast } from "sonner";
 import { 
@@ -253,7 +254,7 @@ const ComprasFinanceiro = () => {
           ) : (
             <>
               {/* Cards de estatísticas */}
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
+                <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-gray-600">Total de Solicitações</CardTitle>
@@ -379,9 +380,9 @@ const ComprasFinanceiro = () => {
                         <TableHeader>
                           <TableRow className="border-gray-100">
                             <TableHead className="font-semibold text-gray-700">Solicitante</TableHead>
-                            <TableHead className="font-semibold text-gray-700">Item</TableHead>
+                            <TableHead className="font-semibold text-gray-700 hidden md:table-cell">Item</TableHead>
                             <TableHead className="font-semibold text-gray-700">Status</TableHead>
-                            <TableHead className="font-semibold text-gray-700">Valor Total</TableHead>
+                            <TableHead className="font-semibold text-gray-700 hidden lg:table-cell">Valor Total</TableHead>
                             <TableHead className="font-semibold text-gray-700">Ações</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -389,9 +390,9 @@ const ComprasFinanceiro = () => {
                           {filteredRequests.map((request) => (
                             <TableRow key={request.id} className="border-gray-100 hover:bg-gray-50/50 transition-colors">
                               <TableCell className="font-medium">{request.userName}</TableCell>
-                              <TableCell>{request.itemName}</TableCell>
+                              <TableCell className="hidden md:table-cell">{request.itemName}</TableCell>
                               <TableCell>{getStatusBadge(request.status)}</TableCell>
-                              <TableCell className="font-semibold">
+                              <TableCell className="font-semibold hidden lg:table-cell">
                                 {new Intl.NumberFormat('pt-BR', {
                                   style: 'currency',
                                   currency: 'BRL'
@@ -445,106 +446,142 @@ const ComprasFinanceiro = () => {
           )}
 
           {/* Dialog de detalhes */}
-          <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-            <DialogContent className="max-w-2xl rounded-2xl">
-              {selectedRequest && (
-                <>
-                  <DialogHeader>
-                    <DialogTitle className="text-xl font-bold">Detalhes da Compra</DialogTitle>
-                    <DialogDescription>
-                      {format(
-                        new Date(selectedRequest.createdAt.toMillis()),
-                        "dd 'de' MMMM 'de' yyyy 'às' HH:mm",
-                        { locale: ptBR }
-                      )}
-                    </DialogDescription>
-                  </DialogHeader>
-                  
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-gray-600">Tipo</p>
-                        <p className="font-medium">{selectedRequest.tipo || "Não especificado"}</p>
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-gray-600">Solicitante</p>
-                        <p className="font-medium">{selectedRequest.userName}</p>
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-gray-600">Status</p>
-                        <div className="flex items-center gap-2">
-                          <Select 
-                            value={selectedRequest.status} 
-                            onValueChange={(value) => setNewStatus(value as RequestStatus)}
-                          >
-                            <SelectTrigger className="w-[180px] rounded-xl">
-                              <SelectValue placeholder="Selecionar status" />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-xl">
-                              <SelectItem value="pending">Pendente</SelectItem>
-                              <SelectItem value="approved">Aprovada</SelectItem>
-                              <SelectItem value="rejected">Reprovada</SelectItem>
-                              <SelectItem value="in-progress">Em Andamento</SelectItem>
-                              <SelectItem value="completed">Concluída</SelectItem>
-                              <SelectItem value="canceled">Cancelada</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Button 
-                            onClick={handleStatusChange}
-                            className="rounded-xl bg-gradient-to-r from-sidebar to-eccos-purple hover:from-eccos-purple hover:to-sidebar"
-                          >
-                            Atualizar
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-gray-600">Item</p>
-                        <p className="font-medium">{selectedRequest.itemName}</p>
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-gray-600">Quantidade</p>
-                        <p className="font-medium">{selectedRequest.quantity}</p>
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-gray-600">Valor Unitário</p>
-                        <p className="font-medium">
-                          {new Intl.NumberFormat('pt-BR', {
-                            style: 'currency',
-                            currency: 'BRL'
-                          }).format(selectedRequest.unitPrice || 0)}
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-gray-600">Valor Total</p>
-                        <p className="font-bold text-lg bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
-                          {new Intl.NumberFormat('pt-BR', {
-                            style: 'currency',
-                            currency: 'BRL'
-                          }).format((selectedRequest.quantity || 0) * (selectedRequest.unitPrice || 0))}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-gray-600">Justificativa</p>
-                      <div className="bg-gray-50 p-4 rounded-xl">
-                        <p className="whitespace-pre-wrap">{selectedRequest.justification}</p>
-                      </div>
-                    </div>
+         <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+  <DialogContent className="max-w-3xl bg-white border border-gray-100 max-h-[90vh] overflow-y-auto rounded-2xl">
+    {selectedRequest && (
+      <>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <ShoppingCart className="h-5 w-5 text-purple-500" />
+            <span className="bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+              Solicitação de Compra - {selectedRequest.userName || selectedRequest.userEmail}
+            </span>
+          </DialogTitle>
+          <DialogDescription asChild>
+            <div className="flex items-center justify-between text-gray-500 px-1">
+              <div>
+                {format(
+                  selectedRequest.createdAt.toDate(),
+                  "dd/MM/yyyy HH:mm",
+                  { locale: ptBR }
+                )}
+              </div>
+              <div>{getStatusBadge(selectedRequest.status)}</div>
+            </div>
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto space-y-6 py-4">
+          {/* Conteúdo específico para compras */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm font-medium text-gray-500">Tipo</p>
+              <p className="font-medium">{selectedRequest.tipo || "Não especificado"}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Solicitante</p>
+              <p className="font-medium">{selectedRequest.userName}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Item</p>
+              <p className="font-medium break-words">{selectedRequest.itemName}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Quantidade</p>
+              <p className="font-medium">{selectedRequest.quantity}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Valor Unitário</p>
+              <p className="font-medium">
+                {new Intl.NumberFormat('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL'
+                }).format(selectedRequest.unitPrice || 0)}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Valor Total</p>
+              <p className="font-bold text-lg bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+                {new Intl.NumberFormat('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL'
+                }).format((selectedRequest.quantity || 0) * (selectedRequest.unitPrice || 0))}
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-gray-500">Justificativa</p>
+            <div className="bg-gray-50 p-4 rounded-xl">
+              <p className="whitespace-pre-wrap break-words">{selectedRequest.justification}</p>
+            </div>
+          </div>
+
+          {/* Controle de status */}
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2">
+                  Alterar Status
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {["pending", "approved", "rejected", "in-progress", "completed", "canceled"].map((status) => (
+                  <DropdownMenuCheckboxItem
+                    key={status}
+                    checked={newStatus === status}
+                    onCheckedChange={() => setNewStatus(status as RequestStatus)}
+                  >
+                    {getStatusBadge(status as RequestStatus)}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              onClick={handleStatusChange}
+              disabled={!newStatus || newStatus === selectedRequest.status}
+              className="bg-gradient-to-r from-sidebar to-eccos-purple hover:from-eccos-purple hover:to-sidebar text-white"
+            >
+              Salvar
+            </Button>
+          </div>
+
+          {/* Histórico */}
+          <div className="space-y-4 pt-4 border-t border-gray-100">
+            <h3 className="text-lg font-medium text-gray-800">Histórico</h3>
+            <div className="space-y-2">
+              {selectedRequest.history?.map((event: any, index: number) => (
+                <div key={index} className="flex items-center gap-3 p-2 bg-gray-50 rounded">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-600">
+                      {format(event.timestamp.toDate(), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                    </p>
+                    <p className="text-sm text-gray-500">{event.message}</p>
                   </div>
-                  
-                  <DialogFooter>
-                    <Button 
-                      variant="outline"
-                      onClick={() => handleDeleteRequest(selectedRequest)}
-                      className="rounded-xl border-red-200 text-red-600 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" /> Excluir
-                    </Button>
-                  </DialogFooter>
-                </>
+                  {getStatusBadge(event.status)}
+                </div>
+              )) || (
+                <p className="text-gray-500 text-sm">Nenhum histórico registrado</p>
               )}
-            </DialogContent>
-          </Dialog>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter className="pt-4 border-t border-gray-100 gap-2">
+          <Button
+            variant="destructive"
+            onClick={() => handleDeleteRequest(selectedRequest)}
+            className="w-full sm:w-auto"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Excluir Solicitação
+          </Button>
+        </DialogFooter>
+      </>
+    )}
+  </DialogContent>
+</Dialog>
 
           {/* Chat Admin */}
           <ChatAdmin 

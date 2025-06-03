@@ -213,10 +213,9 @@ export default function Disponibilidade() {
           <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-sidebar blur-3xl opacity-5"></div>
           <div className="absolute right-1/4 bottom-1/4 h-80 w-80 rounded-full bg-eccos-purple blur-3xl opacity-5"></div>
         </div>
-
-        <div className="relative z-10 space-y-8 p-6 md:p-12">
-          <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
-            <LucideCalendar className="text-eccos-purple" size={35} />
+        <div className="relative z-10 space-y-8 p-4 md:p-6 lg:p-12">
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+            <LucideCalendar className="text-eccos-purple" size={30} />
             Gerenciamento de Disponibilidade
           </h1>
 
@@ -228,7 +227,7 @@ export default function Disponibilidade() {
 
           {!isLoading.initial && (
             <div className="space-y-8">
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
+              <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-gray-600">Total de Datas Disponíveis</CardTitle>
@@ -242,7 +241,6 @@ export default function Disponibilidade() {
                     </Badge>
                   </CardContent>
                 </Card>
-
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-gray-600">Disponíveis Este Mês</CardTitle>
@@ -256,7 +254,6 @@ export default function Disponibilidade() {
                     </Badge>
                   </CardContent>
                 </Card>
-
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-gray-600">
@@ -272,7 +269,6 @@ export default function Disponibilidade() {
                     </Badge>
                   </CardContent>
                 </Card>
-
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-gray-600">
@@ -290,7 +286,7 @@ export default function Disponibilidade() {
                 </Card>
               </div>
 
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="min-w-[200px]">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid grid-cols-2 w-full bg-white border border-gray-100 rounded-2xl shadow-lg p-1 h-14">
                   <TabsTrigger
                     value="add"
@@ -311,61 +307,69 @@ export default function Disponibilidade() {
                 <TabsContent value="add" className="mt-6">
                   <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
                     <CardContent className="p-6">
-                      <div className="bg-gray-50 rounded-2xl p-4">
-                        <Calendar
-                          mode="multiple"
-                          selected={selectedAddDates}
-                          onSelect={setSelectedAddDates}
-                          month={currentMonth}
-                          onMonthChange={setCurrentMonth}
-                          disabled={(date) => isDateInPast(date) || isDateAvailable(date)}
-                          modifiers={{
-                            available: (date) => isDateAvailable(date),
-                            today: (date) => isTodayDate(date),
-                            selectedAdd: (date) => isDateSelectedForAdd(date),
-                          }}
-                          modifiersStyles={calendarStyles}
-                          className="border-0"
-                          components={{
-                            DayContent: (props) => {
-                              const { date } = props;
-                              const day = date.getDate();
-                              return (
-                                <div className="relative w-full h-full flex items-center justify-center">
-                                  <span className={isDateSelectedForAdd(date) ? "opacity-0" : ""}>
-                                    {day}
-                                  </span>
-                                  {isDateSelectedForAdd(date) && <AddDateIcon />}
-                                </div>
-                              );
-                            },
-                          }}
-                        />
+                      <div className="flex justify-between items-center mb-4">
+                        <Button variant="outline" size="icon" onClick={handlePreviousMonth} className="h-8 w-8">
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <h3 className="text-sm font-medium">
+                          {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
+                        </h3>
+                        <Button variant="outline" size="icon" onClick={handleNextMonth} className="h-8 w-8">
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
                       </div>
-                      
+                      <Calendar
+                        mode="multiple"
+                        selected={selectedAddDates}
+                        onSelect={setSelectedAddDates}
+                        month={currentMonth}
+                        onMonthChange={setCurrentMonth}
+                        disabled={(date) => isDateInPast(date) || isDateAvailable(date)}
+                        modifiers={{
+                          available: (date) => isDateAvailable(date),
+                          today: (date) => isTodayDate(date),
+                          selectedAdd: (date) => isDateSelectedForAdd(date),
+                        }}
+                        modifiersStyles={calendarStyles}
+                        className="border-0 max-w-full sm:max-w-[320px] mx-auto"
+                        components={{
+                          DayContent: (props) => {
+                            const { date } = props;
+                            const day = date.getDate();
+                            return (
+                              <div className="relative w-full h-full flex items-center justify-center">
+                                <span className={isDateSelectedForAdd(date) ? "opacity-0" : ""}>
+                                  {day}
+                                </span>
+                                {isDateSelectedForAdd(date) && <AddDateIcon />}
+                              </div>
+                            );
+                          },
+                        }}
+                      />
                       <div className="mt-6 space-y-4">
                         <div className="bg-blue-50 p-4 rounded-2xl">
                           <div className="flex items-center gap-2 mb-3">
                             <CalendarPlus className="h-5 w-5 text-blue-600" />
                             <h3 className="font-medium text-blue-600">Datas para Adicionar</h3>
                           </div>
-                          <p className="text-sm text-blue-600 mb-4 max-h-20 overflow-y-auto">
+                          <p className="text-xs sm:text-sm text-blue-600 mb-4 max-h-20 overflow-y-auto">
                             {formatSelectedDates(selectedAddDates)}
                           </p>
-                          <div className="flex flex-wrap gap-3">
-                            <Button
-                              onClick={handleAddDates}
-                              disabled={isLoading.add || selectedAddDates.length === 0}
-                              className="flex-1 h-12 rounded-xl bg-gradient-to-r from-sidebar to-eccos-purple hover:from-eccos-purple hover:to-sidebar text-white"
-                            >
-                              {isLoading.add ? "Salvando..." : "Confirmar Adição"}
-                            </Button>
+                          <div className="flex flex-col sm:flex-row gap-3">
                             <Button
                               onClick={() => setSelectedAddDates([])}
                               variant="outline"
                               className="flex-1 h-12 rounded-xl border-eccos-purple text-eccos-purple hover:bg-eccos-purple/10"
                             >
                               Limpar Seleção
+                            </Button>
+                            <Button
+                              onClick={handleAddDates}
+                              disabled={isLoading.add || selectedAddDates.length === 0}
+                              className="flex-1 h-12 rounded-xl bg-gradient-to-r from-sidebar to-eccos-purple hover:from-eccos-purple hover:to-sidebar text-white"
+                            >
+                              {isLoading.add ? "Salvando..." : "Confirmar Adição"}
                             </Button>
                           </div>
                         </div>
@@ -377,61 +381,69 @@ export default function Disponibilidade() {
                 <TabsContent value="remove" className="mt-6">
                   <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
                     <CardContent className="p-6">
-                      <div className="bg-gray-50 rounded-2xl p-4">
-                        <Calendar
-                          mode="multiple"
-                          selected={selectedRemoveDates}
-                          onSelect={setSelectedRemoveDates}
-                          month={currentMonth}
-                          onMonthChange={setCurrentMonth}
-                          disabled={(date) => !isDateAvailable(date)}
-                          modifiers={{
-                            available: (date) => isDateAvailable(date),
-                            today: (date) => isTodayDate(date),
-                            selectedRemove: (date) => isDateSelectedForRemove(date),
-                          }}
-                          modifiersStyles={calendarStyles}
-                          className="border-0"
-                          components={{
-                            DayContent: (props) => {
-                              const { date } = props;
-                              const day = date.getDate();
-                              return (
-                                <div className="relative w-full h-full flex items-center justify-center">
-                                  <span className={isDateSelectedForRemove(date) ? "opacity-0" : ""}>
-                                    {day}
-                                  </span>
-                                  {isDateSelectedForRemove(date) && <RemoveDateIcon />}
-                                </div>
-                              );
-                            },
-                          }}
-                        />
+                      <div className="flex justify-between items-center mb-4">
+                        <Button variant="outline" size="icon" onClick={handlePreviousMonth} className="h-8 w-8">
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <h3 className="text-sm font-medium">
+                          {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
+                        </h3>
+                        <Button variant="outline" size="icon" onClick={handleNextMonth} className="h-8 w-8">
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
                       </div>
-                      
+                      <Calendar
+                        mode="multiple"
+                        selected={selectedRemoveDates}
+                        onSelect={setSelectedRemoveDates}
+                        month={currentMonth}
+                        onMonthChange={setCurrentMonth}
+                        disabled={(date) => !isDateAvailable(date)}
+                        modifiers={{
+                          available: (date) => isDateAvailable(date),
+                          today: (date) => isTodayDate(date),
+                          selectedRemove: (date) => isDateSelectedForRemove(date),
+                        }}
+                        modifiersStyles={calendarStyles}
+                        className="border-0 max-w-full sm:max-w-[320px] mx-auto"
+                        components={{
+                          DayContent: (props) => {
+                            const { date } = props;
+                            const day = date.getDate();
+                            return (
+                              <div className="relative w-full h-full flex items-center justify-center">
+                                <span className={isDateSelectedForRemove(date) ? "opacity-0" : ""}>
+                                  {day}
+                                </span>
+                                {isDateSelectedForRemove(date) && <RemoveDateIcon />}
+                              </div>
+                            );
+                          },
+                        }}
+                      />
                       <div className="mt-6 space-y-4">
                         <div className="bg-red-50 p-4 rounded-2xl">
                           <div className="flex items-center gap-2 mb-3">
                             <CalendarX className="h-5 w-5 text-red-600" />
                             <h3 className="font-medium text-red-600">Datas para Remover</h3>
                           </div>
-                          <p className="text-sm text-red-600 mb-4 max-h-20 overflow-y-auto">
+                          <p className="text-xs sm:text-sm text-red-600 mb-4 max-h-20 overflow-y-auto">
                             {formatSelectedDates(selectedRemoveDates)}
                           </p>
-                          <div className="flex flex-wrap gap-3">
-                            <Button
-                              onClick={handleRemoveDates}
-                              disabled={isLoading.remove || selectedRemoveDates.length === 0}
-                              className="flex-1 h-12 rounded-xl bg-red-600 hover:bg-red-700 text-white"
-                            >
-                              {isLoading.remove ? "Removendo..." : "Confirmar Remoção"}
-                            </Button>
+                          <div className="flex flex-col sm:flex-row gap-3">
                             <Button
                               onClick={() => setSelectedRemoveDates([])}
                               variant="outline"
                               className="flex-1 h-12 rounded-xl border-red-600 text-red-600 hover:bg-red-50"
                             >
                               Limpar Seleção
+                            </Button>
+                            <Button
+                              onClick={handleRemoveDates}
+                              disabled={isLoading.remove || selectedRemoveDates.length === 0}
+                              className="flex-1 h-12 rounded-xl bg-red-600 hover:bg-red-700 text-white"
+                            >
+                              {isLoading.remove ? "Removendo..." : "Confirmar Remoção"}
                             </Button>
                           </div>
                         </div>
@@ -443,7 +455,6 @@ export default function Disponibilidade() {
             </div>
           )}
         </div>
-
         <footer className="relative z-10 bg-gray-50 py-10 px-4 md:px-12">
           <div className="max-w-6xl mx-auto text-center">
             <p className="text-gray-500 text-sm">

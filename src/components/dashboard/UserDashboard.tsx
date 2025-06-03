@@ -51,7 +51,18 @@ type Request = {
 const UserDashboard = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
-  const handleNavigateToRequests = () => navigate('/minhas-solicitacoes');
+  
+  const handleNavigateToRequests = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigate('/minhas-solicitacoes');
+  };
+
+  const handleNavigateToNewRequest = (type: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigate(`/nova-solicitacao/${type}`);
+  };
 
   const convertFirestoreData = (data: any): Request | null => {
     try {
@@ -148,8 +159,13 @@ const UserDashboard = () => {
       { threshold: 0.1 }
     );
 
-    document.querySelectorAll('.fade-up').forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
+    const elements = document.querySelectorAll('.fade-up');
+    elements.forEach((el) => observer.observe(el));
+    
+    return () => {
+      elements.forEach((el) => observer.unobserve(el));
+      observer.disconnect();
+    };
   }, []);
 
   const statusLabels: Record<RequestStatus, string> = {
@@ -192,8 +208,9 @@ const UserDashboard = () => {
 
   return (
     <AppLayout>
-      <div className="min-h-screen bg-white overflow-hidden relative">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <div className="min-h-screen bg-white relative">
+        {/* Background decorativo - removido pointer-events-none para evitar conflitos */}
+        <div className="absolute inset-0 -z-10">
           <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-sidebar blur-3xl opacity-5"></div>
           <div className="absolute right-1/4 bottom-1/4 h-80 w-80 rounded-full bg-eccos-purple blur-3xl opacity-5"></div>
         </div>
@@ -209,8 +226,8 @@ const UserDashboard = () => {
 
           {/* NoticeBoard - Sempre visível após o título */}
           <div className="fade-up mb-8">
-  <NoticeBoard />
-</div>
+            <NoticeBoard />
+          </div>
 
           {/* Loading State */}
           <DashboardLoading isLoading={isLoading} isError={isError} />
@@ -236,8 +253,9 @@ const UserDashboard = () => {
 
                   <div className="flex flex-col sm:flex-row justify-center gap-3">
                     <Button
-                      onClick={() => navigate('/nova-solicitacao/reserva')}
-                      className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all shadow-md hover:shadow-lg focus:outline-none min-w-[160px]"
+                      type="button"
+                      onClick={handleNavigateToNewRequest('reserva')}
+                      className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 min-w-[160px] cursor-pointer"
                     >
                       <span className="flex items-center justify-center w-5 h-5">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -251,8 +269,9 @@ const UserDashboard = () => {
                     </Button>
 
                     <Button
-                      onClick={() => navigate('/nova-solicitacao/compra')}
-                      className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-all shadow-md hover:shadow-lg focus:outline-none min-w-[160px]"
+                      type="button"
+                      onClick={handleNavigateToNewRequest('compra')}
+                      className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 min-w-[160px] cursor-pointer"
                     >
                       <span className="flex items-center justify-center w-5 h-5">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -265,8 +284,9 @@ const UserDashboard = () => {
                     </Button>
 
                     <Button
-                      onClick={() => navigate('/nova-solicitacao/suporte')}
-                      className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-lg transition-all shadow-md hover:shadow-lg focus:outline-none min-w-[160px]"
+                      type="button"
+                      onClick={handleNavigateToNewRequest('suporte')}
+                      className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-lg transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 min-w-[160px] cursor-pointer"
                     >
                       <span className="flex items-center justify-center w-5 h-5">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -283,14 +303,22 @@ const UserDashboard = () => {
                 /* Conteúdo com Solicitações */
                 <div className="space-y-8 fade-up">
                   {/* Cards de Status */}
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+                    <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
                     {Object.values(RequestStatus).map((status) => (
                       <Card
                         key={status}
                         className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 relative group overflow-hidden cursor-pointer"
                         onClick={handleNavigateToRequests}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleNavigateToRequests(e as any);
+                          }
+                        }}
                       >
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                         <CardHeader className="pb-2">
                           <CardTitle className="text-sm font-medium text-gray-600">
                             {statusLabels[status]}

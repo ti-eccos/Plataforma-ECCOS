@@ -87,49 +87,49 @@ const getStatusBadge = (status: RequestStatus) => {
     case "pending":
       return (
         <Badge className="bg-amber-50 text-amber-600 border-amber-100">
-          <Clock className="h-4 w-4 mr-1" />
+          <Clock className="h-4 w-4 mr-1 hidden sm:inline-block" />
           Pendente
         </Badge>
       );
     case "approved":
       return (
         <Badge className="bg-green-50 text-green-600 border-green-100">
-          <CheckCircle2 className="h-4 w-4 mr-1" />
+          <CheckCircle2 className="h-4 w-4 mr-1 hidden sm:inline-block" />
           Aprovada
         </Badge>
       );
     case "rejected":
       return (
         <Badge variant="destructive">
-          <XCircle className="h-4 w-4 mr-1" />
+          <XCircle className="h-4 w-4 mr-1 hidden sm:inline-block" />
           Reprovada
         </Badge>
       );
     case "in-progress":
       return (
         <Badge className="bg-blue-50 text-blue-600 border-blue-100">
-          <RefreshCw className="h-4 w-4 mr-1" />
+          <RefreshCw className="h-4 w-4 mr-1 hidden sm:inline-block" />
           Em Andamento
         </Badge>
       );
     case "completed":
       return (
         <Badge className="bg-slate-100 text-slate-600 border-slate-200">
-          <CheckCircle2 className="h-4 w-4 mr-1" />
+          <CheckCircle2 className="h-4 w-4 mr-1 hidden sm:inline-block" />
           Concluída
         </Badge>
       );
     case "canceled":
       return (
         <Badge className="bg-red-50 text-red-600 border-red-100">
-          <AlertTriangle className="h-4 w-4 mr-1" />
+          <AlertTriangle className="h-4 w-4 mr-1 hidden sm:inline-block" />
           Cancelada
         </Badge>
       );
     default:
       return (
         <Badge variant="outline">
-          <AlertTriangle className="h-4 w-4 mr-1" />
+          <AlertTriangle className="h-4 w-4 mr-1 hidden sm:inline-block" />
           Desconhecido
         </Badge>
       );
@@ -177,18 +177,19 @@ const getPriorityLevelBadge = (level?: string) => {
 const UserSolicitacoes = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<RequestType[]>([
     "reservation",
     "purchase",
     "support",
   ]);
-  const [selectedStatuses, setSelectedStatuses] = useState<RequestStatus[]>([
-    "pending",
-    "approved",
-    "in-progress",
-  ]);
+const [selectedStatuses, setSelectedStatuses] = useState<RequestStatus[]>([
+  "pending",
+  "approved",
+  "rejected",
+  "in-progress",
+  "completed"
+]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([
     "Manutenção",
     "Tecnologia",
@@ -591,13 +592,11 @@ const UserSolicitacoes = () => {
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-eccos-purple/10 text-eccos-purple mb-4">
                 <FileText className="h-8 w-8" />
               </div>
-
               <h3 className="text-2xl font-bold mb-2">Nenhuma solicitação encontrada</h3>
               <p className="text-gray-600 mb-6 max-w-md mx-auto">
                 Parece que você ainda não fez nenhuma solicitação. Escolha o tipo de solicitação
                 abaixo para começar!
               </p>
-
               <div className="flex flex-col sm:flex-row justify-center gap-3">
                 <Button
                   onClick={() => navigate("/nova-solicitacao/reserva")}
@@ -688,9 +687,9 @@ const UserSolicitacoes = () => {
             </div>
           )}
 
-          {/* Modais e chats */}
+          {/* Detalhes da Solicitação */}
           <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-            <DialogContent className="max-w-3xl border-gray-100 shadow-xl">
+            <DialogContent className="max-w-full sm:max-w-3xl border-gray-100 shadow-xl p-4">
               {isDetailsLoading ? (
                 <div className="flex justify-center items-center h-64">
                   <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-eccos-purple"></div>
@@ -706,7 +705,7 @@ const UserSolicitacoes = () => {
                       </span>
                     </DialogTitle>
                     <DialogDescription asChild>
-                      <div className="px-1 flex items-center justify-between text-gray-500">
+                      <div className="px-1 flex items-center justify-between text-gray-500 text-xs sm:text-sm">
                         <div>
                           {format(
                             new Date(selectedRequest.createdAt.toMillis()),
@@ -718,16 +717,18 @@ const UserSolicitacoes = () => {
                       </div>
                     </DialogDescription>
                   </DialogHeader>
+
                   <div className="space-y-6 py-4">
                     <div className="space-y-4 border-b pb-4">
                       <h3 className="text-lg font-medium text-gray-800">
                         Detalhes da Solicitação
                       </h3>
+
                       {selectedRequest.type === "reservation" && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4">
                           <div>
-                            <p className="text-sm font-medium text-gray-500">Data</p>
-                            <p className="text-gray-700">
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Data</p>
+                            <p className="text-xs sm:text-sm text-gray-700">
                               {format(
                                 new Date(selectedRequest.date.toMillis()),
                                 "dd/MM/yyyy",
@@ -736,40 +737,41 @@ const UserSolicitacoes = () => {
                             </p>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-gray-500">Horário</p>
-                            <p className="text-gray-700">
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Horário</p>
+                            <p className="text-xs sm:text-sm text-gray-700">
                               {selectedRequest.startTime} - {selectedRequest.endTime}
                             </p>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-gray-500">Local</p>
-                            <p className="text-gray-700">{selectedRequest.location}</p>
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Local</p>
+                            <p className="text-xs sm:text-sm text-gray-700">{selectedRequest.location}</p>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-gray-500">Finalidade</p>
-                            <p className="text-gray-700">{selectedRequest.purpose}</p>
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Finalidade</p>
+                            <p className="text-xs sm:text-sm text-gray-700">{selectedRequest.purpose}</p>
                           </div>
-                          <div className="col-span-2">
-                            <p className="text-sm font-medium text-gray-500">Equipamentos</p>
-                            <ul className="list-disc pl-5 text-gray-700">
+                          <div>
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Equipamentos</p>
+                            <ul className="list-disc pl-5 text-xs sm:text-sm text-gray-700">
                               {renderEquipmentCounts()}
                             </ul>
                           </div>
                         </div>
                       )}
+
                       {selectedRequest.type === "purchase" && (
                         <div className="grid grid-cols-1 gap-4">
                           <div>
-                            <p className="text-sm font-medium text-gray-500">Item Solicitado</p>
-                            <p className="text-gray-700">{selectedRequest.itemName}</p>
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Item Solicitado</p>
+                            <p className="text-xs sm:text-sm text-gray-700">{selectedRequest.itemName}</p>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-gray-500">Quantidade</p>
-                            <p className="text-gray-700">{selectedRequest.quantity}</p>
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Quantidade</p>
+                            <p className="text-xs sm:text-sm text-gray-700">{selectedRequest.quantity}</p>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-gray-500">Valor Unitário</p>
-                            <p className="text-gray-700">
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Valor Unitário</p>
+                            <p className="text-xs sm:text-sm text-gray-700">
                               {new Intl.NumberFormat("pt-BR", {
                                 style: "currency",
                                 currency: "BRL",
@@ -777,9 +779,9 @@ const UserSolicitacoes = () => {
                             </p>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-gray-500">Valor Total</p>
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Valor Total</p>
                             <div className="bg-eccos-purple/10 p-2 rounded-md">
-                              <p className="text-lg font-semibold text-eccos-purple">
+                              <p className="text-sm font-semibold text-eccos-purple">
                                 {new Intl.NumberFormat("pt-BR", {
                                   style: "currency",
                                   currency: "BRL",
@@ -791,73 +793,69 @@ const UserSolicitacoes = () => {
                             </div>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-gray-500">Urgência</p>
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Urgência</p>
                             <div className="flex items-center gap-2">
                               {getPriorityLevelBadge(selectedRequest.urgency)}
                             </div>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-gray-500">Justificativa</p>
-                            <p className="text-gray-700">{selectedRequest.justification}</p>
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Justificativa</p>
+                            <p className="text-xs sm:text-sm text-gray-700">{selectedRequest.justification}</p>
                           </div>
                         </div>
                       )}
+
                       {selectedRequest.type === "support" && (
-  <div className="grid grid-cols-1 gap-4">
-    <div>
-      <p className="text-sm font-medium text-gray-500">Tipo</p>
-      <p className="text-gray-700">{selectedRequest.tipo}</p>
-    </div>
-    <div>
-      <p className="text-sm font-medium text-gray-500">Unidade</p>
-      <p className="text-gray-700">{selectedRequest.unit}</p>
-    </div>
-    <div>
-      <p className="text-sm font-medium text-gray-500">Localização</p>
-      <p className="text-gray-700">{selectedRequest.location}</p>
-    </div>
-    <div>
-      <p className="text-sm font-medium text-gray-500">Categoria</p>
-      <p className="text-gray-700">{selectedRequest.category}</p>
-    </div>
-    <div>
-      <p className="text-sm font-medium text-gray-500">Prioridade</p>
-      <div className="flex items-center gap-2">
-        {getPriorityLevelBadge(selectedRequest.priority)}
-      </div>
-    </div>
-    {selectedRequest.deviceInfo && (
-      <div>
-        <p className="text-sm font-medium text-gray-500">Identificação do Equipamento</p>
-        <p className="text-gray-700">{selectedRequest.deviceInfo}</p>
-      </div>
-    )}
-    <div>
-      <p className="text-sm font-medium text-gray-500">Descrição</p>
-      <div className="max-h-[200px] overflow-y-auto rounded-md bg-gray-50 p-3">
-        <pre className="whitespace-pre-wrap font-sans text-sm text-gray-700">
-          {selectedRequest.description || "Nenhuma descrição fornecida"}
-        </pre>
-      </div>
-    </div>
-  </div>
-)}
+                        <div className="grid grid-cols-1 gap-4">
+                          <div>
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Tipo</p>
+                            <p className="text-xs sm:text-sm text-gray-700">{selectedRequest.tipo}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Unidade</p>
+                            <p className="text-xs sm:text-sm text-gray-700">{selectedRequest.unit}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Localização</p>
+                            <p className="text-xs sm:text-sm text-gray-700">{selectedRequest.location}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Categoria</p>
+                            <p className="text-xs sm:text-sm text-gray-700">{selectedRequest.category}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Prioridade</p>
+                            <div className="flex items-center gap-2">
+                              {getPriorityLevelBadge(selectedRequest.priority)}
+                            </div>
+                          </div>
+                          {selectedRequest.deviceInfo && (
+                            <div>
+                              <p className="text-xs sm:text-sm font-medium text-gray-500">Identificação do Equipamento</p>
+                              <p className="text-xs sm:text-sm text-gray-700">{selectedRequest.deviceInfo}</p>
+                            </div>
+                          )}
+                          <div>
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Descrição</p>
+                            <div className="max-h-[200px] overflow-y-auto rounded-md bg-gray-50 p-3">
+                              <pre className="whitespace-pre-wrap font-sans text-xs sm:text-sm text-gray-700">
+                                {selectedRequest.description || "Nenhuma descrição fornecida"}
+                              </pre>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
+
                   <DialogFooter className="gap-2">
                     <Button
                       variant="destructive"
                       onClick={() => handleCancelRequest(selectedRequest)}
                       disabled={selectedRequest?.status === "canceled"}
+                      className="w-full sm:w-auto"
                     >
                       <Trash2 className="h-4 w-4 mr-2" /> Cancelar Solicitação
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsDetailsOpen(false)}
-                      className="border-gray-200"
-                    >
-                      Fechar
                     </Button>
                   </DialogFooter>
                 </>
@@ -868,12 +866,14 @@ const UserSolicitacoes = () => {
               )}
             </DialogContent>
           </Dialog>
+
           <ChatUser
             request={chatRequest}
             isOpen={isChatOpen}
             onOpenChange={setIsChatOpen}
             onMessageSent={refetch}
           />
+
           <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
             <AlertDialogContent className="border-gray-100">
               <AlertDialogHeader>

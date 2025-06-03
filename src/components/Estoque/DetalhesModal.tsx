@@ -45,41 +45,41 @@ const DetalhesModal: React.FC<DetalhesModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <ClipboardList className="h-6 w-6" /> Detalhes do Item
+<DialogContent className="w-full max-w-[95vw] sm:max-w-md md:max-w-lg lg:max-w-xl rounded-lg p-4 max-h-[80vh] overflow-y-auto">        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <ClipboardList className="h-5 w-5" /> Detalhes do Item
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm text-gray-500">
             Informações completas sobre o item do estoque
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>Nome:</Label>
-            <p className="font-medium">{selectedItemDetails.nome}</p>
+        {/* Conteúdo Responsivo */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <Label className="text-xs font-medium">Nome:</Label>
+            <p className="font-medium text-sm">{selectedItemDetails.nome}</p>
           </div>
-          <div className="space-y-2">
-            <Label>Quantidade:</Label>
-            <p>{selectedItemDetails.quantidade}</p>
+          <div className="space-y-1">
+            <Label className="text-xs font-medium">Quantidade:</Label>
+            <p className="text-sm">{selectedItemDetails.quantidade}</p>
           </div>
-          <div className="space-y-2">
-            <Label>Categoria:</Label>
-            <p>{selectedItemDetails.categoria}</p>
+          <div className="space-y-1">
+            <Label className="text-xs font-medium">Categoria:</Label>
+            <p className="text-sm">{selectedItemDetails.categoria}</p>
           </div>
-          <div className="space-y-2">
-            <Label>Valor Unitário:</Label>
-            <p>
+          <div className="space-y-1">
+            <Label className="text-xs font-medium">Valor Unitário:</Label>
+            <p className="text-sm">
               {selectedItemDetails.valorUnitario?.toLocaleString('pt-BR', {
                 style: 'currency',
                 currency: 'BRL',
               }) || 'Não informado'}
             </p>
           </div>
-          <div className="space-y-2">
-            <Label>Valor Total:</Label>
-            <p>
+          <div className="space-y-1">
+            <Label className="text-xs font-medium">Valor Total:</Label>
+            <p className="text-sm">
               {(selectedItemDetails.quantidade *
                 (selectedItemDetails.valorUnitario || 0)
               ).toLocaleString('pt-BR', {
@@ -88,18 +88,18 @@ const DetalhesModal: React.FC<DetalhesModalProps> = ({
               })}
             </p>
           </div>
-          <div className="space-y-2">
-            <Label>Unidade:</Label>
-            <p>{selectedItemDetails.unidade}</p>
+          <div className="space-y-1">
+            <Label className="text-xs font-medium">Unidade:</Label>
+            <p className="text-sm">{selectedItemDetails.unidade}</p>
           </div>
-          <div className="space-y-2">
-            <Label>Localização:</Label>
-            <p>{selectedItemDetails.localizacao}</p>
+          <div className="space-y-1">
+            <Label className="text-xs font-medium">Localização:</Label>
+            <p className="text-sm">{selectedItemDetails.localizacao}</p>
           </div>
-          <div className="space-y-2">
-            <Label>Estado:</Label>
+          <div className="space-y-1">
+            <Label className="text-xs font-medium">Estado:</Label>
             <p
-              className={`inline-flex items-center rounded-md px-2 py-1 text-sm font-medium ${
+              className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${
                 estadoClassNames[selectedItemDetails.estado] ||
                 'bg-gray-100 text-gray-800'
               }`}
@@ -107,20 +107,21 @@ const DetalhesModal: React.FC<DetalhesModalProps> = ({
               {selectedItemDetails.estado}
             </p>
           </div>
-          <div className="col-span-2 space-y-2">
-            <Label>Descrição:</Label>
-            <p>{selectedItemDetails.descricao || 'Não informada'}</p>
+          <div className="col-span-1 sm:col-span-2 space-y-1">
+            <Label className="text-xs font-medium">Descrição:</Label>
+            <p className="text-sm">{selectedItemDetails.descricao || 'Não informada'}</p>
           </div>
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button variant="destructive" onClick={onDelete}>
+        {/* Botões responsivos */}
+        <DialogFooter className="mt-6 flex flex-col-reverse sm:flex-row gap-2 justify-end">
+          <Button variant="destructive" onClick={onDelete} className="w-full sm:w-auto">
             <Trash2 className="mr-2 h-4 w-4" /> Excluir
           </Button>
-          <Button onClick={onClone}>
+          <Button onClick={onClone} className="w-full sm:w-auto">
             <Copy className="mr-2 h-4 w-4" /> Copiar
           </Button>
-          <Button onClick={onEdit}>
+          <Button onClick={onEdit} className="w-full sm:w-auto">
             <Edit className="mr-2 h-4 w-4" /> Editar
           </Button>
         </DialogFooter>

@@ -246,7 +246,7 @@ export const Dashboard = () => {
             </div>
           ) : !isLoading && !isError && hasValidData && (
             <div className="space-y-8 fade-up">
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
+             <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
                 {/* Card Usuários Ativos */}
                 <Card
                   className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 relative group overflow-hidden"

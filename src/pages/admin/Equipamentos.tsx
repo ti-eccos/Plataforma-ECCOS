@@ -169,7 +169,7 @@ export default function Equipamentos() {
             Gerencie os equipamentos disponíveis para empréstimo.
           </p>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 fade-up">
+          <div className="grid gap-4 grid-cols-2 max-[400px]:grid-cols-1 lg:grid-cols-3 fade-up">
             {/* Card Chromebooks */}
             <Card
               className={`bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 relative group overflow-hidden ${filterType === "Chromebook" ? "ring-2 ring-blue-400" : ""}`}

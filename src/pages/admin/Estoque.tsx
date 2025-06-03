@@ -457,10 +457,8 @@ const Estoque = () => {
             <h2 className="text-lg font-semibold mb-4 text-gray-700">Filtros</h2>
             <Filtros
               filtroCategoria={filtroCategoria}
-              filtroLocalizacao={filtroLocalizacao}
               filtroNomeDescricao={filtroNomeDescricao}
               setFiltroCategoria={setFiltroCategoria}
-              setFiltroLocalizacao={setFiltroLocalizacao}
               setFiltroNomeDescricao={setFiltroNomeDescricao}
               todasCategorias={todasCategorias}
               localizacoesCadastradas={localizacoesCadastradas}

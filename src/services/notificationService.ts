@@ -29,10 +29,24 @@ export interface Notification {
 
 export const createBatchNotifications = async (notifications: Array<Omit<Notification, "id">>) => {
   try {
+    // Filtrar notificações de status: apenas "Aprovada" e "Reprovada"
+    const filteredNotifications = notifications.filter(notification => {
+      if (notification.title === "Alteração de Status") {
+        const allowedStatuses = ["Aprovada", "Reprovada"];
+        return allowedStatuses.some(status => 
+          notification.message.includes(`alterado para ${status}`)
+        );
+      }
+      return true; // Mantém todas as outras notificações (globais e individuais)
+    });
+
+    // Se não houver notificações válidas após o filtro
+    if (filteredNotifications.length === 0) return 0;
+
     const batch = writeBatch(db);
     const notificationsRef = collection(db, "notifications");
 
-    notifications.forEach(notification => {
+    filteredNotifications.forEach(notification => {
       const docRef = doc(notificationsRef);
       batch.set(docRef, {
         ...notification,
@@ -41,7 +55,7 @@ export const createBatchNotifications = async (notifications: Array<Omit<Notific
     });
 
     await batch.commit();
-    return notifications.length;
+    return filteredNotifications.length;
   } catch (error) {
     throw new Error("Failed to create batch notifications");
   }

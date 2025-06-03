@@ -1,10 +1,12 @@
 // src/pages/admin/SuportePlataforma.tsx
 import React, { useState, useEffect } from 'react';
-import { useToast } from "@/hooks/use-toast";
-import { 
-  collection, 
-  getDocs, 
-  query, 
+import {
+  useToast
+} from "@/hooks/use-toast";
+import {
+  collection,
+  getDocs,
+  query,
   where,
   updateDoc,
   doc
@@ -47,7 +49,6 @@ const SuportePlataforma = () => {
           where("status", "==", "open")
         );
         const querySnapshot = await getDocs(q);
-        
         const reports: BugReport[] = [];
         querySnapshot.forEach((doc) => {
           const data = doc.data();
@@ -61,9 +62,8 @@ const SuportePlataforma = () => {
             pageUrl: data.pageUrl
           });
         });
-        
         // Ordenar por data (mais recente primeiro)
-        setBugReports(reports.sort((a, b) => 
+        setBugReports(reports.sort((a, b) =>
           b.createdAt.getTime() - a.createdAt.getTime()
         ));
         setLoading(false);
@@ -77,7 +77,6 @@ const SuportePlataforma = () => {
         setLoading(false);
       }
     };
-
     fetchBugReports();
   }, [toast]);
 
@@ -103,7 +102,6 @@ const SuportePlataforma = () => {
         });
       }
     };
-
     fetchManuais();
   }, [toast]);
 
@@ -119,9 +117,7 @@ const SuportePlataforma = () => {
       },
       { threshold: 0.1 }
     );
-
     document.querySelectorAll('.fade-up').forEach((el) => observer.observe(el));
-
     return () => observer.disconnect();
   }, []);
 
@@ -140,7 +136,6 @@ const SuportePlataforma = () => {
       });
       return;
     }
-
     setUploading(true);
     try {
       // Verificar se o arquivo é PDF
@@ -152,14 +147,12 @@ const SuportePlataforma = () => {
         });
         return;
       }
-
       const storageRef = ref(storage, `manuais/${file.name}`);
       await uploadBytes(storageRef, file);
       toast({
         title: "Sucesso!",
         description: "Arquivo enviado com sucesso.",
       });
-
       // Atualizar a lista de manuais
       const url = await getDownloadURL(storageRef);
       setManuais([...manuais, { name: file.name, url }]);
@@ -180,12 +173,10 @@ const SuportePlataforma = () => {
     try {
       const storageRef = ref(storage, `manuais/${name}`);
       await deleteObject(storageRef);
-      
       toast({
         title: "Sucesso",
         description: "Manual removido com sucesso.",
       });
-      
       setManuais(manuais.filter(m => m.name !== name));
     } catch (error) {
       console.error("Erro ao excluir manual:", error);
@@ -204,12 +195,10 @@ const SuportePlataforma = () => {
         status: "resolved",
         resolvedAt: new Date()
       });
-      
       toast({
         title: "Bug resolvido",
         description: "O problema foi marcado como resolvido.",
       });
-      
       setBugReports(bugReports.filter(report => report.id !== id));
     } catch (error) {
       console.error("Erro ao marcar bug como resolvido:", error);
@@ -247,7 +236,7 @@ const SuportePlataforma = () => {
           </h1>
 
           {/* Cards de estatísticas */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 fade-up">
+              <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
             {/* Card Bugs Abertos */}
             <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg transition-all duration-300">
               <CardHeader className="pb-2">
@@ -283,7 +272,7 @@ const SuportePlataforma = () => {
             </Card>
 
             {/* Card Status */}
-            <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg transition-all duration-300 md:col-span-2 lg:col-span-1">
+            <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg transition-all duration-300 xs:col-span-2 lg:col-span-1">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600">
                   Status do Sistema
@@ -301,7 +290,7 @@ const SuportePlataforma = () => {
           </div>
 
           {/* Seções principais */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 fade-up">
+          <div className="grid grid-cols-1 xs:grid-cols-2 gap-8 fade-up">
             {/* Seção de Relatórios de Bugs */}
             <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg transition-all duration-300">
               <CardHeader>
@@ -342,8 +331,8 @@ const SuportePlataforma = () => {
                               <p><span className="font-medium">Data:</span> {format(report.createdAt, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
                             </div>
                           </div>
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="sm"
                             onClick={() => handleResolveBug(report.id)}
                             className="flex items-center gap-2 border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300 transition-all duration-200 relative z-10"
@@ -377,13 +366,13 @@ const SuportePlataforma = () => {
                 <div className="mb-8 p-6 bg-gray-50 rounded-xl border border-gray-100">
                   <h3 className="font-semibold text-lg mb-4 text-gray-800">Adicionar Novo Manual</h3>
                   <div className="flex gap-3">
-                    <Input 
-                      type="file" 
+                    <Input
+                      type="file"
                       accept=".pdf"
                       onChange={handleFileChange}
                       className="flex-1 border-gray-200 focus:border-eccos-purple focus:ring-eccos-purple"
                     />
-                    <Button 
+                    <Button
                       onClick={handleUpload}
                       disabled={!file || uploading}
                       className="flex items-center gap-2 bg-eccos-purple hover:bg-sidebar text-white transition-all duration-200"
@@ -396,7 +385,6 @@ const SuportePlataforma = () => {
                     Apenas arquivos PDF são permitidos. Tamanho máximo: 10MB.
                   </p>
                 </div>
-
                 <h3 className="font-semibold text-lg mb-4 text-gray-800">Manuais Disponíveis</h3>
                 {manuais.length === 0 ? (
                   <div className="text-center py-12">
@@ -421,9 +409,9 @@ const SuportePlataforma = () => {
                           <span className="font-medium text-gray-800 truncate max-w-[200px]">{manual.name}</span>
                         </div>
                         <div className="flex gap-2">
-                          <a 
-                            href={manual.url} 
-                            target="_blank" 
+                          <a
+                            href={manual.url}
+                            target="_blank"
                             rel="noopener noreferrer"
                           >
                             <Button variant="outline" size="sm" className="border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200">
@@ -431,8 +419,8 @@ const SuportePlataforma = () => {
                               Baixar
                             </Button>
                           </a>
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="sm"
                             onClick={() => handleDeleteManual(manual.name)}
                             className="border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 transition-all duration-200"

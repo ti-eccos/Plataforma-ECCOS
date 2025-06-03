@@ -119,37 +119,38 @@ const getStatusBadge = (status: RequestStatus) => {
   switch (status) {
     case "pending": return (
       <Badge className="bg-amber-50 text-amber-600 border-amber-100">
-        <Clock className="h-4 w-4 mr-1" />
+        {/* Adicionada classe responsiva */}
+        <Clock className="h-4 w-4 mr-1 hidden sm:inline-block" />
         Pendente
       </Badge>
     );
     case "approved": return (
       <Badge className="bg-green-50 text-green-600 border-green-100">
-        <CheckCircle2 className="h-4 w-4 mr-1" />
+        <CheckCircle2 className="h-4 w-4 mr-1 hidden sm:inline-block" />
         Aprovada
       </Badge>
     );
     case "rejected": return (
       <Badge variant="destructive">
-        <XCircle className="h-4 w-4 mr-1" />
+        <XCircle className="h-4 w-4 mr-1 hidden sm:inline-block" />
         Reprovada
       </Badge>
     );
     case "in-progress": return (
       <Badge className="bg-blue-50 text-blue-600 border-blue-100">
-        <RefreshCw className="h-4 w-4 mr-1" />
+        <RefreshCw className="h-4 w-4 mr-1 hidden sm:inline-block" />
         Em Andamento
       </Badge>
     );
     case "completed": return (
       <Badge className="bg-slate-100 text-slate-600 border-slate-200">
-        <CheckCircle2 className="h-4 w-4 mr-1" />
+        <CheckCircle2 className="h-4 w-4 mr-1 hidden sm:inline-block" />
         Concluída
       </Badge>
     );
     default: return (
       <Badge variant="outline">
-        <AlertTriangle className="h-4 w-4 mr-1" />
+        <AlertTriangle className="h-4 w-4 mr-1 hidden sm:inline-block" />
         Desconhecido
       </Badge>
     );
@@ -374,7 +375,7 @@ const Solicitacoes = () => {
         {/* Conteúdo principal */}
         <div className="relative z-10 space-y-8 p-6 md:p-12">
           {/* Cards de Estatísticas */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
             {/* Card Pendentes */}
             <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
               <CardHeader className="pb-2">
@@ -542,7 +543,7 @@ const Solicitacoes = () => {
             <div className="rounded-lg border border-gray-100 overflow-hidden bg-white shadow-sm">
               <Table>
                 <TableHeader className="bg-gray-50">
-                  <TableRow>
+                <TableRow>
                     <TableHead className="text-center font-medium text-gray-600 w-[20%]">Tipo</TableHead>
                     <TableHead className="text-center font-medium text-gray-600 w-[25%]">Usuário</TableHead>
                     <TableHead className="text-center font-medium text-gray-600 w-[25%]">Status</TableHead>
@@ -550,16 +551,18 @@ const Solicitacoes = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredRequests.map((request) => (
-                    <TableRow key={`${request.collectionName}-${request.id}`} className="hover:bg-gray-50">
-                      <TableCell className="text-center align-middle">
-                        <div className="flex items-center justify-center gap-2">
-                          {getRequestTypeIcon(request.type)}
-                          <span className="font-medium">
-                            {getReadableRequestType(request.type)}
-                          </span>
-                        </div>
-                      </TableCell>
+  {filteredRequests.map((request) => (
+    <TableRow key={`${request.collectionName}-${request.id}`} className="hover:bg-gray-50">
+      {/* Célula TIPO (modificada) */}
+      <TableCell className="text-center align-middle p-2 md:p-4">
+        <div className="flex items-center justify-center">
+          {getRequestTypeIcon(request.type)}
+          {/* Texto visível apenas em md+ */}
+          <span className="font-medium hidden md:inline ml-2">
+            {getReadableRequestType(request.type)}
+          </span>
+        </div>
+      </TableCell>
                       <TableCell className="text-center align-middle">
                         {request.userName}
                       </TableCell>
@@ -604,29 +607,29 @@ const Solicitacoes = () => {
 
           {/* Diálogo de detalhes */}
           <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-            <DialogContent className="max-w-3xl bg-white border border-gray-100 max-h-[90vh] flex flex-col">
-              {isDetailsLoading ? (
-                <div className="flex justify-center items-center h-64">
-                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-eccos-purple"></div>
-                </div>
-              ) : selectedRequest ? (
-                <>
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                      {getRequestTypeIcon(selectedRequest.type)}
-                      <span className="bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
-                        {getReadableRequestType(selectedRequest.type)} - {selectedRequest.userName || selectedRequest.userEmail}
-                      </span>
-                    </DialogTitle>
-                    <DialogDescription asChild>
-                      <div className="flex items-center justify-between text-gray-500 px-1">
-                        <div>
-                          {format(selectedRequest.createdAt.toDate(), "dd/MM/yyyy HH:mm")}
-                        </div>
-                        <div>{getStatusBadge(selectedRequest.status)}</div>
-                      </div>
-                    </DialogDescription>
-                  </DialogHeader>
+  <DialogContent className="max-w-3xl bg-white border border-gray-100 max-h-[90vh] overflow-y-auto">
+    {isDetailsLoading ? (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-eccos-purple"></div>
+      </div>
+    ) : selectedRequest ? (
+      <>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            {getRequestTypeIcon(selectedRequest.type)}
+            <span className="bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+              {getReadableRequestType(selectedRequest.type)} - {selectedRequest.userName || selectedRequest.userEmail}
+            </span>
+          </DialogTitle>
+          <DialogDescription asChild>
+            <div className="flex items-center justify-between text-gray-500 px-1">
+              <div>
+                {format(selectedRequest.createdAt.toDate(), "dd/MM/yyyy HH:mm")}
+              </div>
+              <div>{getStatusBadge(selectedRequest.status)}</div>
+            </div>
+          </DialogDescription>
+        </DialogHeader>
                   <div className="flex-1 overflow-y-auto space-y-6 py-4">
                     {/* Conteúdo detalhado */}
                     {selectedRequest.type === "reservation" && (
@@ -731,71 +734,71 @@ const Solicitacoes = () => {
     </div>
   </div>
 )}
+<div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2">
+                  Alterar Status
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {["pending", "approved", "rejected", "in-progress", "completed"].map((status) => (
+                  <DropdownMenuCheckboxItem
+                    key={status}
+                    checked={newStatus === status}
+                    onCheckedChange={() => setNewStatus(status as RequestStatus)}
+                  >
+                    {getStatusBadge(status as RequestStatus)}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              onClick={handleStatusUpdate}
+              disabled={!newStatus || newStatus === selectedRequest.status}
+            >
+              Salvar
+            </Button>
+          </div>
                     {/* Histórico */}
                     <div className="space-y-4 pt-4 border-t border-gray-100">
-                      <h3 className="text-lg font-medium text-gray-800">Histórico</h3>
-                      <div className="space-y-2">
-                        {selectedRequest.history?.map((event: any, index: number) => (
-                          <div key={index} className="flex items-center gap-3 p-2 bg-gray-50 rounded">
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-gray-600">
-                                {format(event.timestamp.toDate(), "dd/MM/yyyy HH:mm")}
-                              </p>
-                              <p className="text-sm text-gray-500">{event.message}</p>
-                            </div>
-                            {getStatusBadge(event.status)}
-                          </div>
-                        )) || (
-                          <p className="text-gray-500 text-sm">Nenhum histórico registrado</p>
-                        )}
-                      </div>
-                    </div>
+            <h3 className="text-lg font-medium text-gray-800">Histórico</h3>
+            <div className="space-y-2">
+              {selectedRequest.history?.map((event: any, index: number) => (
+                <div key={index} className="flex items-center gap-3 p-2 bg-gray-50 rounded">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-600">
+                      {format(event.timestamp.toDate(), "dd/MM/yyyy HH:mm")}
+                    </p>
+                    <p className="text-sm text-gray-500">{event.message}</p>
                   </div>
-                  {/* Rodapé com controles */}
-                  <DialogFooter className="pt-4 border-t border-gray-100 gap-2">
-                    <div className="flex items-center gap-2">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" className="flex items-center gap-2">
-                            Alterar Status
-                            <ChevronDown className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          {["pending", "approved", "rejected", "in-progress", "completed"].map((status) => (
-                            <DropdownMenuCheckboxItem
-                              key={status}
-                              checked={newStatus === status}
-                              onCheckedChange={() => setNewStatus(status as RequestStatus)}
-                            >
-                              {getStatusBadge(status as RequestStatus)}
-                            </DropdownMenuCheckboxItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                      <Button
-                        onClick={handleStatusUpdate}
-                        disabled={!newStatus || newStatus === selectedRequest.status}
-                      >
-                        Salvar
-                      </Button>
-                    </div>
-                    <Button
-                      variant="destructive"
-                      onClick={() => handleDeleteConfirmation(selectedRequest)}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Excluir Solicitação
-                    </Button>
-                  </DialogFooter>
-                </>
-              ) : (
-                <div className="text-center p-4 text-red-500">
-                  Nenhuma solicitação selecionada
+                  {getStatusBadge(event.status)}
                 </div>
+              )) || (
+                <p className="text-gray-500 text-sm">Nenhum histórico registrado</p>
               )}
-            </DialogContent>
-          </Dialog>
+            </div>
+          </div>
+        </div>
+        
+        <DialogFooter className="pt-4 border-t border-gray-100 gap-2">
+          <Button
+            variant="destructive"
+            onClick={() => handleDeleteConfirmation(selectedRequest)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Excluir Solicitação
+          </Button>
+        </DialogFooter>
+      </>
+    ) : (
+      <div className="text-center p-4 text-red-500">
+        Nenhuma solicitação selecionada
+      </div>
+    )}
+  </DialogContent>
+</Dialog>
 
           {/* Diálogo de confirmação de exclusão */}
           <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

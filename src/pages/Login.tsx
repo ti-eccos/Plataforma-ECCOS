@@ -65,11 +65,14 @@ const Login = () => {
       });
     } catch (error) {
       console.error("Erro no redirecionamento:", error);
-      toast({
-        title: "Erro",
-        description: "Ocorreu um problema durante o login",
-        variant: "destructive"
-      });
+      // Adicionar delay para garantir que o toast apareça acima de tudo
+      setTimeout(() => {
+        toast({
+          title: "Erro",
+          description: "Ocorreu um problema durante o login",
+          variant: "destructive"
+        });
+      }, 100);
       navigate("/", { replace: true });
     } finally {
       setIsRedirecting(false);
@@ -132,26 +135,29 @@ const Login = () => {
     } catch (error: any) {
       console.error("Login error:", error);
 
-      if (error.code === 'auth/popup-blocked') {
-        toast({
-          title: "Popup bloqueado",
-          description: "Por favor permita popups para este site nas configurações do navegador.",
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "Erro no login",
-          description: error.message || "Falha ao realizar login",
-          variant: "destructive"
-        });
-      }
+      // Garantir que o toast seja exibido com delay para aparecer acima de tudo
+      setTimeout(() => {
+        if (error.code === 'auth/popup-blocked') {
+          toast({
+            title: "Popup bloqueado",
+            description: "Por favor permita popups para este site nas configurações do navegador.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Erro no login",
+            description: error.message || "Falha ao realizar login",
+            variant: "destructive"
+          });
+        }
+      }, 100);
     }
   };
 
   // Se estiver carregando, mostra loader visual
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-white">
+      <div className="flex items-center justify-center min-h-screen bg-white relative z-50">
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -198,7 +204,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white overflow-hidden">
+    <div className="min-h-screen bg-white relative">
       {/* Estilos adicionais */}
       <style>{`
         .google-auth-popup {
@@ -208,45 +214,130 @@ const Login = () => {
           0% { transform: scale(0.95); opacity: 0; }
           100% { transform: scale(1); opacity: 1; }
         }
+        
+        /* Garantir que botões sejam clicáveis em todas as telas */
+        .clickable-button {
+          position: relative;
+          z-index: 999 !important;
+          pointer-events: auto !important;
+          touch-action: manipulation;
+          -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* Área de toque mínima para mobile */
+        .touch-target {
+          min-height: 48px;
+          min-width: 48px;
+          position: relative;
+          z-index: 999;
+        }
+        
+        /* Elementos de fundo com z-index baixo */
+        .background-element {
+          position: absolute;
+          z-index: 1 !important;
+          pointer-events: none !important;
+        }
+        
+        /* Container principal com z-index médio */
+        .content-layer {
+          position: relative;
+          z-index: 10;
+        }
+        
+        /* Elementos interativos com z-index alto */
+        .interactive-layer {
+          position: relative;
+          z-index: 100;
+        }
+        
+        /* Toast/popup deve ficar acima de tudo */
+        [data-sonner-toaster] {
+          z-index: 9999 !important;
+        }
+        
+        /* Garantir que todos os elementos do toast tenham z-index alto */
+        [data-sonner-toast] {
+          z-index: 9999 !important;
+        }
+        
+        /* Para outros tipos de popup/modal */
+        .toast-container,
+        .modal-overlay,
+        .popup-overlay,
+        [role="dialog"],
+        [role="alertdialog"] {
+          z-index: 9999 !important;
+        }
+        
+        @media (max-width: 768px) {
+          .decorative-bg {
+            opacity: 0.02 !important;
+            z-index: 1 !important;
+          }
+          .floating-particles {
+            display: none;
+          }
+          
+          /* Garantir que botões funcionem em mobile */
+          .clickable-button {
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+        }
+        
+        /* Remover qualquer sobreposição em elementos de fundo */
+        .decorative-bg, .floating-particles {
+          pointer-events: none !important;
+          user-select: none;
+          -webkit-user-select: none;
+          -moz-user-select: none;
+          -ms-user-select: none;
+        }
       `}</style>
 
-      {/* Fundos decorativos */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {/* Fundos decorativos - com z-index baixo */}
+      <div className="background-element absolute inset-0 overflow-hidden">
         <motion.div 
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 0.05, scale: 1 }}
           transition={{ duration: 1.5 }}
-          className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-sidebar blur-3xl" 
+          className="decorative-bg absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-sidebar blur-3xl" 
         />
         <motion.div 
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 0.05, scale: 1 }}
           transition={{ duration: 1.5, delay: 0.3 }}
-          className="absolute right-1/4 bottom-1/4 h-80 w-80 rounded-full bg-eccos-purple blur-3xl" 
+          className="decorative-bg absolute right-1/4 bottom-1/4 h-80 w-80 rounded-full bg-eccos-purple blur-3xl" 
         />
       </div>
 
-      {/* Partículas animadas */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(10)].map((_, i) => (
+      {/* Partículas animadas - com z-index baixo */}
+      <div className="floating-particles background-element absolute inset-0 overflow-hidden">
+        {[...Array(6)].map((_, i) => (
           <motion.div
             key={i}
             initial={{ 
-              x: Math.random() * window.innerWidth,
-              y: Math.random() * window.innerHeight,
+              x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1200),
+              y: Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 800),
               opacity: 0
             }}
             animate={{ 
-              y: [Math.random() * window.innerHeight, Math.random() * window.innerHeight],
-              opacity: [0, 0.3, 0]
+              y: [
+                Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 800), 
+                Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 800)
+              ],
+              opacity: [0, 0.2, 0]
             }}
             transition={{ 
               repeat: Infinity, 
-              duration: 15 + Math.random() * 10,
+              duration: 20 + Math.random() * 10,
               ease: "easeInOut",
-              delay: i * 1.5
+              delay: i * 2
             }}
-            className={`absolute h-${Math.floor(Math.random() * 6) + 4} w-${Math.floor(Math.random() * 6) + 4} rounded-full bg-${
+            className={`absolute h-4 w-4 rounded-full bg-${
               i % 2 === 0 ? 'sidebar' : 'eccos-purple'
             } blur-lg`}
           />
@@ -254,9 +345,13 @@ const Login = () => {
       </div>
 
       {/* Header */}
-      <header className="relative z-10 pt-6 px-4 md:px-16 flex justify-between items-center">
-        <img src={logo} alt="ECCOS Logo" className="h-16 w-auto" />
-        <Button onClick={handleLogin} disabled={loading}>
+      <header className="interactive-layer pt-4 sm:pt-6 px-4 sm:px-8 md:px-16 flex justify-between items-center">
+        <img src={logo} alt="ECCOS Logo" className="h-12 sm:h-16 w-auto" />
+        <Button 
+          onClick={handleLogin} 
+          disabled={loading}
+          className="clickable-button touch-target bg-gradient-to-r from-sidebar to-eccos-purple hover:from-sidebar/90 hover:to-eccos-purple/90 text-white font-medium px-4 sm:px-6 py-3 rounded-lg shadow-md transition-all duration-300"
+        >
           Entrar
         </Button>
       </header>
@@ -266,32 +361,31 @@ const Login = () => {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="relative z-10 flex flex-col md:flex-row items-center justify-between px-4 md:px-16 pt-12 md:pt-20 pb-16"
+        className="content-layer flex flex-col items-center justify-center px-4 sm:px-8 md:px-16 pt-8 sm:pt-12 md:pt-20 pb-12 sm:pb-16"
       >
-        <div className="w-full md:w-1/2 mb-12 md:mb-0">
+        <div className="w-full max-w-4xl text-center">
           <motion.h1 
             variants={itemVariants}
-            className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent"
+            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent"
           >
             Plataforma de Gestão ECCOS
           </motion.h1>
           <motion.p 
             variants={itemVariants}
-            className="text-lg md:text-xl text-gray-700 mb-8 max-w-lg"
+            className="text-base sm:text-lg md:text-xl text-gray-700 mb-6 sm:mb-8 max-w-2xl mx-auto px-2"
           >
             Sistema integrado para gestão de processos internos, solicitações e controle de equipamentos
           </motion.p>
           <motion.div 
             variants={itemVariants}
-            className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4"
+            className="flex justify-center interactive-layer"
           >
             <Button 
-              className="w-full sm:w-auto bg-gradient-to-r from-sidebar to-eccos-purple hover:from-sidebar/90 hover:to-eccos-purple/90 text-white font-medium py-6 px-8 rounded-xl shadow-md transition-all duration-300 hover:shadow-lg"
-              size="lg"
+              className="clickable-button touch-target w-full sm:w-auto bg-gradient-to-r from-sidebar to-eccos-purple hover:from-sidebar/90 hover:to-eccos-purple/90 text-white font-medium py-4 sm:py-6 px-6 sm:px-8 rounded-xl shadow-md transition-all duration-300 hover:shadow-lg text-base sm:text-lg max-w-xs sm:max-w-none"
               onClick={handleLogin}
               disabled={loading}
             >
-              <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
+              <svg className="mr-2 h-5 w-5 flex-shrink-0" viewBox="0 0 24 24">
                 <path
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                   fill="#FFFFFF"
@@ -309,49 +403,27 @@ const Login = () => {
                   fill="#FFFFFF"
                 />
               </svg>
-              Entrar com Google
+              <span className="whitespace-nowrap">Entrar com Google</span>
             </Button>
-          </motion.div>
-        </div>
-
-        {/* Cartão com efeito de brilho */}
-        <div className="w-full md:w-1/2 flex justify-center" ref={cardRef}>
-          <motion.div
-            variants={itemVariants}
-            className="relative"
-          >
-            <div 
-              className="absolute -inset-2 bg-gradient-to-r from-eccos-blue via-eccos-purple to-eccos-blue rounded-3xl opacity-70 blur-lg"
-              style={{
-                background: `radial-gradient(circle at ${shineStyle.x} ${shineStyle.y}, rgba(139, 92, 246, 0.8), rgba(0, 116, 224, 0.5), transparent 70%)`,
-                transition: "background 0.1s ease"
-              }}
-            />
-            <motion.div
-              whileHover={{ y: -5, boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)" }}
-              transition={{ type: "spring", stiffness: 400, damping: 10 }}
-              className="relative bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100"
-            >
-            </motion.div>
           </motion.div>
         </div>
       </motion.section>
 
       {/* Funcionalidades */}
-      <section className="relative z-10 bg-gray-50 py-20 px-4 md:px-16">
+      <section className="content-layer bg-gray-50 py-12 sm:py-16 md:py-20 px-4 sm:px-8 md:px-16">
         <div className="max-w-6xl mx-auto">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7 }}
-            className="text-center mb-16"
+            className="text-center mb-12 sm:mb-16"
           >
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-800">Funcionalidades Principais</h2>
-            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 text-gray-800">Funcionalidades Principais</h2>
+            <p className="text-base sm:text-lg text-gray-600 max-w-3xl mx-auto px-2">
               Ferramentas especializadas para gestão eficiente de processos
             </p>
           </motion.div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {features.map((feature, index) => (
               <motion.div
                 key={index}
@@ -360,13 +432,13 @@ const Login = () => {
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: true, margin: "-50px" }}
-                className="bg-white rounded-xl p-8 shadow-lg hover:shadow-xl transition-shadow duration-300"
+                className="bg-white rounded-xl p-6 sm:p-8 shadow-lg hover:shadow-xl transition-shadow duration-300"
               >
                 <div className="bg-gray-50 p-3 rounded-lg inline-block mb-4">
                   {feature.icon}
                 </div>
-                <h3 className="text-xl font-semibold mb-3 text-gray-800">{feature.title}</h3>
-                <p className="text-gray-600">{feature.description}</p>
+                <h3 className="text-lg sm:text-xl font-semibold mb-3 text-gray-800">{feature.title}</h3>
+                <p className="text-sm sm:text-base text-gray-600">{feature.description}</p>
               </motion.div>
             ))}
           </div>
@@ -374,10 +446,10 @@ const Login = () => {
       </section>
 
       {/* Rodapé */}
-      <footer className="relative z-10 bg-gray-50 py-10 px-4 md:px-16">
+      <footer className="content-layer bg-gray-50 py-8 sm:py-10 px-4 sm:px-8 md:px-16">
         <div className="max-w-6xl mx-auto">
           <div className="text-center">
-            <p className="text-gray-500 text-sm">
+            <p className="text-gray-500 text-xs sm:text-sm">
               © 2025 Colégio ECCOS - Todos os direitos reservados
             </p>
           </div>

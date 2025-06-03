@@ -65,25 +65,29 @@ export const NotificationBell = () => {
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
+          {/* Badge flutuante no canto superior direito do botão inteiro */}
+    {unreadCount > 0 && (
+      <div className="absolute top-0 right-0 -translate-x-1/4 -translate-y-1/4 bg-red-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center font-semibold shadow-lg animate-pulse z-20">
+        {unreadCount > 99 ? '99+' : unreadCount}
+      </div>
+    )}
       <PopoverTrigger asChild>
-        <Button 
-          variant="default" 
-          size="icon"
-          className="relative rounded-full w-12 h-12 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-sidebar to-eccos-purple hover:from-eccos-purple hover:to-sidebar group overflow-hidden"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          {unreadCount > 0 ? (
-            <BellRing className="h-6 w-6 text-white animate-pulse relative z-10" />
-          ) : (
-            <Bell className="h-6 w-6 text-white relative z-10" />
-          )}
-          {unreadCount > 0 && (
-            <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center font-semibold shadow-lg animate-pulse">
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </div>
-          )}
-        </Button>
-      </PopoverTrigger>
+  <Button 
+    variant="default" 
+    size="icon"
+    className="relative rounded-full w-12 h-12 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-sidebar to-eccos-purple hover:from-eccos-purple hover:to-sidebar group overflow-hidden"
+  >
+    {/* Efeito decorativo */}
+    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+    {/* Ícone do sino */}
+    {unreadCount > 0 ? (
+      <BellRing className="h-6 w-6 text-white relative z-10" />
+    ) : (
+      <Bell className="h-6 w-6 text-white relative z-10" />
+    )}
+  </Button>
+</PopoverTrigger>
       
       <PopoverContent className="w-96 p-0 border border-gray-100 shadow-2xl rounded-2xl bg-white" align="end">
         {/* Background decorative elements */}

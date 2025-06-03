@@ -214,7 +214,7 @@ export const AppSidebar = () => {
       items: [
         { icon: CalendarCheck, label: "Reserva", href: "/nova-solicitacao/reserva" },
         { icon: ShoppingCart, label: "Compra", href: "/nova-solicitacao/compra" },
-        { icon: Wrench, label: "Suporte", href: "/nova-solicitacao/suporte" },
+        { icon: Wrench, label: "Manutenção", href: "/nova-solicitacao/suporte" },
       ],
     },
   ];
@@ -355,7 +355,7 @@ export const AppSidebar = () => {
               <>
                 <SidebarItem
                   icon={Wrench}
-                  label="Chamados de Suporte"
+                  label="Chamados de Manutenção"
                   href="/suporte-operacional"
                   active={location.pathname === "/suporte-operacional"}
                   expanded={expanded}
