@@ -34,6 +34,11 @@ export interface MessageData {
   read: boolean;
   readBy?: string[];
   attachment?: FileAttachment;
+  userId: string; // Adicionado para identificar o dono da mensagem
+  isDeleted?: boolean; // Flag para mensagens apagadas
+  isEdited?: boolean; // Flag para mensagens editadas
+  editedAt?: Timestamp; // Timestamp da última edição
+  originalMessage?: string; // Mensagem original (para histórico)
 }
 
 export interface RequestData {
@@ -268,6 +273,7 @@ export const addMessageToRequest = async (
   isAdmin: boolean,
   collectionName: string,
   userName: string,
+  userId: string, // Adicionado parâmetro userId
   attachment?: FileAttachment
 ): Promise<void> => {
   try {
@@ -277,10 +283,13 @@ export const addMessageToRequest = async (
       message,
       isAdmin,
       userName,
+      userId, // Incluído userId na mensagem
       timestamp: Timestamp.now(),
       delivered: true,
       read: false,
-      readBy: []
+      readBy: [],
+      isDeleted: false,
+      isEdited: false
     };
 
     if (attachment) {
@@ -295,6 +304,86 @@ export const addMessageToRequest = async (
     });
   } catch (error) {
     console.error("Erro ao adicionar mensagem:", error);
+    throw error;
+  }
+};
+
+// Nova função para editar mensagem
+export const editMessage = async (
+  requestId: string,
+  collectionName: string,
+  messageId: string,
+  newMessage: string,
+  userId: string
+): Promise<void> => {
+  try {
+    const docRef = doc(db, collectionName, requestId);
+    const docSnap = await getDoc(docRef);
+    
+    if (!docSnap.exists()) {
+      throw new Error("Solicitação não encontrada");
+    }
+    
+    const data = docSnap.data();
+    const messages = data.messages || [];
+    
+    const updatedMessages = messages.map((msg: MessageData) => {
+      if (msg.id === messageId && msg.userId === userId) {
+        return {
+          ...msg,
+          originalMessage: msg.isEdited ? msg.originalMessage : msg.message,
+          message: newMessage,
+          isEdited: true,
+          editedAt: Timestamp.now()
+        };
+      }
+      return msg;
+    });
+
+    await updateDoc(docRef, {
+      messages: updatedMessages
+    });
+  } catch (error) {
+    console.error("Erro ao editar mensagem:", error);
+    throw error;
+  }
+};
+
+// Nova função para apagar mensagem
+export const deleteMessage = async (
+  requestId: string,
+  collectionName: string,
+  messageId: string,
+  userId: string
+): Promise<void> => {
+  try {
+    const docRef = doc(db, collectionName, requestId);
+    const docSnap = await getDoc(docRef);
+    
+    if (!docSnap.exists()) {
+      throw new Error("Solicitação não encontrada");
+    }
+    
+    const data = docSnap.data();
+    const messages = data.messages || [];
+    
+    const updatedMessages = messages.map((msg: MessageData) => {
+      if (msg.id === messageId && msg.userId === userId) {
+        return {
+          ...msg,
+          message: "Mensagem apagada",
+          isDeleted: true,
+          attachment: undefined // Remove anexo se houver
+        };
+      }
+      return msg;
+    });
+
+    await updateDoc(docRef, {
+      messages: updatedMessages
+    });
+  } catch (error) {
+    console.error("Erro ao apagar mensagem:", error);
     throw error;
   }
 };

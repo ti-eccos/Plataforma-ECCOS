@@ -37,7 +37,7 @@ const TrashIcon = ({ className }: { className?: string }) => (
 );
 
 const Profile = () => {
-  const { currentUser, loading: authLoading } = useAuth();
+  const { currentUser, loading: authLoading, updateUserData } = useAuth();
   const [displayName, setDisplayName] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [loading, setLoading] = useState(true);
@@ -49,7 +49,6 @@ const Profile = () => {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
-  const [currentPhotoURL, setCurrentPhotoURL] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -64,10 +63,6 @@ const Profile = () => {
           const userData = userSnap.data();
           setDisplayName(userData.displayName || '');
           setBirthDate(userData.birthDate || '');
-          // Armazenar a URL da foto atual se existir
-          if (userData.photoURL) {
-            setCurrentPhotoURL(userData.photoURL);
-          }
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -181,7 +176,7 @@ const Profile = () => {
   };
 
   const handleRemovePhoto = async () => {
-    if (!currentUser || !currentPhotoURL) return;
+    if (!currentUser || !currentUser.photoURL) return;
     
     if (!window.confirm('Tem certeza que deseja remover sua foto de perfil?')) {
       return;
@@ -189,9 +184,15 @@ const Profile = () => {
     
     setSaving(true);
     try {
-      // 1. Remover a imagem do storage
-      const storageRef = ref(storage, currentPhotoURL);
-      await deleteObject(storageRef);
+      // 1. Remover a imagem do storage se for uma URL do Firebase Storage
+      if (currentUser.photoURL.includes('firebase')) {
+        const storageRef = ref(storage, `profile_pics/${currentUser.uid}`);
+        try {
+          await deleteObject(storageRef);
+        } catch (error) {
+          console.log('Storage file not found or already deleted');
+        }
+      }
       
       // 2. Atualizar o documento do usuário
       const userRef = doc(db, 'users', currentUser.uid);
@@ -199,12 +200,14 @@ const Profile = () => {
         photoURL: null
       });
       
-      // 3. Atualizar os estados
-      setCurrentPhotoURL(null);
+      // 3. Atualizar o contexto local imediatamente
+      updateUserData({ photoURL: null });
+      
+      // 4. Limpar estados locais
       setPhotoPreview(null);
       setPhotoFile(null);
       
-      // 4. Limpar o input de arquivo
+      // 5. Limpar o input de arquivo
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -240,12 +243,14 @@ const Profile = () => {
         const photoURL = await uploadPhoto();
         if (photoURL) {
           updates.photoURL = photoURL;
-          setCurrentPhotoURL(photoURL);
         }
       }
       
       const userRef = doc(db, 'users', currentUser.uid);
       await updateDoc(userRef, updates);
+      
+      // Atualizar o contexto local imediatamente
+      updateUserData(updates);
       
       toast({
         title: 'Perfil atualizado',
@@ -293,10 +298,10 @@ const Profile = () => {
         <div className="bg-white rounded-xl shadow-md p-6 mb-6">
           <div className="flex items-center gap-4 mb-6">
             <div className="relative group">
-              {photoPreview || currentPhotoURL ? (
+              {photoPreview || currentUser?.photoURL ? (
                 <div className="h-16 w-16 rounded-full overflow-hidden">
                   <img
-                    src={photoPreview || currentPhotoURL || ''}
+                    src={photoPreview || currentUser?.photoURL || ''}
                     alt="Foto de perfil"
                     className="w-full h-full object-cover rounded-full"
                   />
@@ -369,7 +374,7 @@ const Profile = () => {
           </div>
 
           {/* Botão para remover foto */}
-          {currentPhotoURL && !photoPreview && (
+          {currentUser?.photoURL && !photoPreview && (
             <div className="mt-4">
               <Button
                 variant="outline"

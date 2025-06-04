@@ -24,6 +24,7 @@ import {
   validateImageFile,
   generateImagePreview
 } from '@/components/imageUtils';
+import { cn } from '@/lib/utils';
 
 // Estilo global para linha truncada
 const styles = `
@@ -202,11 +203,16 @@ const canEditNoticeBoard = user?.role === 'superadmin'||user?.role === 'admin' |
   };
 
   return (
-    <div className={`w-full ${className}`}>
+    <div className={cn(
+  "w-full bg-gradient-to-br from-white via-purple-50 to-gray-50 rounded-3xl shadow-2xl border-2 p-7 mb-8 transform transition-all duration-300 hover:shadow-3xl hover:-translate-y-1",
+  className
+)}>
       {/* Seção Admin */}
       {canEditNoticeBoard && (
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-gray-700">Quadro de Avisos</h2>
+          <h2 className="text-2xl font-extrabold bg-gradient-to-r from-eccos-purple to-sidebar bg-clip-text text-transparent flex items-center gap-2 mb-4">
+  Quadro de Avisos
+</h2>
           <div className="flex gap-2">
             <Button
               onClick={() => setIsEditing(!isEditing)}
@@ -233,28 +239,13 @@ const canEditNoticeBoard = user?.role === 'superadmin'||user?.role === 'admin' |
 
       {/* Lista de Avisos */}
       {notices.length > 0 ? (
-        <div className={`grid gap-4 mb-6 ${
-          notices.length === 1 ? 'grid-cols-1' :
-          notices.length === 2 ? 'grid-cols-1 md:grid-cols-2' :
-          notices.length === 3 ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' :
-          'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
-        }`}>
+  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {notices.map((notice) => (
             <Card
               key={notice.id}
               className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 relative group overflow-hidden cursor-pointer"
               onClick={() => setSelectedNotice(notice)}
             >
-              {/* Prioridade */}
-              <div className="absolute top-3 right-3 z-10">
-                <Badge className={`${getPriorityColor(notice.priority)} border text-xs`}>
-                  <span className="flex items-center gap-1">
-                    {getPriorityIcon(notice.priority)}
-                    {notice.priority === 'high' ? 'Urgente' :
-                     notice.priority === 'medium' ? 'Importante' : 'Normal'}
-                  </span>
-                </Badge>
-              </div>
 
               {/* Botões de edição */}
               {canEditNoticeBoard && isEditing && (
@@ -280,32 +271,44 @@ const canEditNoticeBoard = user?.role === 'superadmin'||user?.role === 'admin' |
               )}
 
               {/* Conteúdo do Cartão */}
-              <CardContent className="p-0">
-                {notice.type === 'image' && notice.imageUrl && (
-                  <div className="relative w-full h-48 rounded-t-2xl overflow-hidden bg-gray-100">
-                    <img
-                      src={notice.imageUrl}
-                      alt={notice.title}
-                      className="w-full h-full object-contain bg-white"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                      }}
-                    />
-                  </div>
-                )}
-                <div className="p-4">
-                  <h3 className="font-semibold text-gray-800 mb-2 text-sm leading-tight">{notice.title}</h3>
-                  {notice.content && (
-                    <p className="text-gray-600 text-xs leading-relaxed line-clamp-3">{notice.content}</p>
-                  )}
-                  <div className="mt-3 pt-2 border-t border-gray-100">
-                    <span className="text-xs text-gray-500">
-                      {new Date(notice.createdAt).toLocaleDateString('pt-BR')}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
+             <CardContent className="p-0">
+  {/* Badge de prioridade - alinhado à direita, acima do título */}
+  <div className="px-4 pt-4 flex justify-end">
+    <Badge className={`${getPriorityColor(notice.priority)} border text-xs`}>
+      <span className="flex items-center gap-1">
+        {getPriorityIcon(notice.priority)}
+        {notice.priority === 'high' ? 'Urgente' :
+         notice.priority === 'medium' ? 'Importante' : 'Normal'}
+      </span>
+    </Badge>
+  </div>
+
+  {/* Conteúdo do Cartão */}
+  {notice.type === 'image' && notice.imageUrl && (
+    <div className="relative w-full h-48 rounded-t-2xl overflow-hidden bg-gray-100">
+      <img
+        src={notice.imageUrl}
+        alt={notice.title}
+        className="w-full h-full object-contain bg-white"
+        onError={(e) => {
+          const target = e.target as HTMLImageElement;
+          target.style.display = 'none';
+        }}
+      />
+    </div>
+  )}
+  <div className="p-4">
+    <h3 className="font-semibold text-gray-800 mb-2 text-sm leading-tight">{notice.title}</h3>
+    {notice.content && (
+      <p className="text-gray-600 text-xs leading-relaxed line-clamp-3">{notice.content}</p>
+    )}
+    <div className="mt-3 pt-2 border-t border-gray-100">
+      <span className="text-xs text-gray-500">
+        {new Date(notice.createdAt).toLocaleDateString('pt-BR')}
+      </span>
+    </div>
+  </div>
+</CardContent>
             </Card>
           ))}
         </div>

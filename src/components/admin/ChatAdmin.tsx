@@ -1,7 +1,21 @@
 import React, { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Send, Paperclip, X, FileText, Image, Download, Check, CheckCheck } from "lucide-react";
+import { 
+  Send, 
+  Paperclip, 
+  X, 
+  FileText, 
+  Image, 
+  Download, 
+  Check, 
+  CheckCheck, 
+  MoreVertical,
+  Edit2,
+  Trash2,
+  Save,
+  XCircle
+} from "lucide-react";
 import { toast } from "sonner";
 import { 
   addMessageToRequest,
@@ -10,7 +24,9 @@ import {
   getRequestById,
   uploadFile,
   markMessagesAsRead,
-  FileAttachment
+  FileAttachment,
+  editMessage,
+  deleteMessage
 } from "@/services/reservationService";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -20,6 +36,12 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +62,8 @@ const ChatAdmin = ({ request, isOpen, onOpenChange, onMessageSent }: ChatAdminPr
   const [isLoading, setIsLoading] = useState(true);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -91,7 +115,7 @@ const ChatAdmin = ({ request, isOpen, onOpenChange, onMessageSent }: ChatAdminPr
   };
 
   const handleSendMessage = async () => {
-    if (!request || (!newMessage.trim() && !selectedFile)) return;
+    if (!request || (!newMessage.trim() && !selectedFile) || !currentUser) return;
     
     try {
       setIsLoading(true);
@@ -109,6 +133,7 @@ const ChatAdmin = ({ request, isOpen, onOpenChange, onMessageSent }: ChatAdminPr
         true,
         request.collectionName,
         currentUser?.displayName || "Administrador",
+        currentUser.uid, // Passar o userId
         attachment
       );
       
@@ -127,6 +152,59 @@ const ChatAdmin = ({ request, isOpen, onOpenChange, onMessageSent }: ChatAdminPr
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleEditMessage = async (messageId: string) => {
+    if (!request || !editingText.trim()) return;
+
+    try {
+      await editMessage(
+        request.id,
+        request.collectionName,
+        messageId,
+        editingText,
+        currentUser?.uid || ""
+      );
+      
+      setEditingMessageId(null);
+      setEditingText("");
+      toast.success("Mensagem editada");
+    } catch (error) {
+      toast.error("Erro ao editar mensagem");
+      console.error("Error:", error);
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!request) return;
+
+    try {
+      await deleteMessage(
+        request.id,
+        request.collectionName,
+        messageId,
+        currentUser?.uid || ""
+      );
+      
+      toast.success("Mensagem apagada");
+    } catch (error) {
+      toast.error("Erro ao apagar mensagem");
+      console.error("Error:", error);
+    }
+  };
+
+  const startEditing = (message: MessageData) => {
+    setEditingMessageId(message.id);
+    setEditingText(message.message);
+  };
+
+  const cancelEditing = () => {
+    setEditingMessageId(null);
+    setEditingText("");
+  };
+
+  const canEditOrDelete = (message: MessageData) => {
+    return currentUser && message.userId === currentUser.uid && !message.isDeleted;
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -194,10 +272,51 @@ const ChatAdmin = ({ request, isOpen, onOpenChange, onMessageSent }: ChatAdminPr
                 messages.map((msg, index) => (
                   <div 
                     key={msg.id || index} 
-                    className={`p-3 rounded-lg ${msg.isAdmin ? 'bg-primary text-primary-foreground ml-8' : 'bg-muted mr-8'}`}
+                    className={`relative group p-3 rounded-lg ${
+                      msg.isDeleted 
+                        ? 'bg-gray-100 text-gray-500 italic' 
+                        : msg.isAdmin 
+                        ? 'bg-primary text-primary-foreground ml-8' 
+                        : 'bg-muted mr-8'
+                    }`}
                   >
+                    {/* Menu de opções para mensagens próprias */}
+                    {canEditOrDelete(msg) && (
+                      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                            >
+                              <MoreVertical className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            <DropdownMenuItem onClick={() => startEditing(msg)}>
+                              <Edit2 className="h-3 w-3 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleDeleteMessage(msg.id)}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="h-3 w-3 mr-2" />
+                              Apagar
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    )}
+
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="font-medium">{msg.userName}</span>
+                      <span className="font-medium">
+                        {msg.userName}
+                        {msg.isEdited && !msg.isDeleted && (
+                          <span className="ml-2 text-xs opacity-70">(Editada)</span>
+                        )}
+                      </span>
                       <div className="flex items-center gap-1">
                         <span>
                           {format(
@@ -205,12 +324,22 @@ const ChatAdmin = ({ request, isOpen, onOpenChange, onMessageSent }: ChatAdminPr
                             "dd/MM HH:mm",
                             { locale: ptBR }
                           )}
+                          {msg.isEdited && msg.editedAt && (
+                            <span className="ml-1 text-xs opacity-70">
+                              (editada {format(
+                                new Date(msg.editedAt.toMillis()),
+                                "dd/MM HH:mm",
+                                { locale: ptBR }
+                              )})
+                            </span>
+                          )}
                         </span>
                         {renderMessageStatus(msg)}
                       </div>
                     </div>
                     
-                    {msg.attachment && (
+                    {/* Renderizar anexo apenas se a mensagem não foi apagada */}
+                    {msg.attachment && !msg.isDeleted && (
                       <div className="mb-2 p-2 bg-white/10 rounded border border-white/20">
                         <div className="flex items-center gap-2">
                           {getFileIcon(msg.attachment.type)}
@@ -242,7 +371,37 @@ const ChatAdmin = ({ request, isOpen, onOpenChange, onMessageSent }: ChatAdminPr
                       </div>
                     )}
                     
-                    {msg.message && <p>{msg.message}</p>}
+                    {/* Renderizar mensagem ou campo de edição */}
+                    {editingMessageId === msg.id ? (
+                      <div className="space-y-2">
+                        <Textarea
+                          value={editingText}
+                          onChange={(e) => setEditingText(e.target.value)}
+                          className="min-h-[60px] resize-none"
+                          placeholder="Edite sua mensagem..."
+                        />
+                        <div className="flex gap-2 justify-end">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={cancelEditing}
+                          >
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Cancelar
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleEditMessage(msg.id)}
+                            disabled={!editingText.trim()}
+                          >
+                            <Save className="h-3 w-3 mr-1" />
+                            Salvar
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      msg.message && <p className={msg.isDeleted ? "text-gray-500 italic" : ""}>{msg.message}</p>
+                    )}
                   </div>
                 ))
               ) : (

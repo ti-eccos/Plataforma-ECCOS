@@ -7,7 +7,7 @@ import {
 } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 export type UserRole = "user" | "admin" | "superadmin" | "financeiro" | "operacional";
@@ -33,6 +33,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   isAdmin: boolean;
   isSuperAdmin: boolean;
+  updateUserData: (updates: Partial<AuthUser>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -44,6 +45,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const isSuperAdmin = currentUser?.email === "suporte@colegioeccos.com.br";
   const isAdmin = currentUser?.role === "admin" || isSuperAdmin;
+
+  // Função para atualizar dados do usuário localmente
+  const updateUserData = useCallback((updates: Partial<AuthUser>) => {
+    setCurrentUser(prev => prev ? { ...prev, ...updates } : null);
+  }, []);
 
   const handleUserDocument = useCallback(async (firebaseUser: FirebaseUser) => {
     try {
@@ -96,7 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         uid: firebaseUser.uid,
         email: firebaseUser.email || "",
         displayName: firebaseUser.displayName || "Usuário sem nome",
-        photoURL: firebaseUser.photoURL,
+        photoURL: userData.photoURL || firebaseUser.photoURL,
         role: userData.role || "user"
       } as AuthUser;
 
@@ -113,6 +119,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
+    let userUnsubscribe: (() => void) | null = null;
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (!isMounted) return;
 
@@ -131,10 +139,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
 
           const authUser = await handleUserDocument(firebaseUser);
-          if (authUser) setCurrentUser(authUser);
+          if (authUser && isMounted) {
+            setCurrentUser(authUser);
+
+            // Configurar listener em tempo real para mudanças no documento do usuário
+            const userRef = doc(db, "users", firebaseUser.uid);
+            userUnsubscribe = onSnapshot(userRef, (docSnap) => {
+              if (docSnap.exists() && isMounted) {
+                const updatedUserData = docSnap.data() as AuthUser;
+                setCurrentUser(prev => prev ? {
+                  ...prev,
+                  ...updatedUserData,
+                  uid: firebaseUser.uid,
+                  email: firebaseUser.email || "",
+                } : null);
+              }
+            });
+          }
           
         } else {
           setCurrentUser(null);
+          if (userUnsubscribe) {
+            userUnsubscribe();
+            userUnsubscribe = null;
+          }
         }
       } catch (error) {
         console.error("Auth state error:", error);
@@ -146,6 +174,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       isMounted = false;
       unsubscribe();
+      if (userUnsubscribe) {
+        userUnsubscribe();
+      }
     };
   }, [handleUserDocument, toast]);
 
@@ -201,7 +232,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signInWithGoogle,
     signOut,
     isAdmin,
-    isSuperAdmin
+    isSuperAdmin,
+    updateUserData
   };
 
   return (
