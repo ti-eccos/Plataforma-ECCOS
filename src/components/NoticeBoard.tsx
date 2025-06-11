@@ -26,7 +26,6 @@ import {
 } from '@/components/imageUtils';
 import { cn } from '@/lib/utils';
 
-// Estilo global para linha truncada
 const styles = `
   .line-clamp-3 {
     display: -webkit-box;
@@ -41,8 +40,9 @@ interface NoticeBoardProps {
 }
 
 const NoticeBoard: React.FC<NoticeBoardProps> = ({ className = '' }) => {
-  const { user } = useAuth();
-const canEditNoticeBoard = user?.role === 'superadmin'||user?.role === 'admin' || user?.role === 'financeiro';
+  const { currentUser, isSuperAdmin, userPermissions } = useAuth();
+  const canEditNoticeBoard = isSuperAdmin || userPermissions['notice-board-edit'];
+  
   const [notices, setNotices] = useState<Notice[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -52,7 +52,6 @@ const canEditNoticeBoard = user?.role === 'superadmin'||user?.role === 'admin' |
   const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Injeta estilo global
   useEffect(() => {
     if (!document.querySelector('#line-clamp-styles')) {
       const styleSheet = document.createElement('style');
@@ -62,7 +61,6 @@ const canEditNoticeBoard = user?.role === 'superadmin'||user?.role === 'admin' |
     }
   }, []);
 
-  // Assina avisos ativos
   useEffect(() => {
     let unsubscribe: () => void;
     unsubscribe = subscribeToActiveNotices((newNotices) => {
@@ -73,7 +71,6 @@ const canEditNoticeBoard = user?.role === 'superadmin'||user?.role === 'admin' |
     };
   }, []);
 
-  // Estado inicial do formulário
   const [newNotice, setNewNotice] = useState<Partial<Notice & { imageFile?: File }>>({
     type: 'text',
     title: '',
@@ -82,9 +79,8 @@ const canEditNoticeBoard = user?.role === 'superadmin'||user?.role === 'admin' |
     isActive: true,
   });
 
-  // Adicionar novo aviso
   const handleAddNotice = async () => {
-    if (!user || !newNotice.title) return;
+    if (!currentUser || !newNotice.title) return;
     setIsUploading(true);
     try {
       await createNotice({
@@ -95,7 +91,7 @@ const canEditNoticeBoard = user?.role === 'superadmin'||user?.role === 'admin' |
         priority: newNotice.priority || 'medium',
         expiresAt: newNotice.expiresAt,
         isActive: true,
-        createdBy: user.email || 'admin',
+        createdBy: currentUser.email || 'admin',
       });
       resetForm();
     } catch (error) {
@@ -105,7 +101,6 @@ const canEditNoticeBoard = user?.role === 'superadmin'||user?.role === 'admin' |
     }
   };
 
-  // Editar aviso existente
   const handleEditNotice = (notice: Notice) => {
     setEditingNotice(notice);
     setNewNotice({
@@ -115,15 +110,14 @@ const canEditNoticeBoard = user?.role === 'superadmin'||user?.role === 'admin' |
     setShowAddForm(true);
   };
 
-  // Atualizar aviso
   const handleUpdateNotice = async () => {
-    if (!editingNotice || !user) return;
+    if (!editingNotice || !currentUser) return;
     setIsUploading(true);
     try {
       await updateNotice(editingNotice.id, {
         ...newNotice,
         imageFile: newNotice.imageFile,
-        updatedBy: user.email || 'admin',
+        updatedBy: currentUser.email || 'admin',
       });
       resetForm();
     } catch (error) {
@@ -133,9 +127,8 @@ const canEditNoticeBoard = user?.role === 'superadmin'||user?.role === 'admin' |
     }
   };
 
-  // Desativar aviso
   const handleDeactivateNotice = async (id: string) => {
-    if (!user) return;
+    if (!currentUser) return;
     try {
       await deleteNotice(id);
     } catch (error) {
@@ -143,7 +136,6 @@ const canEditNoticeBoard = user?.role === 'superadmin'||user?.role === 'admin' |
     }
   };
 
-  // Selecionar imagem
   const handleImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -166,7 +158,6 @@ const canEditNoticeBoard = user?.role === 'superadmin'||user?.role === 'admin' |
     }
   };
 
-  // Resetar formulário
   const resetForm = () => {
     setEditingNotice(null);
     setNewNotice({
@@ -183,7 +174,6 @@ const canEditNoticeBoard = user?.role === 'superadmin'||user?.role === 'admin' |
     }
   };
 
-  // Cores da prioridade
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high': return 'bg-red-100 text-red-800 border-red-200';
@@ -193,7 +183,6 @@ const canEditNoticeBoard = user?.role === 'superadmin'||user?.role === 'admin' |
     }
   };
 
-  // Ícones da prioridade
   const getPriorityIcon = (priority: string) => {
     switch (priority) {
       case 'high': return <AlertCircle className="w-4 h-4" />;
@@ -204,15 +193,14 @@ const canEditNoticeBoard = user?.role === 'superadmin'||user?.role === 'admin' |
 
   return (
     <div className={cn(
-  "w-full bg-gradient-to-br from-white via-purple-50 to-gray-50 rounded-3xl shadow-2xl border-2 p-7 mb-8 transform transition-all duration-300 hover:shadow-3xl hover:-translate-y-1",
-  className
-)}>
-      {/* Seção Admin */}
+      "w-full bg-gradient-to-br from-white via-purple-50 to-gray-50 rounded-3xl shadow-2xl border-2 p-7 mb-8 transform transition-all duration-300 hover:shadow-3xl hover:-translate-y-1",
+      className
+    )}>
       {canEditNoticeBoard && (
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-extrabold bg-gradient-to-r from-eccos-purple to-sidebar bg-clip-text text-transparent flex items-center gap-2 mb-4">
-  Quadro de Avisos
-</h2>
+            Quadro de Avisos
+          </h2>
           <div className="flex gap-2">
             <Button
               onClick={() => setIsEditing(!isEditing)}
@@ -237,17 +225,14 @@ const canEditNoticeBoard = user?.role === 'superadmin'||user?.role === 'admin' |
         </div>
       )}
 
-      {/* Lista de Avisos */}
       {notices.length > 0 ? (
-  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {notices.map((notice) => (
             <Card
               key={notice.id}
               className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 relative group overflow-hidden cursor-pointer"
               onClick={() => setSelectedNotice(notice)}
             >
-
-              {/* Botões de edição */}
               {canEditNoticeBoard && isEditing && (
                 <div className="absolute top-3 left-3 z-10 flex gap-1">
                   <Button 
@@ -270,50 +255,46 @@ const canEditNoticeBoard = user?.role === 'superadmin'||user?.role === 'admin' |
                 </div>
               )}
 
-              {/* Conteúdo do Cartão */}
-             <CardContent className="p-0">
-  {/* Badge de prioridade - alinhado à direita, acima do título */}
-  <div className="px-4 pt-4 flex justify-end">
-    <Badge className={`${getPriorityColor(notice.priority)} border text-xs`}>
-      <span className="flex items-center gap-1">
-        {getPriorityIcon(notice.priority)}
-        {notice.priority === 'high' ? 'Urgente' :
-         notice.priority === 'medium' ? 'Importante' : 'Normal'}
-      </span>
-    </Badge>
-  </div>
+              <CardContent className="p-0">
+                <div className="px-4 pt-4 flex justify-end">
+                  <Badge className={`${getPriorityColor(notice.priority)} border text-xs`}>
+                    <span className="flex items-center gap-1">
+                      {getPriorityIcon(notice.priority)}
+                      {notice.priority === 'high' ? 'Urgente' :
+                      notice.priority === 'medium' ? 'Importante' : 'Normal'}
+                    </span>
+                  </Badge>
+                </div>
 
-  {/* Conteúdo do Cartão */}
-  {notice.type === 'image' && notice.imageUrl && (
-    <div className="relative w-full h-48 rounded-t-2xl overflow-hidden bg-gray-100">
-      <img
-        src={notice.imageUrl}
-        alt={notice.title}
-        className="w-full h-full object-contain bg-white"
-        onError={(e) => {
-          const target = e.target as HTMLImageElement;
-          target.style.display = 'none';
-        }}
-      />
-    </div>
-  )}
-  <div className="p-4">
-    <h3 className="font-semibold text-gray-800 mb-2 text-sm leading-tight">{notice.title}</h3>
-    {notice.content && (
-      <p className="text-gray-600 text-xs leading-relaxed line-clamp-3">{notice.content}</p>
-    )}
-    <div className="mt-3 pt-2 border-t border-gray-100">
-      <span className="text-xs text-gray-500">
-        {new Date(notice.createdAt).toLocaleDateString('pt-BR')}
-      </span>
-    </div>
-  </div>
-</CardContent>
+                {notice.type === 'image' && notice.imageUrl && (
+                  <div className="relative w-full h-48 rounded-t-2xl overflow-hidden bg-gray-100">
+                    <img
+                      src={notice.imageUrl}
+                      alt={notice.title}
+                      className="w-full h-full object-contain bg-white"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
+                <div className="p-4">
+                  <h3 className="font-semibold text-gray-800 mb-2 text-sm leading-tight">{notice.title}</h3>
+                  {notice.content && (
+                    <p className="text-gray-600 text-xs leading-relaxed line-clamp-3">{notice.content}</p>
+                  )}
+                  <div className="mt-3 pt-2 border-t border-gray-100">
+                    <span className="text-xs text-gray-500">
+                      {new Date(notice.createdAt).toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
             </Card>
           ))}
         </div>
       ) : (
-        /* Estado vazio para todos os usuários */
         <Card className="bg-gray-50 border border-gray-200 rounded-2xl">
           <CardContent className="p-8 text-center">
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-200 text-gray-500 mb-4">
@@ -335,7 +316,6 @@ const canEditNoticeBoard = user?.role === 'superadmin'||user?.role === 'admin' |
         </Card>
       )}
 
-      {/* Formulário de Adicionar/Editar */}
       {canEditNoticeBoard && showAddForm && (
         <Card className="bg-white border border-gray-200 rounded-2xl shadow-lg mb-6">
           <CardContent className="p-6">
@@ -346,7 +326,6 @@ const canEditNoticeBoard = user?.role === 'superadmin'||user?.role === 'admin' |
               </Button>
             </div>
             <div className="space-y-4">
-              {/* Tipo de Aviso */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Aviso</label>
                 <div className="flex gap-2">
@@ -369,7 +348,6 @@ const canEditNoticeBoard = user?.role === 'superadmin'||user?.role === 'admin' |
                 </div>
               </div>
 
-              {/* Título */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Título</label>
                 <input
@@ -381,7 +359,6 @@ const canEditNoticeBoard = user?.role === 'superadmin'||user?.role === 'admin' |
                 />
               </div>
 
-              {/* Imagem */}
               {newNotice.type === 'image' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Imagem</label>
@@ -457,7 +434,6 @@ const canEditNoticeBoard = user?.role === 'superadmin'||user?.role === 'admin' |
                 </div>
               )}
 
-              {/* Conteúdo */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Conteúdo</label>
                 <textarea
@@ -469,7 +445,6 @@ const canEditNoticeBoard = user?.role === 'superadmin'||user?.role === 'admin' |
                 />
               </div>
 
-              {/* Prioridade */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Prioridade</label>
                 <div className="flex gap-2">
@@ -491,7 +466,6 @@ const canEditNoticeBoard = user?.role === 'superadmin'||user?.role === 'admin' |
                 </div>
               </div>
 
-              {/* Ações */}
               <div className="flex justify-end gap-2 pt-4 border-t border-gray-100">
                 <Button onClick={resetForm} variant="outline" disabled={isUploading}>
                   Cancelar
@@ -516,7 +490,6 @@ const canEditNoticeBoard = user?.role === 'superadmin'||user?.role === 'admin' |
         </Card>
       )}
 
-      {/* Modal Detalhe do Aviso */}
       {selectedNotice && (
         <Dialog open={true} onOpenChange={() => setSelectedNotice(null)}>
           <DialogContent className="max-w-4xl max-h-[95vh] p-0 overflow-hidden gap-0">

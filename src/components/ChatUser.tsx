@@ -21,13 +21,11 @@ import {
   addMessageToRequest,
   editMessage,
   deleteMessage,
-  MessageData,
-  RequestData,
   getRequestById,
   uploadFile,
   markMessagesAsRead,
-  FileAttachment,
-} from "@/services/reservationService";
+} from "@/services/sharedService";
+import {FileAttachment, MessageData, RequestData,} from '@/services/types';
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Dialog,

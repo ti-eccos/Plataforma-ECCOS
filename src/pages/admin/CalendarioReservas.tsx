@@ -21,7 +21,8 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getAllRequests, RequestData, RequestType } from "@/services/reservationService";
+import { getAllRequests} from "@/services/sharedService";
+import {RequestData, RequestType} from "@/services/types";
 import { cn } from "@/lib/utils";
 
 // Tipagem específica para Reserva

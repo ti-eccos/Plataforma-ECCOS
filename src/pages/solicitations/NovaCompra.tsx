@@ -22,11 +22,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { addPurchaseRequest } from '@/services/reservationService';
+import { addPurchaseRequest } from '@/services/purchaseService';
 import { useAuth } from '@/contexts/AuthContext';
 import { sendAdminNotification } from '@/lib/email';
 import { cn } from '@/lib/utils';
 import { ShoppingCart } from 'lucide-react';
+import { RequestData, MessageData, RequestStatus } from '@/services/types';
+import { getAllRequests, addMessageToRequest, uploadFile } from '@/services/sharedService'
 
 const formSchema = z.object({
   tipo: z.enum(["Compra Pedagógica", "Compra Administrativa", "Compra Infraestrutura"], {

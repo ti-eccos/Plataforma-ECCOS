@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { getAllRequests } from "@/services/reservationService";
+import { getAllRequests } from "@/services/sharedService";
 import { getAllUsers } from "@/services/userService";
 import { getAllEquipment } from "@/services/equipmentService";
 import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
@@ -17,10 +17,32 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
 export const Dashboard = () => {
-  const { currentUser, isAdmin } = useAuth();
+  const { currentUser, userPermissions, isSuperAdmin } = useAuth(); // Corrigido: userPermissions ao invés de permissions
   const navigate = useNavigate();
 
-  // Configuração para tentar refetch caso os dados venham vazios
+  // Verifica qual dashboard o usuário tem permissão para ver
+  const canViewAdminDashboard = isSuperAdmin || userPermissions.dashboard;
+  const canViewUserDashboard = userPermissions.userdashboard;
+
+  // Se não tem permissão para nenhum dashboard
+  if (!canViewAdminDashboard && !canViewUserDashboard) {
+    return (
+      <AppLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center p-8 bg-white rounded-lg shadow-lg">
+            <h1 className="text-2xl font-bold text-gray-800 mb-4">Acesso negado</h1>
+            <p className="text-gray-600">Você não tem permissão para acessar esta página.</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  // Se tem permissão apenas para o dashboard do usuário
+  if (!canViewAdminDashboard && canViewUserDashboard) {
+    return <UserDashboard />;
+  }
+
   const { 
     data: requests = [], 
     isLoading: requestsLoading, 
@@ -29,7 +51,7 @@ export const Dashboard = () => {
   } = useQuery({
     queryKey: ['adminAllRequests'],
     queryFn: () => getAllRequests(true),
-    enabled: isAdmin,
+    enabled: canViewAdminDashboard,
     retry: 2,
   });
 
@@ -41,7 +63,7 @@ export const Dashboard = () => {
   } = useQuery({
     queryKey: ['adminAllUsers'],
     queryFn: getAllUsers,
-    enabled: isAdmin,
+    enabled: canViewAdminDashboard,
     retry: 2,
   });
 
@@ -53,32 +75,27 @@ export const Dashboard = () => {
   } = useQuery({
     queryKey: ['adminAllEquipment'],
     queryFn: getAllEquipment,
-    enabled: isAdmin,
+    enabled: canViewAdminDashboard,
     retry: 2,
   });
 
-  // Tentar recarregar dados se algum deles vier vazio
   useEffect(() => {
-    if (isAdmin && !requestsLoading && !requestsError && requests.length === 0) {
-      console.log("Tentando recarregar solicitações...");
+    if (canViewAdminDashboard && !requestsLoading && !requestsError && requests.length === 0) {
       refetchRequests();
     }
     
-    if (isAdmin && !usersLoading && !usersError && users.length === 0) {
-      console.log("Tentando recarregar usuários...");
+    if (canViewAdminDashboard && !usersLoading && !usersError && users.length === 0) {
       refetchUsers();
     }
     
-    if (isAdmin && !equipmentLoading && !equipmentError && equipment.length === 0) {
-      console.log("Tentando recarregar equipamentos...");
+    if (canViewAdminDashboard && !equipmentLoading && !equipmentError && equipment.length === 0) {
       refetchEquipment();
     }
-  }, [isAdmin, 
+  }, [canViewAdminDashboard, 
       requests.length, requestsLoading, requestsError, 
       users.length, usersLoading, usersError, 
       equipment.length, equipmentLoading, equipmentError]);
 
-  // Animação de entrada (fade-up)
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -96,17 +113,11 @@ export const Dashboard = () => {
     return () => observer.disconnect();
   }, []);
 
-  if (!isAdmin) {
-    return <UserDashboard />;
-  }
-
   const isLoading = requestsLoading || usersLoading || equipmentLoading;
   const isError = requestsError || usersError || equipmentError;
   
-  // Verifica se há dados válidos
   const hasValidData = requests.length > 0 && users.length > 0 && equipment.length > 0;
 
-  // Calcula estatísticas apenas se houver dados válidos
   const activeUsers = users.filter((user: any) => !user.blocked).length;
   const pendingRequests = requests.filter((req: any) => req.status === 'pending').length;
   const approvedRequests = requests.filter((req: any) => req.status === 'approved').length;
@@ -118,7 +129,6 @@ export const Dashboard = () => {
   const purchaseRequests = requests.filter((req: any) => req.type === 'purchase').length;
   const supportRequests = requests.filter((req: any) => req.type === 'support').length;
 
-  // Trate dados para os gráficos
   const requestStatusData = [
     { name: 'Pendentes', value: pendingRequests, color: '#eab308' },
     { name: 'Aprovadas', value: approvedRequests, color: '#22c55e' },
@@ -136,7 +146,6 @@ export const Dashboard = () => {
     { name: 'Suporte', value: supportRequests, color: '#ec4899' }
   ];
 
-  // Calcule as estatísticas de usuários
   const userRequestCounts = requests.reduce((acc: Record<string, any>, req: any) => {
     const userId = req.userId || 'unknown';
     if (!acc[userId]) {
@@ -162,20 +171,17 @@ export const Dashboard = () => {
   return (
     <AppLayout>
       <div className="min-h-screen bg-white overflow-hidden relative">
-        {/* Fundos decorativos */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-sidebar blur-3xl opacity-5"></div>
           <div className="absolute right-1/4 bottom-1/4 h-80 w-80 rounded-full bg-eccos-purple blur-3xl opacity-5"></div>
         </div>
 
-        {/* Conteúdo principal */}
         <div className="relative z-10 space-y-8 p-6 md:p-12 fade-up">
           <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
             <Home className="text-eccos-purple" size={35} />
             Dashboard Administrativo
           </h1>
 
-          {/* NoticeBoard fixo no topo */}
           <div className="fade-up">
             <NoticeBoard />
           </div>
@@ -247,7 +253,6 @@ export const Dashboard = () => {
           ) : !isLoading && !isError && hasValidData && (
             <div className="space-y-8 fade-up">
              <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
-                {/* Card Usuários Ativos */}
                 <Card
                   className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 relative group overflow-hidden"
                 >
@@ -267,7 +272,6 @@ export const Dashboard = () => {
                   </CardContent>
                 </Card>
 
-                {/* Card Pendentes */}
                 <Card
                   className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 relative group overflow-hidden"
                 >
@@ -287,7 +291,6 @@ export const Dashboard = () => {
                   </CardContent>
                 </Card>
 
-                {/* Card Aprovadas */}
                 <Card
                   className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 relative group overflow-hidden"
                 >
@@ -307,7 +310,6 @@ export const Dashboard = () => {
                   </CardContent>
                 </Card>
 
-                {/* Card Em Progresso */}
                 <Card
                   className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 relative group overflow-hidden"
                 >
@@ -359,7 +361,6 @@ export const Dashboard = () => {
           )}
         </div>
 
-        {/* Rodapé */}
         <footer className="relative z-10 bg-gray-50 py-10 px-4 md:px-12 fade-up">
           <div className="max-w-6xl mx-auto">
             <div className="text-center">

@@ -201,10 +201,9 @@ const SidebarSubMenu = ({ label, icon: Icon, children, expanded }: any) => {
 export const AppSidebar = () => {
   const [expanded, setExpanded] = useState(true);
   const location = useLocation();
-  const { isAdmin, signOut, currentUser } = useAuth();
-  const userRole = currentUser?.role || "";
-
-  // Menus dinâmicos
+  const { signOut, currentUser, userPermissions, isSuperAdmin } = useAuth();
+  
+  // Menus dinâmicos baseados em permissões
   const userMenuItems = [
     { icon: Home, label: "Página Inicial", href: "/" },
     { icon: FileText, label: "Minhas Solicitações", href: "/minhas-solicitacoes" },
@@ -219,16 +218,31 @@ export const AppSidebar = () => {
     },
   ];
 
+  // Itens administrativos baseados em permissões
   const adminMenuItems = [
-    { icon: Calendar, label: "Calendário", href: "/calendario" },
-    { icon: Laptop, label: "Equipamentos", href: "/equipamentos" },
-    { icon: Calendar, label: "Disponibilidade", href: "/disponibilidade" },
-    { icon: Users, label: "Usuários", href: "/usuarios" },
-    { icon: FileText, label: "Solicitações", href: "/solicitacoes" },
-    { icon: Bell, label: "Notificações", href: "/notificacoes" },
-    { icon: Warehouse, label: "Estoque", href: "/estoque" },
-    { icon: Bug, label: "Suporte Plataforma", href: "/suporte-plataforma" },
-  ];
+  { icon: Calendar, label: "Calendário", href: "/calendario", permission: "solicitacoes" },
+  { icon: Laptop, label: "Equipamentos", href: "/equipamentos", permission: "equipamentos" },
+  { icon: Calendar, label: "Disponibilidade", href: "/disponibilidade", permission: "equipamentos" },
+  { icon: Users, label: "Usuários", href: "/usuarios", permission: "usuarios" },
+  { icon: FileText, label: "Solicitações", href: "/solicitacoes", permission: "solicitacoes" },
+  { icon: Bell, label: "Notificações", href: "/notificacoes", permission: "notificacoes" },
+  { icon: Warehouse, label: "Estoque", href: "/estoque", permission: "estoque" },
+  { icon: Bug, label: "Suporte Plataforma", href: "/suporte-plataforma", permission: "suporte-plataforma" },
+  { icon: ShoppingCart, label: "Compras", href: "/compras-financeiro", permission: "financeiro" },
+  { icon: Wrench, label: "Manutenção", href: "/suporte-operacional", permission: "suporte-operacional" },
+];
+if (isSuperAdmin) {
+  adminMenuItems.push({
+    icon: Users,
+    label: "Permissões",
+    href: "/roles",
+    permission: null // Sem verificação extra, só aparece se for superadmin
+  });
+}
+  // Filtra itens administrativos baseado nas permissões
+ const filteredAdminItems = adminMenuItems.filter(item => 
+  isSuperAdmin || (item.permission && userPermissions[item.permission])
+);
 
   return (
     <div
@@ -295,7 +309,7 @@ export const AppSidebar = () => {
           }
         })}
 
-        {(isAdmin || ["financeiro", "operacional"].includes(userRole)) && (
+        {filteredAdminItems.length > 0 && (
           <>
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
@@ -310,68 +324,26 @@ export const AppSidebar = () => {
                       expanded ? "opacity-100" : "opacity-0"
                     )}
                   >
-                    {isAdmin
-                      ? "Administração"
-                      : userRole === "financeiro"
-                      ? "Recursos Financeiros"
-                      : "Manutenção"}
+                    Administração
                   </span>
                 </div>
               </div>
             </div>
 
-            {isAdmin &&
-              adminMenuItems.map((item, index) => (
-                <SidebarItem
-                  key={`admin-${index}`}
-                  icon={item.icon}
-                  label={item.label}
-                  href={item.href}
-                  active={location.pathname === item.href}
-                  expanded={expanded}
-                />
-              ))}
-
-            {userRole === "financeiro" && (
-              <>
-                <SidebarItem
-                  icon={ShoppingCart}
-                  label="Compras"
-                  href="/compras-financeiro"
-                  active={location.pathname === "/compras-financeiro"}
-                  expanded={expanded}
-                />
-                <SidebarItem
-                  icon={Warehouse}
-                  label="Estoque"
-                  href="/estoque"
-                  active={location.pathname === "/estoque"}
-                  expanded={expanded}
-                />
-              </>
-            )}
-
-            {userRole === "operacional" && (
-              <>
-                <SidebarItem
-                  icon={Wrench}
-                  label="Chamados de Manutenção"
-                  href="/suporte-operacional"
-                  active={location.pathname === "/suporte-operacional"}
-                  expanded={expanded}
-                />
-                <SidebarItem
-                  icon={Warehouse}
-                  label="Estoque"
-                  href="/estoque"
-                  active={location.pathname === "/estoque"}
-                  expanded={expanded}
-                />
-              </>
-            )}
+            {filteredAdminItems.map((item, index) => (
+              <SidebarItem
+                key={`admin-${index}`}
+                icon={item.icon}
+                label={item.label}
+                href={item.href}
+                active={location.pathname === item.href}
+                expanded={expanded}
+              />
+            ))}
           </>
         )}
       </div>
+
 
       {/* Rodapé Fixo */}
       <div className="shrink-0 pt-4 pb-4 px-4 border-t border-gray-100 relative z-10">

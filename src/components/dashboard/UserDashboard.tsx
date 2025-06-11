@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
-import { getUserRequests } from "@/services/reservationService";
+import { getUserRequests } from "@/services/sharedService";
 import { DashboardLoading } from "@/components/dashboard/DashboardLoading";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

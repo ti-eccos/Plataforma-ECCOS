@@ -19,15 +19,13 @@ import {
 import { toast } from "sonner";
 import { 
   addMessageToRequest,
-  MessageData,
-  RequestData,
   getRequestById,
   uploadFile,
   markMessagesAsRead,
-  FileAttachment,
   editMessage,
   deleteMessage
-} from "@/services/reservationService";
+} from "@/services/sharedService";
+import {FileAttachment, MessageData, RequestData,} from '@/services/types';
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Dialog,

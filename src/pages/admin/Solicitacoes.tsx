@@ -31,10 +31,8 @@ import { toast } from "sonner";
 import {
   getAllRequests,
   getRequestById,
-  RequestStatus,
-  RequestData,
-  RequestType,
-} from "@/services/reservationService";
+} from "@/services/sharedService";
+import {  RequestStatus, RequestData, RequestType} from '@/services/types'
 import { useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/components/AppLayout";
 import {
@@ -169,7 +167,8 @@ const getReadableRequestType = (type: RequestType): string => {
 // Componente Principal
 const Solicitacoes = () => {
   const queryClient = useQueryClient();
-  const { currentUser: user, isAdmin } = useAuth();
+  const { currentUser: user} = useAuth();
+  const isAdmin = (user?.role || []).includes("admin");
   const [showHidden, setShowHidden] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<RequestType[]>(["reservation", "purchase", "support"]);

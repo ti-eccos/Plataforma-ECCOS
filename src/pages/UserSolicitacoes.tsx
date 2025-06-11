@@ -24,10 +24,8 @@ import { toast } from "sonner";
 import {
   getAllRequests,
   getRequestById,
-  RequestStatus,
-  RequestData,
-  RequestType,
-} from "@/services/reservationService";
+} from "@/services/sharedService";
+import {RequestStatus, RequestData, RequestType} from '@/services/types'
 import { useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/components/AppLayout";
 import {

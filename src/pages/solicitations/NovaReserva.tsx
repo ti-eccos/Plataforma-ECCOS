@@ -30,6 +30,8 @@ import { getAllEquipment } from '@/services/equipmentService';
 import { addReservation, checkConflicts } from '@/services/reservationService';
 import { useAuth } from '@/contexts/AuthContext';
 import { sendAdminNotification } from '@/lib/email';
+import { RequestData, MessageData, RequestStatus } from '@/services/types';
+import { getAllRequests, addMessageToRequest, uploadFile } from '@/services/sharedService'
 
 const LOCATIONS = [
   'Recepção', 'Secretaria', 'Sala de atendimento',

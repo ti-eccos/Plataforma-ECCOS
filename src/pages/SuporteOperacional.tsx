@@ -15,9 +15,8 @@ import {
   getAllRequests,
   getRequestById,
   deleteRequest,
-  RequestStatus,
-  RequestData,
-} from "@/services/reservationService";
+} from "@/services/sharedService";
+import {RequestStatus, RequestData} from '@/services/types'
 import { useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/components/AppLayout";
 import {
@@ -285,7 +284,7 @@ const SuporteOperacional = () => {
         <div className="relative z-10 space-y-8 p-6 md:p-12">
           <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
             <Wrench className="text-eccos-purple" size={35} />
-            Chamados de Suporte
+            Solicitações de Suporte
           </h1>
 
           <div className="flex flex-col sm:flex-row gap-4">

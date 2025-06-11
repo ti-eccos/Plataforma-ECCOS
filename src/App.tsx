@@ -7,12 +7,15 @@ import {
   RouterProvider,
   Navigate,
 } from "react-router-dom";
+
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+
 import Notificacao from "@/pages/Notificacoes";
 import AppWrapper from "@/components/AppWrapper";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import UserDashboard from "./components/dashboard/UserDashboard";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 import UserSolicitacoes from "@/pages/UserSolicitacoes";
@@ -29,6 +32,8 @@ import Estoque from "./pages/admin/Estoque";
 import CalendarioReservas from "@/pages/admin/CalendarioReservas";
 import SuportePlataforma from "@/pages/admin/SuportePlataforma";
 import Profile from "@/pages/Profile";
+import RolesManagement from "@/pages/admin/RolesManagement";
+import HomeRedirect from "@/components/HomeRedirect";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +58,14 @@ const router = createBrowserRouter(
         {
           index: true,
           element: (
+            <ProtectedRoute>
+              <HomeRedirect /> {/* Mantém para usuários regulares */}
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "dashboard",
+          element: ( // Nova rota para Dashboard
             <ProtectedRoute>
               <Dashboard />
             </ProtectedRoute>
@@ -85,7 +98,7 @@ const router = createBrowserRouter(
         {
           path: "suporte-operacional",
           element: (
-            <ProtectedRoute allowedRoles={['operacional']}>
+            <ProtectedRoute requiredPermission="suporte-operacional">
               <SuporteOperacional />
             </ProtectedRoute>
           ),
@@ -93,7 +106,7 @@ const router = createBrowserRouter(
         {
           path: "compras-financeiro",
           element: (
-            <ProtectedRoute allowedRoles={['financeiro']}>
+            <ProtectedRoute requiredPermission="financeiro">
               <ComprasFinanceiro />
             </ProtectedRoute>
           ),
@@ -101,7 +114,7 @@ const router = createBrowserRouter(
         {
           path: "calendario",
           element: (
-            <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+            <ProtectedRoute requiredPermission="solicitacoes">
               <CalendarioReservas />
             </ProtectedRoute>
           ),
@@ -109,7 +122,7 @@ const router = createBrowserRouter(
         {
           path: "equipamentos",
           element: (
-            <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+            <ProtectedRoute requiredPermission="equipamentos">
               <Equipamentos />
             </ProtectedRoute>
           ),
@@ -117,7 +130,7 @@ const router = createBrowserRouter(
         {
           path: "estoque",
           element: (
-            <ProtectedRoute allowedRoles={['admin', 'superadmin', 'financeiro', 'operacional']}>
+            <ProtectedRoute requiredPermission="estoque">
               <Estoque />
             </ProtectedRoute>
           ),
@@ -125,7 +138,7 @@ const router = createBrowserRouter(
         {
           path: "disponibilidade",
           element: (
-            <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+            <ProtectedRoute requiredPermission="equipamentos">
               <Disponibilidade />
             </ProtectedRoute>
           ),
@@ -133,7 +146,7 @@ const router = createBrowserRouter(
         {
           path: "usuarios",
           element: (
-            <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+            <ProtectedRoute requiredPermission="usuarios">
               <Usuarios />
             </ProtectedRoute>
           ),
@@ -141,7 +154,7 @@ const router = createBrowserRouter(
         {
           path: "solicitacoes",
           element: (
-            <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+            <ProtectedRoute requiredPermission="solicitacoes">
               <Solicitacoes />
             </ProtectedRoute>
           ),
@@ -149,7 +162,7 @@ const router = createBrowserRouter(
         {
           path: "suporte-plataforma",
           element: (
-            <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+            <ProtectedRoute requiredPermission="suporte-plataforma">
               <SuportePlataforma />
             </ProtectedRoute>
           ),
@@ -157,7 +170,7 @@ const router = createBrowserRouter(
         {
           path: "notificacoes",
           element: (
-            <ProtectedRoute allowedRoles={['admin', 'superadmin', 'financeiro']}>
+            <ProtectedRoute requiredPermission="notificacoes">
               <Notificacao />
             </ProtectedRoute>
           ),
@@ -171,16 +184,24 @@ const router = createBrowserRouter(
           ),
         },
         {
-          path: "*",
-          element: <Navigate to="/404" replace />,
-        },
-        {
           path: "perfil",
           element: (
             <ProtectedRoute>
               <Profile />
             </ProtectedRoute>
           ),
+        },
+        {
+          path: "roles",
+          element: (
+            <ProtectedRoute requiredPermission="all">
+              <RolesManagement />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "*",
+          element: <Navigate to="/404" replace />,
         },
       ],
     },

@@ -1,139 +1,161 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { 
-  User as FirebaseUser, 
-  signInWithPopup, 
-  signOut as firebaseSignOut, 
-  onAuthStateChanged 
+import {
+  User as FirebaseUser,
+  signInWithPopup,
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
 } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
-export type UserRole = "user" | "admin" | "superadmin" | "financeiro" | "operacional";
+export interface Permissions {
+  [key: string]: boolean;
+}
+
+export interface Role {
+  name: string;
+  description: string;
+  permissions: Permissions;
+}
 
 export interface AuthUser {
   uid: string;
   email: string;
   displayName: string;
   photoURL: string | null;
-  role: UserRole;
+  role: string;
   blocked?: boolean;
   lastActive?: Date;
   createdAt?: Date;
-  department?: string;
-  birthDate?: string;
 }
 
 interface AuthContextType {
   currentUser: AuthUser | null;
-  user: AuthUser | null;
+  userPermissions: Permissions;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
-  isAdmin: boolean;
   isSuperAdmin: boolean;
   updateUserData: (updates: Partial<AuthUser>) => void;
+  hasDashboardPermission: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [userPermissions, setUserPermissions] = useState<Permissions>({});
   const [loading, setLoading] = useState<boolean>(true);
   const { toast } = useToast();
 
   const isSuperAdmin = currentUser?.email === "suporte@colegioeccos.com.br";
-  const isAdmin = currentUser?.role === "admin" || isSuperAdmin;
+  const hasDashboardPermission = isSuperAdmin || userPermissions.dashboard;
 
-  // Função para atualizar dados do usuário localmente
   const updateUserData = useCallback((updates: Partial<AuthUser>) => {
-    setCurrentUser(prev => prev ? { ...prev, ...updates } : null);
+    setCurrentUser((prev) => (prev ? { ...prev, ...updates } : null));
   }, []);
 
-  const handleUserDocument = useCallback(async (firebaseUser: FirebaseUser) => {
-    try {
-      const userRef = doc(db, "users", firebaseUser.uid);
-      const docSnap = await getDoc(userRef);
-      
-      let userData: Partial<AuthUser>;
+  const handleUserDocument = useCallback(
+    async (firebaseUser: FirebaseUser) => {
+      try {
+        const userRef = doc(db, "users", firebaseUser.uid);
+        const docSnap = await getDoc(userRef);
 
-      if (docSnap.exists()) {
-        userData = docSnap.data() as AuthUser;
-        
-        if (userData.blocked) {
-          await firebaseSignOut(auth);
-          toast({
-            title: "Acesso bloqueado",
-            description: "Sua conta foi bloqueada. Entre em contato com um administrador.",
-            variant: "destructive"
-          });
-          return null;
+        let userData: Partial<AuthUser>;
+
+        if (docSnap.exists()) {
+          userData = docSnap.data() as AuthUser;
+
+          if (firebaseUser.email === "suporte@colegioeccos.com.br") {
+            userData.role = "superadmin";
+          }
+
+          if (userData.blocked) {
+            await firebaseSignOut(auth);
+            toast({
+              title: "Acesso bloqueado",
+              description: "Sua conta foi bloqueada.",
+              variant: "destructive",
+            });
+            return null;
+          }
+
+          await setDoc(
+            userRef,
+            { lastActive: new Date(), role: userData.role },
+            { merge: true }
+          );
+        } else {
+          const role =
+            firebaseUser.email === "suporte@colegioeccos.com.br"
+              ? "superadmin"
+              : "user";
+
+          userData = {
+            uid: firebaseUser.uid,
+            email: firebaseUser.email || "",
+            displayName: firebaseUser.displayName || "Usuário sem nome",
+            photoURL: firebaseUser.photoURL,
+            role,
+            blocked: false,
+            lastActive: new Date(),
+            createdAt: new Date(),
+          };
+
+          await setDoc(userRef, userData);
         }
 
-        await setDoc(userRef, {
-          lastActive: new Date()
-        }, { merge: true });
-
-      } else {
-        if (!firebaseUser.email?.endsWith("@colegioeccos.com.br")) return null;
-
-        const role: UserRole = firebaseUser.email === "suporte@colegioeccos.com.br" 
-          ? "superadmin" 
-          : "user";
-
-        userData = {
+        return {
+          ...userData,
           uid: firebaseUser.uid,
           email: firebaseUser.email || "",
-          displayName: firebaseUser.displayName || "Usuário sem nome",
-          photoURL: firebaseUser.photoURL,
-          role,
-          blocked: false,
-          lastActive: new Date(),
-          createdAt: new Date(),
-          department: "Não definido"
-        };
-        
-        await setDoc(userRef, userData);
+        } as AuthUser;
+      } catch (error) {
+        console.error("Error handling user document:", error);
+        toast({
+          title: "Erro de acesso",
+          description: "Falha ao carregar seus dados.",
+          variant: "destructive",
+        });
+        return null;
       }
+    },
+    [toast]
+  );
 
-      return {
-        ...userData,
-        uid: firebaseUser.uid,
-        email: firebaseUser.email || "",
-        displayName: firebaseUser.displayName || "Usuário sem nome",
-        photoURL: userData.photoURL || firebaseUser.photoURL,
-        role: userData.role || "user"
-      } as AuthUser;
-
-    } catch (error) {
-      console.error("Error handling user document:", error);
-      toast({
-        title: "Erro de acesso",
-        description: "Ocorreu um erro ao carregar seus dados de usuário.",
-        variant: "destructive"
-      });
-      return null;
+  const loadUserPermissions = useCallback(async (roleName: string) => {
+    if (roleName === "superadmin") {
+      setUserPermissions({ all: true });
+      return;
     }
-  }, [toast]);
+
+    const roleRef = doc(db, "roles", roleName);
+    const roleSnap = await getDoc(roleRef);
+    if (roleSnap.exists()) {
+      const roleData = roleSnap.data() as Role;
+      setUserPermissions(roleData.permissions || {});
+    } else {
+      setUserPermissions({});
+    }
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
-    let userUnsubscribe: (() => void) | null = null;
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (!isMounted) return;
-
       setLoading(true);
-      
+
       try {
         if (firebaseUser) {
           if (!firebaseUser.email?.endsWith("@colegioeccos.com.br")) {
             await firebaseSignOut(auth);
             toast({
               title: "Acesso negado",
-              description: "Apenas emails do domínio @colegioeccos.com.br são permitidos.",
-              variant: "destructive"
+              description: "Domínio inválido.",
+              variant: "destructive",
             });
             return;
           }
@@ -141,99 +163,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const authUser = await handleUserDocument(firebaseUser);
           if (authUser && isMounted) {
             setCurrentUser(authUser);
-
-            // Configurar listener em tempo real para mudanças no documento do usuário
-            const userRef = doc(db, "users", firebaseUser.uid);
-            userUnsubscribe = onSnapshot(userRef, (docSnap) => {
-              if (docSnap.exists() && isMounted) {
-                const updatedUserData = docSnap.data() as AuthUser;
-                setCurrentUser(prev => prev ? {
-                  ...prev,
-                  ...updatedUserData,
-                  uid: firebaseUser.uid,
-                  email: firebaseUser.email || "",
-                } : null);
-              }
-            });
+            await loadUserPermissions(authUser.role);
           }
-          
         } else {
           setCurrentUser(null);
-          if (userUnsubscribe) {
-            userUnsubscribe();
-            userUnsubscribe = null;
-          }
+          setUserPermissions({});
         }
       } catch (error) {
         console.error("Auth state error:", error);
       } finally {
-        if (isMounted) setLoading(false);
+        setLoading(false);
       }
     });
 
     return () => {
       isMounted = false;
       unsubscribe();
-      if (userUnsubscribe) {
-        userUnsubscribe();
-      }
     };
-  }, [handleUserDocument, toast]);
+  }, [handleUserDocument, loadUserPermissions, toast]);
 
   const signInWithGoogle = useCallback(async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      
       if (!result.user.email?.endsWith("@colegioeccos.com.br")) {
         await firebaseSignOut(auth);
         toast({
-          title: "Domínio não permitido",
-          description: "Apenas emails @colegioeccos.com.br são aceitos",
-          variant: "destructive"
+          title: "Domínio inválido",
+          description: "Email não permitido.",
+          variant: "destructive",
         });
       }
     } catch (error: any) {
-      console.error("Login error:", error);
       toast({
         title: "Erro no login",
-        description: error.message || "Falha ao realizar login",
-        variant: "destructive"
+        description: error.message || "Falha no login",
+        variant: "destructive",
       });
     }
   }, [toast]);
 
   const signOut = useCallback(async () => {
-    try {
-      await firebaseSignOut(auth);
-      setCurrentUser(null);
-      
-      // Limpeza completa de caminhos armazenados
-      sessionStorage.removeItem("redirectPath");
-      localStorage.removeItem("redirectPath");
-      
-      toast({
-        title: "Logout realizado",
-        description: "Até breve!",
-      });
-    } catch (error: any) {
-      console.error("Logout error:", error);
-      toast({
-        title: "Erro no logout",
-        description: error.message || "Falha ao sair da conta",
-        variant: "destructive"
-      });
-    }
+    await firebaseSignOut(auth);
+    setCurrentUser(null);
+    setUserPermissions({});
+    toast({ title: "Logout realizado" });
   }, [toast]);
 
   const authContextValue = {
     currentUser,
-    user: currentUser,
+    userPermissions,
     loading,
     signInWithGoogle,
     signOut,
-    isAdmin,
     isSuperAdmin,
-    updateUserData
+    updateUserData,
+    hasDashboardPermission,
   };
 
   return (
@@ -245,8 +229,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within AuthProvider");
-  }
+  if (!context) throw new Error("useAuth must be used within AuthProvider");
   return context;
 }

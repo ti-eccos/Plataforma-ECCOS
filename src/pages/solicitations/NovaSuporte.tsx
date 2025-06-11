@@ -23,13 +23,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { addSupportRequest } from '@/services/reservationService';
+import { addSupportRequest } from '@/services/supportService';
 import { useAuth } from '@/contexts/AuthContext';
 import { sendAdminNotification } from '@/lib/email';
 import { cn } from '@/lib/utils';
 import { Wrench } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Timestamp } from 'firebase/firestore';
+import { RequestData, MessageData, RequestStatus } from '@/services/types';
+import { getAllRequests, addMessageToRequest, uploadFile } from '@/services/sharedService'
 
 const locationsByUnit = {
   'Berçário e Educação Infantil': [

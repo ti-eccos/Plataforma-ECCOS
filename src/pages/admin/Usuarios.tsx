@@ -96,11 +96,12 @@ const UserDetailsDialog = ({ user, onRoleChange, onBlock }: {
   };
 
   const canEditRole = (user: User): boolean => {
-    if (currentUser?.uid === user.uid) return false;
-    if (isSuperAdmin && user.role !== "superadmin") return true;
-    if (currentUser?.role === "admin" && ["user", "financeiro", "operacional", "admin"].includes(user.role)) return true;
-    return false;
-  };
+  if (user.email === "suporte@colegioeccos.com.br") return false;
+  if (currentUser?.uid === user.uid) return false;
+  if (isSuperAdmin) return true;
+  return false;
+};
+
 
   const canBlock = (user: User): boolean => {
     if (currentUser?.uid === user.uid) return false;
