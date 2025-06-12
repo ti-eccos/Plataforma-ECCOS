@@ -1,9 +1,7 @@
-import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import React, { useState, useEffect, useMemo, useCallback } from "react";import { Link, useLocation } from "react-router-dom";
 import {
   Home,
   Laptop,
-  Calendar,
   Users,
   PlusCircle,
   LogOut,
@@ -12,10 +10,12 @@ import {
   FileText,
   Bell,
   CalendarCheck,
+  CalendarCheck2,
   ShoppingCart,
   Wrench,
   Warehouse,
   Bug,
+  Calendar1,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -220,16 +220,16 @@ export const AppSidebar = () => {
 
   // Itens administrativos baseados em permissões
   const adminMenuItems = [
-  { icon: Calendar, label: "Calendário", href: "/calendario", permission: "solicitacoes" },
-  { icon: Laptop, label: "Equipamentos", href: "/equipamentos", permission: "equipamentos" },
-  { icon: Calendar, label: "Disponibilidade", href: "/disponibilidade", permission: "equipamentos" },
-  { icon: Users, label: "Usuários", href: "/usuarios", permission: "usuarios" },
-  { icon: FileText, label: "Solicitações", href: "/solicitacoes", permission: "solicitacoes" },
-  { icon: Bell, label: "Notificações", href: "/notificacoes", permission: "notificacoes" },
-  { icon: Warehouse, label: "Estoque", href: "/estoque", permission: "estoque" },
-  { icon: Bug, label: "Suporte Plataforma", href: "/suporte-plataforma", permission: "suporte-plataforma" },
   { icon: ShoppingCart, label: "Compras", href: "/compras-financeiro", permission: "financeiro" },
   { icon: Wrench, label: "Manutenção", href: "/suporte-operacional", permission: "suporte-operacional" },
+  { icon: CalendarCheck, label: "Reservas", href: "/solicitacoes", permission: "solicitacoes" },
+  { icon: Calendar1, label: "Calendário", href: "/calendario", permission: "solicitacoes" },
+  { icon: CalendarCheck2, label: "Disponibilidade", href: "/disponibilidade", permission: "equipamentos" },
+  { icon: Laptop, label: "Equipamentos", href: "/equipamentos", permission: "equipamentos" },
+  { icon: Users, label: "Usuários", href: "/usuarios", permission: "usuarios" },
+  { icon: Warehouse, label: "Estoque", href: "/estoque", permission: "estoque" },
+  { icon: Bell, label: "Notificações", href: "/notificacoes", permission: "notificacoes" },
+  { icon: Bug, label: "Suporte Plataforma", href: "/suporte-plataforma", permission: "suporte-plataforma" },
 ];
 if (isSuperAdmin) {
   adminMenuItems.push({
@@ -240,9 +240,11 @@ if (isSuperAdmin) {
   });
 }
   // Filtra itens administrativos baseado nas permissões
- const filteredAdminItems = adminMenuItems.filter(item => 
-  isSuperAdmin || (item.permission && userPermissions[item.permission])
-);
+ const filteredAdminItems = useMemo(() => {
+  return adminMenuItems.filter(item => 
+    isSuperAdmin || (item.permission && userPermissions[item.permission])
+  );
+}, [adminMenuItems, isSuperAdmin, userPermissions]);
 
   return (
     <div

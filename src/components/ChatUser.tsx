@@ -21,7 +21,6 @@ import {
   addMessageToRequest,
   editMessage,
   deleteMessage,
-  getRequestById,
   uploadFile,
   markMessagesAsRead,
 } from "@/services/sharedService";
@@ -51,6 +50,7 @@ interface ChatUserProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onMessageSent: () => void;
+  onMessagesRead?: (requestId: string) => void; // Nova prop
 }
 
 const ChatUser = ({
@@ -58,6 +58,7 @@ const ChatUser = ({
   isOpen,
   onOpenChange,
   onMessageSent,
+  onMessagesRead, // Nova prop
 }: ChatUserProps) => {
   const { currentUser } = useAuth();
   const [newMessage, setNewMessage] = useState("");
@@ -94,9 +95,20 @@ const ChatUser = ({
   // Marcar mensagens como lidas ao abrir o chat
   useEffect(() => {
     if (request && isOpen && currentUser) {
-      markMessagesAsRead(request.id, request.collectionName, currentUser.uid, false);
+      const markAsRead = async () => {
+        try {
+          await markMessagesAsRead(request.id, request.collectionName, currentUser.uid, false);
+          // Notificar componente pai que as mensagens foram lidas
+          if (onMessagesRead) {
+            onMessagesRead(request.id);
+          }
+        } catch (error) {
+          console.error("Erro ao marcar mensagens como lidas:", error);
+        }
+      };
+      markAsRead();
     }
-  }, [request, isOpen, currentUser]);
+  }, [request, isOpen, currentUser, onMessagesRead]);
 
   // Selecionar arquivo
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {

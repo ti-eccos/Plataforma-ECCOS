@@ -1,6 +1,6 @@
 import { Timestamp } from "firebase/firestore";
 
-export type RequestStatus = "pending" | "approved" | "rejected" | "in-progress" | "completed" | "canceled";
+export type RequestStatus = "pending" | "approved" | "rejected" | "waitingDelivery" | "delivered" | "completed" | "canceled";
 export type RequestType = "reservation" | "purchase" | "support";
 
 export interface FileAttachment {

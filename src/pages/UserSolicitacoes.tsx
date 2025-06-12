@@ -19,6 +19,8 @@ import {
   AlertTriangle,
   Search,
   FileText,
+  Truck,
+  PackageCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -93,35 +95,42 @@ const getStatusBadge = (status: RequestStatus) => {
       return (
         <Badge className="bg-green-50 text-green-600 border-green-100">
           <CheckCircle2 className="h-4 w-4 mr-1 hidden sm:inline-block" />
-          Aprovada
+          Aprovado
         </Badge>
       );
     case "rejected":
       return (
         <Badge variant="destructive">
           <XCircle className="h-4 w-4 mr-1 hidden sm:inline-block" />
-          Reprovada
+          Reprovado
         </Badge>
       );
-    case "in-progress":
+    case "waitingDelivery":
       return (
         <Badge className="bg-blue-50 text-blue-600 border-blue-100">
-          <RefreshCw className="h-4 w-4 mr-1 hidden sm:inline-block" />
-          Em Andamento
+          <Truck className="h-4 w-4 mr-1 hidden sm:inline-block" />
+          Aguardando entrega
+        </Badge>
+      );
+    case "delivered":
+      return (
+        <Badge className="bg-indigo-50 text-indigo-600 border-indigo-100">
+          <PackageCheck className="h-4 w-4 mr-1 hidden sm:inline-block" />
+          Recebido
         </Badge>
       );
     case "completed":
       return (
         <Badge className="bg-slate-100 text-slate-600 border-slate-200">
           <CheckCircle2 className="h-4 w-4 mr-1 hidden sm:inline-block" />
-          Concluída
+          Concluído
         </Badge>
       );
     case "canceled":
       return (
         <Badge className="bg-red-50 text-red-600 border-red-100">
           <AlertTriangle className="h-4 w-4 mr-1 hidden sm:inline-block" />
-          Cancelada
+          Cancelado
         </Badge>
       );
     default:
@@ -185,7 +194,8 @@ const [selectedStatuses, setSelectedStatuses] = useState<RequestStatus[]>([
   "pending",
   "approved",
   "rejected",
-  "in-progress",
+  "waitingDelivery",
+  "delivered",
   "completed"
 ]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([
@@ -452,6 +462,63 @@ const [selectedStatuses, setSelectedStatuses] = useState<RequestStatus[]>([
     return items.length > 0 ? items : <li className="text-sm">Nenhum equipamento selecionado</li>;
   };
 
+  const handleMarkAsDelivered = async () => {
+  if (!selectedRequest) return;
+  try {
+    const docRef = doc(db, selectedRequest.collectionName, selectedRequest.id);
+    await updateDoc(docRef, { status: "delivered" });
+
+    await createNotification({
+      title: "Entrega Recebida",
+      message: `Você marcou a solicitação como entregue.`,
+      link: "minhas-solicitacoes",
+      createdAt: new Date(),
+      readBy: [],
+      recipients: [selectedRequest.userEmail],
+      isBatch: false,
+    });
+
+    toast.success("Status atualizado para Recebido");
+    setIsDetailsOpen(false);
+    refetch();
+  } catch (error) {
+    toast.error("Erro ao atualizar status");
+    console.error("Error:", error);
+  }
+};
+
+const handleMarkAsCompleted = async () => {
+    if (!selectedRequest) return;
+    try {
+      const docRef = doc(db, selectedRequest.collectionName, selectedRequest.id);
+      await updateDoc(docRef, { status: "completed" });
+
+      await createNotification({
+        title: "Solicitação Concluída",
+        message: `Sua solicitação foi marcada como concluída.`,
+        link: "minhas-solicitacoes",
+        createdAt: new Date(),
+        readBy: [],
+        recipients: [selectedRequest.userEmail],
+        isBatch: false,
+      });
+
+      toast.success("Solicitação marcada como concluída");
+      setIsDetailsOpen(false);
+      refetch();
+    } catch (error) {
+      toast.error("Erro ao atualizar status");
+      console.error("Error:", error);
+    }
+  };
+
+  // Verifica se o botão deve ser exibido
+  const showCompleteButton = selectedRequest && 
+    (selectedRequest.type === "purchase" || selectedRequest.type === "support") &&
+    selectedRequest.status !== "canceled" &&
+    selectedRequest.status !== "rejected" &&
+    selectedRequest.status !== "completed";
+    
   return (
     <AppLayout>
       <div className="min-h-screen bg-white overflow-hidden relative">
@@ -802,6 +869,21 @@ const [selectedStatuses, setSelectedStatuses] = useState<RequestStatus[]>([
                           </div>
                         </div>
                       )}
+                        {selectedRequest.deliveryDate && (
+                          <div>
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Previsão de Entrega</p>
+                            <div className="flex items-center gap-2 bg-gray-50 rounded-md p-2">
+                              <Calendar className="h-4 w-4 text-gray-500" />
+                              <p className="text-xs sm:text-sm text-gray-700">
+                                {format(
+                                  new Date(selectedRequest.deliveryDate.toMillis ? selectedRequest.deliveryDate.toMillis() : selectedRequest.deliveryDate),
+                                  "dd/MM/yyyy",
+                                  { locale: ptBR }
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        )}
 
                       {selectedRequest.type === "support" && (
                         <div className="grid grid-cols-1 gap-4">
@@ -847,15 +929,36 @@ const [selectedStatuses, setSelectedStatuses] = useState<RequestStatus[]>([
                   </div>
 
                   <DialogFooter className="gap-2">
-                    <Button
-                      variant="destructive"
-                      onClick={() => handleCancelRequest(selectedRequest)}
-                      disabled={selectedRequest?.status === "canceled"}
-                      className="w-full sm:w-auto"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" /> Cancelar Solicitação
-                    </Button>
-                  </DialogFooter>
+            {selectedRequest?.type === "purchase" && selectedRequest.status === "waitingDelivery" && (
+              <Button
+                variant="outline"
+                onClick={handleMarkAsDelivered}
+                className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                <PackageCheck className="h-4 w-4 mr-2" /> Entrega Recebida
+              </Button>
+            )}
+            
+            {/* Botão Concluir (apenas para compras/suportes) */}
+            {showCompleteButton && (
+              <Button
+                variant="secondary"
+                onClick={handleMarkAsCompleted}
+                className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white"
+              >
+                <CheckCircle2 className="h-4 w-4 mr-2" /> Concluir
+              </Button>
+            )}
+            
+            <Button
+              variant="destructive"
+              onClick={() => handleCancelRequest(selectedRequest)}
+              disabled={selectedRequest?.status === "canceled"}
+              className="w-full sm:w-auto"
+            >
+              <Trash2 className="h-4 w-4 mr-2" /> Cancelar Solicitação
+            </Button>
+          </DialogFooter>
                 </>
               ) : (
                 <div className="text-center p-4 text-destructive">

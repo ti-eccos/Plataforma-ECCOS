@@ -12,8 +12,10 @@ import {
   DollarSign,
   Clock,
   CheckCircle,
-  XCircle,
-  ChevronDown
+  ChevronDown,
+  Calendar,
+  Save,
+  X
 } from "lucide-react";
 import { toast } from "sonner";
 import { 
@@ -50,13 +52,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -72,19 +67,22 @@ import { updateDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Timestamp } from "firebase/firestore";
 
 const getStatusBadge = (status: RequestStatus) => {
   switch (status) {
     case "pending": return <Badge variant="outline" className="border-yellow-500 text-yellow-600">Pendente</Badge>;
-    case "approved": return <Badge className="bg-green-500 text-white">Aprovada</Badge>;
-    case "rejected": return <Badge variant="destructive">Reprovada</Badge>;
-    case "in-progress": return <Badge className="bg-blue-500 text-white">Em Andamento</Badge>;
-    case "completed": return <Badge className="bg-slate-500 text-white">Concluída</Badge>;
-    case "canceled": return <Badge className="bg-amber-500 text-white">Cancelada</Badge>;
+    case "approved": return <Badge className="bg-green-500 text-white">Aprovado</Badge>;
+    case "rejected": return <Badge variant="destructive">Reprovado</Badge>;
+    case "waitingDelivery": return <Badge className="bg-blue-500 text-white">Aguardando entrega</Badge>;
+    case "delivered": return <Badge className="bg-indigo-500 text-white">Recebido</Badge>;
+    case "completed": return <Badge className="bg-slate-500 text-white">Concluído</Badge>;
+    case "canceled": return <Badge className="bg-amber-500 text-white">Cancelado</Badge>;
     default: return <Badge variant="outline">Desconhecido</Badge>;
   }
 };
@@ -95,7 +93,6 @@ const ComprasFinanceiro = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRequest, setSelectedRequest] = useState<RequestData | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [newStatus, setNewStatus] = useState<RequestStatus>("pending");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<{id: string, collectionName: string} | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -105,6 +102,8 @@ const ComprasFinanceiro = () => {
     const saved = typeof window !== 'undefined' ? localStorage.getItem('financeViewedRequests') : null;
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
+  const [deliveryDate, setDeliveryDate] = useState<Date | null>(null);
+  const [isEditingDeliveryDate, setIsEditingDeliveryDate] = useState(false);
   
   const purchaseTypes = ["Compra Pedagógica", "Compra Administrativa", "Compra Infraestrutura"];
   const [selectedTypes, setSelectedTypes] = useState<string[]>(purchaseTypes);
@@ -133,6 +132,14 @@ const ComprasFinanceiro = () => {
 
     checkUnreadMessages();
   }, [allRequests, viewedRequests]);
+
+  useEffect(() => {
+    if (selectedRequest && selectedRequest.deliveryDate) {
+      setDeliveryDate(selectedRequest.deliveryDate.toDate());
+    } else {
+      setDeliveryDate(null);
+    }
+  }, [selectedRequest]);
 
   const handleOpenChat = async (request: RequestData) => {
     try {
@@ -163,12 +170,19 @@ const ComprasFinanceiro = () => {
     }
   };
 
-  const handleStatusChange = async () => {
-    if (!selectedRequest || !newStatus) return;
+  const handleStatusChange = async (newStatus: RequestStatus) => {
+    if (!selectedRequest) return;
     
     try {
+      const updateData: any = { status: newStatus };
+      
+      // Adiciona data de entrega se status for 'waitingDelivery'
+      if (newStatus === "waitingDelivery" && deliveryDate) {
+        updateData.deliveryDate = Timestamp.fromDate(deliveryDate);
+      }
+
       const docRef = doc(db, selectedRequest.collectionName, selectedRequest.id);
-      await updateDoc(docRef, { status: newStatus });
+      await updateDoc(docRef, updateData);
   
       await createNotification({
         title: 'Alteração de Status',
@@ -182,9 +196,68 @@ const ComprasFinanceiro = () => {
   
       toast.success("Status atualizado");
       queryClient.invalidateQueries({ queryKey: ['allRequests'] });
-      setSelectedRequest({ ...selectedRequest, status: newStatus });
+      setSelectedRequest({ ...selectedRequest, status: newStatus, ...updateData });
     } catch (error) {
       toast.error("Erro ao atualizar");
+      console.error("Error:", error);
+    }
+  };
+
+  // Função para salvar/atualizar a data de entrega
+  const handleSaveDeliveryDate = async () => {
+    if (!selectedRequest) return;
+    
+    try {
+      const docRef = doc(db, selectedRequest.collectionName, selectedRequest.id);
+      const updateData: any = {};
+      
+      if (deliveryDate) {
+        updateData.deliveryDate = Timestamp.fromDate(deliveryDate);
+      } else {
+        // Remove a data de entrega se deliveryDate for null
+        updateData.deliveryDate = null;
+      }
+
+      await updateDoc(docRef, updateData);
+      
+      // Atualiza localmente
+      setSelectedRequest({ 
+        ...selectedRequest, 
+        deliveryDate: deliveryDate ? Timestamp.fromDate(deliveryDate) : null 
+      });
+      
+      toast.success("Data de entrega atualizada");
+      setIsEditingDeliveryDate(false);
+      queryClient.invalidateQueries({ queryKey: ['allRequests'] });
+    } catch (error) {
+      toast.error("Erro ao atualizar data de entrega");
+      console.error("Error:", error);
+    }
+  };
+
+  // Função para remover a data de entrega
+  const handleRemoveDeliveryDate = async () => {
+    if (!selectedRequest) return;
+    
+    try {
+      const docRef = doc(db, selectedRequest.collectionName, selectedRequest.id);
+      
+      await updateDoc(docRef, {
+        deliveryDate: null
+      });
+      
+      // Atualiza localmente
+      setSelectedRequest({ 
+        ...selectedRequest, 
+        deliveryDate: null 
+      });
+      
+      setDeliveryDate(null);
+      toast.success("Data de entrega removida");
+      setIsEditingDeliveryDate(false);
+      queryClient.invalidateQueries({ queryKey: ['allRequests'] });
+    } catch (error) {
+      toast.error("Erro ao remover data de entrega");
       console.error("Error:", error);
     }
   };
@@ -221,8 +294,8 @@ const ComprasFinanceiro = () => {
         (req.userName?.toLowerCase().includes(search) ||
         req.userEmail?.toLowerCase().includes(search) ||
         req.itemName?.toLowerCase().includes(search)) &&
-        selectedTypes.includes(req.tipo)
-    )});
+        selectedTypes.includes(req.tipo))
+    });
 
   // Calcular estatísticas
   const totalRequests = filteredRequests.length;
@@ -253,7 +326,7 @@ const ComprasFinanceiro = () => {
           ) : (
             <>
               {/* Cards de estatísticas */}
-                <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-gray-600">Total de Solicitações</CardTitle>
@@ -445,142 +518,187 @@ const ComprasFinanceiro = () => {
           )}
 
           {/* Dialog de detalhes */}
-         <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-  <DialogContent className="max-w-3xl bg-white border border-gray-100 max-h-[90vh] overflow-y-auto rounded-2xl">
-    {selectedRequest && (
-      <>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5 text-purple-500" />
-            <span className="bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
-              Solicitação de Compra - {selectedRequest.userName || selectedRequest.userEmail}
-            </span>
-          </DialogTitle>
-          <DialogDescription asChild>
-            <div className="flex items-center justify-between text-gray-500 px-1">
-              <div>
-                {format(
-                  selectedRequest.createdAt.toDate(),
-                  "dd/MM/yyyy HH:mm",
-                  { locale: ptBR }
-                )}
-              </div>
-              <div>{getStatusBadge(selectedRequest.status)}</div>
-            </div>
-          </DialogDescription>
-        </DialogHeader>
+          <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+            <DialogContent className="max-w-3xl bg-white border border-gray-100 max-h-[90vh] overflow-y-auto rounded-2xl">
+              {selectedRequest && (
+                <>
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <ShoppingCart className="h-5 w-5 text-purple-500" />
+                      <span className="bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+                        Solicitação de Compra - {selectedRequest.userName || selectedRequest.userEmail}
+                      </span>
+                    </DialogTitle>
+                    <DialogDescription asChild>
+                      <div className="flex items-center justify-between text-gray-500 px-1">
+                        <div>
+                          {format(
+                            selectedRequest.createdAt.toDate(),
+                            "dd/MM/yyyy HH:mm",
+                            { locale: ptBR }
+                          )}
+                        </div>
+                        <div>{getStatusBadge(selectedRequest.status)}</div>
+                      </div>
+                    </DialogDescription>
+                  </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto space-y-6 py-4">
-          {/* Conteúdo específico para compras */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Tipo</p>
-              <p className="font-medium">{selectedRequest.tipo || "Não especificado"}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Solicitante</p>
-              <p className="font-medium">{selectedRequest.userName}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Item</p>
-              <p className="font-medium break-words">{selectedRequest.itemName}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Quantidade</p>
-              <p className="font-medium">{selectedRequest.quantity}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Valor Unitário</p>
-              <p className="font-medium">
-                {new Intl.NumberFormat('pt-BR', {
-                  style: 'currency',
-                  currency: 'BRL'
-                }).format(selectedRequest.unitPrice || 0)}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Valor Total</p>
-              <p className="font-bold text-lg bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
-                {new Intl.NumberFormat('pt-BR', {
-                  style: 'currency',
-                  currency: 'BRL'
-                }).format((selectedRequest.quantity || 0) * (selectedRequest.unitPrice || 0))}
-              </p>
-            </div>
-          </div>
+                  <div className="flex-1 overflow-y-auto space-y-6 py-4">
+                    {/* Conteúdo específico para compras */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Tipo</p>
+                        <p className="font-medium">{selectedRequest.tipo || "Não especificado"}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Solicitante</p>
+                        <p className="font-medium">{selectedRequest.userName}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Item</p>
+                        <p className="font-medium break-words">{selectedRequest.itemName}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Quantidade</p>
+                        <p className="font-medium">{selectedRequest.quantity}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Valor Unitário</p>
+                        <p className="font-medium">
+                          {new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL'
+                          }).format(selectedRequest.unitPrice || 0)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Valor Total</p>
+                        <p className="font-bold text-lg bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+                          {new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL'
+                          }).format((selectedRequest.quantity || 0) * (selectedRequest.unitPrice || 0))}
+                        </p>
+                      </div>
+                    </div>
 
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-gray-500">Justificativa</p>
-            <div className="bg-gray-50 p-4 rounded-xl">
-              <p className="whitespace-pre-wrap break-words">{selectedRequest.justification}</p>
-            </div>
-          </div>
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-gray-500">Justificativa</p>
+                      <div className="bg-gray-50 p-4 rounded-xl">
+                        <p className="whitespace-pre-wrap break-words">{selectedRequest.justification}</p>
+                      </div>
+                    </div>
 
-          {/* Controle de status */}
-          <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
-                  Alterar Status
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                {["pending", "approved", "rejected", "in-progress", "completed", "canceled"].map((status) => (
-                  <DropdownMenuCheckboxItem
-                    key={status}
-                    checked={newStatus === status}
-                    onCheckedChange={() => setNewStatus(status as RequestStatus)}
-                  >
-                    {getStatusBadge(status as RequestStatus)}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button
-              onClick={handleStatusChange}
-              disabled={!newStatus || newStatus === selectedRequest.status}
-              className="bg-gradient-to-r from-sidebar to-eccos-purple hover:from-eccos-purple hover:to-sidebar text-white"
-            >
-              Salvar
-            </Button>
-          </div>
+                    {/* Campo de data de entrega */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-gray-500">Previsão de Entrega</p>
+                        
+                         {selectedRequest.status === 'waitingDelivery' && (
+    <div className="flex gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-8"
+        onClick={() => setIsEditingDeliveryDate(!isEditingDeliveryDate)}
+      >
+        {isEditingDeliveryDate ? "Cancelar" : "Editar"}
+      </Button>
+      
+      {isEditingDeliveryDate && (
+        <Button
+          variant="destructive"
+          size="sm"
+          className="h-8"
+          onClick={handleRemoveDeliveryDate}
+        >
+          <X className="h-4 w-4 mr-1" />
+          Remover
+        </Button>
+      )}
+    </div>
+  )}
+</div>
+                      
+                      {isEditingDeliveryDate ? (
+                        <div className="flex gap-2">
+                          <Input
+                            type="date"
+                            value={deliveryDate ? deliveryDate.toISOString().split('T')[0] : ""}
+                            onChange={(e) => {
+                              const [year, month, day] = e.target.value.split('-').map(Number);
+                              setDeliveryDate(new Date(year, month - 1, day));
+                            }}
+                            min={new Date().toISOString().split('T')[0]}
+                            className="rounded-xl flex-1"
+                          />
+                          <Button 
+                            variant="default"
+                            className="rounded-xl bg-eccos-purple hover:bg-eccos-purple-darker text-white"
+                            onClick={handleSaveDeliveryDate}
+                          >
+                            <Save className="h-4 w-4 mr-1" />
+                            Salvar
+                          </Button>
+                        </div>
+                      ) : selectedRequest.deliveryDate ? (
+                        <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl">
+                          <Calendar className="h-5 w-5 text-gray-500" />
+                          <p className="font-medium">
+                            {format(selectedRequest.deliveryDate.toDate(), "dd/MM/yyyy", { locale: ptBR })}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="text-center py-4 text-gray-500">
+                          Nenhuma data de entrega definida
+                        </div>
+                      )}
+                    </div>
 
-          {/* Histórico */}
-          <div className="space-y-4 pt-4 border-t border-gray-100">
-            <h3 className="text-lg font-medium text-gray-800">Histórico</h3>
-            <div className="space-y-2">
-              {selectedRequest.history?.map((event: any, index: number) => (
-                <div key={index} className="flex items-center gap-3 p-2 bg-gray-50 rounded">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-600">
-                      {format(event.timestamp.toDate(), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                    </p>
-                    <p className="text-sm text-gray-500">{event.message}</p>
-                  </div>
-                  {getStatusBadge(event.status)}
-                </div>
-              )) || (
-                <p className="text-gray-500 text-sm">Nenhum histórico registrado</p>
+                    {/* Controle de status */}
+                    <div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" className="flex items-center gap-2">
+                            Alterar Status
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="rounded-xl">
+                          {["pending", "approved", "rejected", "waitingDelivery", "delivered", "completed", "canceled"].map((status) => (
+                            <DropdownMenuItem 
+                              key={status} 
+                              onSelect={() => handleStatusChange(status as RequestStatus)}
+                              className="cursor-pointer px-4 py-2 hover:bg-gray-100"
+                            >
+                              <div className="flex items-center gap-2">
+                                {getStatusBadge(status as RequestStatus)}
+                              </div>
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+
+                    {/* Histórico */}
+                    <div className="space-y-4 pt-4 border-t border-gray-100">
+                    </div>
+                      </div>
+
+                  <DialogFooter className="pt-4 border-t border-gray-100 gap-2">
+                    <Button
+                      variant="destructive"
+                      onClick={() => handleDeleteRequest(selectedRequest)}
+                      className="w-full sm:w-auto"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir Solicitação
+                    </Button>
+                  </DialogFooter>
+                </>
               )}
-            </div>
-          </div>
-        </div>
-
-        <DialogFooter className="pt-4 border-t border-gray-100 gap-2">
-          <Button
-            variant="destructive"
-            onClick={() => handleDeleteRequest(selectedRequest)}
-            className="w-full sm:w-auto"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Excluir Solicitação
-          </Button>
-        </DialogFooter>
-      </>
-    )}
-  </DialogContent>
-</Dialog>
+            </DialogContent>
+          </Dialog>
 
           {/* Chat Admin */}
           <ChatAdmin 

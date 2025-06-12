@@ -9,6 +9,11 @@ import {
   Trash2,
   MessageSquare,
   Eye,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  ChevronDown
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -30,6 +35,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -65,35 +76,18 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 const getStatusBadge = (status: RequestStatus) => {
   switch (status) {
     case "pending":
-      return (
-        <Badge variant="outline" className="border-amber-500 text-amber-600">
-          Pendente
-        </Badge>
-      );
+      return <Badge variant="outline" className="border-yellow-500 text-yellow-600">Pendente</Badge>;
     case "in-progress":
-      return (
-        <Badge className="bg-blue-50 text-blue-600 border-blue-100">
-          Em Andamento
-        </Badge>
-      );
+      return <Badge className="bg-blue-500 text-white">Em Andamento</Badge>;
     case "completed":
-      return (
-        <Badge className="bg-green-50 text-green-600 border-green-100">
-          Concluído
-        </Badge>
-      );
+      return <Badge className="bg-green-500 text-white">Concluído</Badge>;
     case "canceled":
-      return (
-        <Badge className="bg-red-50 text-red-600 border-red-100">
-          Cancelado
-        </Badge>
-      );
+      return <Badge className="bg-amber-500 text-white">Cancelado</Badge>;
     default:
       return <Badge variant="outline">Desconhecido</Badge>;
   }
@@ -129,7 +123,6 @@ const SuporteOperacional = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRequest, setSelectedRequest] = useState<RequestData | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [isDetailsLoading, setIsDetailsLoading] = useState(false);
   const [newStatus, setNewStatus] = useState<RequestStatus>("pending");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<{ id: string; collectionName: string } | null>(
@@ -147,28 +140,15 @@ const SuporteOperacional = () => {
   const supportTypes = ["Tecnologia", "Manutenção"];
   const [selectedTypes, setSelectedTypes] = useState<string[]>(supportTypes);
 
-  const {
-    data: requests = [],
-    isLoading,
-    isError,
-    refetch,
-  } = useQuery({
-    queryKey: ["supportRequests"],
+  const { data: allRequests = [], isLoading } = useQuery({
+    queryKey: ['allRequests'],
     queryFn: () => getAllRequests(),
-    select: (data) => data.filter((req) => req.type === "support"),
   });
-
-  const filteredRequests = requests.filter(
-    (req) =>
-      (req.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        req.description?.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      selectedTypes.includes(req.tipo)
-  );
 
   useEffect(() => {
     const checkUnreadMessages = () => {
       const newUnread: Record<string, number> = {};
-      requests.forEach((req) => {
+      allRequests.forEach((req) => {
         const messages = req.messages || [];
         const unreadCount = messages.filter(
           (msg) =>
@@ -182,22 +162,7 @@ const SuporteOperacional = () => {
       setUnreadMessages(newUnread);
     };
     checkUnreadMessages();
-  }, [requests, viewedRequests]);
-
-  const handleViewDetails = async (request: RequestData) => {
-    try {
-      setIsDetailsLoading(true);
-      const fullRequest = await getRequestById(request.id, request.collectionName);
-      setSelectedRequest(fullRequest);
-      setNewStatus(fullRequest.status);
-      setIsDetailsOpen(true);
-    } catch (error) {
-      toast.error("Erro ao carregar detalhes");
-      console.error("Error:", error);
-    } finally {
-      setIsDetailsLoading(false);
-    }
-  };
+  }, [allRequests, viewedRequests]);
 
   const handleOpenChat = async (request: RequestData) => {
     try {
@@ -240,9 +205,8 @@ const SuporteOperacional = () => {
         isBatch: false,
       });
       toast.success("Status atualizado");
-      refetch();
+      queryClient.invalidateQueries({ queryKey: ['allRequests'] });
       setSelectedRequest({ ...selectedRequest, status: newStatus });
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
     } catch (error) {
       toast.error("Erro ao atualizar");
       console.error("Error:", error);
@@ -265,283 +229,400 @@ const SuporteOperacional = () => {
       setIsDeleteDialogOpen(false);
       setRequestToDelete(null);
       if (isDetailsOpen) setIsDetailsOpen(false);
-      refetch();
+      queryClient.invalidateQueries({ queryKey: ['allRequests'] });
     } catch (error) {
       toast.error("Erro ao excluir");
       console.error("Error:", error);
     }
   };
 
+  const filteredRequests = allRequests
+    .filter(req => req.type === 'support')
+    .filter(req => {
+      const search = searchTerm.toLowerCase();
+      return (
+        (req.userName?.toLowerCase().includes(search) ||
+        req.userEmail?.toLowerCase().includes(search) ||
+        req.description?.toLowerCase().includes(search)) &&
+        selectedTypes.includes(req.tipo)
+      );
+    });
+
+  // Calcular estatísticas
+  const totalRequests = filteredRequests.length;
+  const pendingRequests = filteredRequests.filter(req => req.status === 'pending').length;
+  const inProgressRequests = filteredRequests.filter(req => req.status === 'in-progress').length;
+  const completedRequests = filteredRequests.filter(req => req.status === 'completed').length;
+
   return (
     <AppLayout>
       <div className="min-h-screen bg-white relative overflow-hidden">
-        {/* Background Decorativo */}
+        {/* Background decorativo */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-sidebar blur-3xl opacity-5"></div>
           <div className="absolute right-1/4 bottom-1/4 h-80 w-80 rounded-full bg-eccos-purple blur-3xl opacity-5"></div>
         </div>
 
         <div className="relative z-10 space-y-8 p-6 md:p-12">
+          {/* Header */}
           <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
             <Wrench className="text-eccos-purple" size={35} />
             Solicitações de Suporte
           </h1>
 
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Pesquisar por nome ou descrição..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-12 rounded-xl border-gray-200 focus:ring-eccos-purple"
-              />
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="flex items-center gap-2 h-12 rounded-xl border-gray-200"
-                >
-                  <Filter className="h-4 w-4" /> Tipo ({selectedTypes.length})
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-white rounded-xl shadow-lg">
-                {supportTypes.map((type) => (
-                  <DropdownMenuCheckboxItem
-                    key={type}
-                    checked={selectedTypes.includes(type)}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedTypes([...selectedTypes, type]);
-                      } else {
-                        setSelectedTypes(selectedTypes.filter((t) => t !== type));
-                      }
-                    }}
-                    className="focus:bg-gray-50"
-                  >
-                    {type}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-eccos-purple"></div>
             </div>
-          ) : isError ? (
-            <div className="text-center text-destructive p-4 border border-destructive rounded-2xl bg-red-50">
-              Erro ao carregar chamados
-            </div>
-          ) : filteredRequests.length === 0 ? (
-            <div className="text-center text-gray-500 p-8 border-2 border-dashed rounded-2xl bg-gray-50">
-              Nenhum chamado encontrado
-            </div>
           ) : (
-            <Card className="border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
-              <Table>
-                <TableHeader className="bg-gray-50">
-                  <TableRow>
-                    <TableHead className="text-center font-semibold text-gray-600 w-[35%]">
-                      Tipo
-                    </TableHead>
-                    <TableHead className="text-center font-semibold text-gray-600 w-[35%]">
-                      Status
-                    </TableHead>
-                    <TableHead className="text-center font-semibold text-gray-600 w-[30%]">
-                      Ações
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredRequests.map((request) => (
-                    <TableRow
-                      key={`${request.collectionName}-${request.id}`}
-                      className="hover:bg-gray-50"
-                    >
-                      <TableCell className="text-center truncate font-medium">
-                        <div className="flex items-center justify-center gap-2">
-                          <Wrench className="h-4 w-4 text-pink-500" />
-                          {request.tipo || "Suporte"}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">{getStatusBadge(request.status)}</TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex justify-center items-center space-x-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleViewDetails(request)}
-                            className="h-8 w-8"
-                            title="Detalhes"
+            <>
+              {/* Cards de estatísticas */}
+              <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
+                <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">Total de Chamados</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+                      {totalRequests}
+                    </div>
+                    <Badge variant="outline" className="mt-2 border-eccos-purple text-eccos-purple">
+                      Total
+                    </Badge>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">Pendentes</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold bg-gradient-to-r from-yellow-500 to-yellow-600 bg-clip-text text-transparent">
+                      {pendingRequests}
+                    </div>
+                    <Badge variant="outline" className="mt-2 border-yellow-500 text-yellow-500">
+                      <Clock className="h-3 w-3 mr-1" />
+                      Aguardando
+                    </Badge>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">Em Andamento</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-blue-600 bg-clip-text text-transparent">
+                      {inProgressRequests}
+                    </div>
+                    <Badge variant="outline" className="mt-2 border-blue-500 text-blue-500">
+                      <AlertTriangle className="h-3 w-3 mr-1" />
+                      Ativo
+                    </Badge>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">Concluídos</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold bg-gradient-to-r from-green-500 to-green-600 bg-clip-text text-transparent">
+                      {completedRequests}
+                    </div>
+                    <Badge variant="outline" className="mt-2 border-green-500 text-green-500">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Finalizados
+                    </Badge>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Filtros */}
+              <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg">
+                <CardContent className="p-6">
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="relative flex-1 max-w-md">
+                      <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Pesquisar por nome, email ou descrição..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 h-12 rounded-xl border-gray-200 focus:border-eccos-purple"
+                      />
+                    </div>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="flex items-center gap-2 h-12 rounded-xl border-gray-200 px-6">
+                          <Filter className="h-4 w-4" /> Tipo ({selectedTypes.length})
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-background rounded-xl">
+                        {supportTypes.map((type) => (
+                          <DropdownMenuCheckboxItem
+                            key={type}
+                            checked={selectedTypes.includes(type)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedTypes([...selectedTypes, type]);
+                              } else {
+                                setSelectedTypes(selectedTypes.filter(t => t !== type));
+                              }
+                            }}
                           >
-                            <Eye className="h-4 w-4 text-gray-600" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleOpenChat(request)}
-                            className="h-8 w-8 relative"
-                            title="Chat"
-                          >
-                            <MessageSquare className="h-4 w-4 text-gray-600" />
-                            {unreadMessages[request.id] > 0 && (
-                              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                                {unreadMessages[request.id]}
-                              </span>
-                            )}
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Card>
+                            {type}
+                          </DropdownMenuCheckboxItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Tabela */}
+              {filteredRequests.length === 0 ? (
+                <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg">
+                  <CardContent className="p-12">
+                    <div className="text-center text-muted-foreground">
+                      <Wrench className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                      <p className="text-lg">Nenhuma solicitação de suporte encontrada</p>
+                      <p className="text-sm">Tente ajustar os filtros para ver mais resultados</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg overflow-hidden">
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-gray-100">
+                            <TableHead className="font-semibold text-gray-700">Solicitante</TableHead>
+                            <TableHead className="font-semibold text-gray-700 hidden md:table-cell">Tipo</TableHead>
+                            <TableHead className="font-semibold text-gray-700">Status</TableHead>
+                            <TableHead className="font-semibold text-gray-700 hidden lg:table-cell">Prioridade</TableHead>
+                            <TableHead className="font-semibold text-gray-700">Ações</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredRequests.map((request) => (
+                            <TableRow key={request.id} className="border-gray-100 hover:bg-gray-50/50 transition-colors">
+                              <TableCell className="font-medium">{request.userName}</TableCell>
+                              <TableCell className="hidden md:table-cell">{request.tipo}</TableCell>
+                              <TableCell>{getStatusBadge(request.status)}</TableCell>
+                              <TableCell className="hidden lg:table-cell">
+                                {getPriorityLevelBadge(request.priority)}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-9 w-9 rounded-xl hover:bg-eccos-purple/10 hover:text-eccos-purple"
+                                    onClick={() => {
+                                      setSelectedRequest(request);
+                                      setNewStatus(request.status);
+                                      setIsDetailsOpen(true);
+                                    }}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-9 w-9 rounded-xl hover:bg-blue-50 hover:text-blue-600 relative"
+                                    onClick={() => handleOpenChat(request)}
+                                  >
+                                    <MessageSquare className="h-4 w-4" />
+                                    {unreadMessages[request.id] > 0 && (
+                                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                                        {unreadMessages[request.id]}
+                                      </span>
+                                    )}
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-9 w-9 rounded-xl hover:bg-red-50 hover:text-red-600"
+                                    onClick={() => handleDeleteRequest(request)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </>
           )}
 
+          {/* Dialog de detalhes */}
           <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-  <DialogContent className="max-w-full sm:max-w-3xl w-[95%] rounded-2xl border-gray-100 shadow-xl p-0 overflow-y-auto max-h-screen">
-    {isDetailsLoading ? (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-eccos-purple"></div>
-      </div>
-    ) : selectedRequest ? (
-      <>
-        {/* Cabeçalho rola com o conteúdo */}
-        <DialogHeader className="p-4 border-b bg-gray-50">
-          <DialogTitle className="flex items-center gap-2 text-gray-900 text-lg">
-            <Wrench className="h-5 w-5 text-eccos-purple" />
-            {selectedRequest.userName || selectedRequest.userEmail}
-          </DialogTitle>
-          <DialogDescription asChild>
-            <div className="text-gray-600 px-1 mt-1">
+            <DialogContent className="max-w-3xl bg-white border border-gray-100 max-h-[90vh] overflow-y-auto rounded-2xl">
               {selectedRequest && (
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div className="text-sm">
-                    {format(
-                      new Date(selectedRequest.createdAt.toMillis()),
-                      "dd 'de' MMMM 'de' yyyy 'às' HH:mm",
-                      { locale: ptBR }
+                <>
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Wrench className="h-5 w-5 text-purple-500" />
+                      <span className="bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+                        Chamado de Suporte - {selectedRequest.userName || selectedRequest.userEmail}
+                      </span>
+                    </DialogTitle>
+                    <DialogDescription asChild>
+                      <div className="flex items-center justify-between text-gray-500 px-1">
+                        <div>
+                          {format(
+                            selectedRequest.createdAt.toDate(),
+                            "dd/MM/yyyy HH:mm",
+                            { locale: ptBR }
+                          )}
+                        </div>
+                        <div>{getStatusBadge(selectedRequest.status)}</div>
+                      </div>
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="flex-1 overflow-y-auto space-y-6 py-4">
+                    {/* Conteúdo específico para suporte */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Tipo</p>
+                        <p className="font-medium">{selectedRequest.tipo || "Não especificado"}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Solicitante</p>
+                        <p className="font-medium">{selectedRequest.userName}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Unidade</p>
+                        <p className="font-medium">{selectedRequest.unit}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Localização</p>
+                        <p className="font-medium">{selectedRequest.location}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Categoria</p>
+                        <p className="font-medium">{selectedRequest.category}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Prioridade</p>
+                        <div className="mt-1">
+                          {getPriorityLevelBadge(selectedRequest.priority)}
+                        </div>
+                      </div>
+                    </div>
+
+                    {selectedRequest.deviceInfo && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-gray-500">Identificação do Equipamento</p>
+                        <div className="bg-gray-50 p-4 rounded-xl">
+                          <p className="break-words">{selectedRequest.deviceInfo}</p>
+                        </div>
+                      </div>
                     )}
+
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-gray-500">Descrição do Problema</p>
+                      <div className="bg-gray-50 p-4 rounded-xl">
+                        <p className="whitespace-pre-wrap break-words">{selectedRequest.description}</p>
+                      </div>
+                    </div>
+
+                    {/* Controle de status */}
+                    <div className="flex items-center gap-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" className="flex items-center gap-2">
+                            Alterar Status
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          {["pending", "in-progress", "completed", "canceled"].map((status) => (
+                            <DropdownMenuCheckboxItem
+                              key={status}
+                              checked={newStatus === status}
+                              onCheckedChange={() => setNewStatus(status as RequestStatus)}
+                            >
+                              {getStatusBadge(status as RequestStatus)}
+                            </DropdownMenuCheckboxItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      <Button
+                        onClick={handleStatusChange}
+                        disabled={!newStatus || newStatus === selectedRequest.status}
+                        className="bg-gradient-to-r from-sidebar to-eccos-purple hover:from-eccos-purple hover:to-sidebar text-white"
+                      >
+                        Salvar
+                      </Button>
+                    </div>
+
+                    {/* Histórico */}
+                    <div className="space-y-4 pt-4 border-t border-gray-100">
+                      <h3 className="text-lg font-medium text-gray-800">Histórico</h3>
+                      <div className="space-y-2">
+                        {selectedRequest.history?.map((event: any, index: number) => (
+                          <div key={index} className="flex items-center gap-3 p-2 bg-gray-50 rounded">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-600">
+                                {format(event.timestamp.toDate(), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                              </p>
+                              <p className="text-sm text-gray-500">{event.message}</p>
+                            </div>
+                            {getStatusBadge(event.status)}
+                          </div>
+                        )) || (
+                          <p className="text-gray-500 text-sm">Nenhum histórico registrado</p>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div>{getStatusBadge(selectedRequest.status)}</div>
-                </div>
+
+                  <DialogFooter className="pt-4 border-t border-gray-100 gap-2">
+                    <Button
+                      variant="destructive"
+                      onClick={() => handleDeleteRequest(selectedRequest)}
+                      className="w-full sm:w-auto"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir Chamado
+                    </Button>
+                  </DialogFooter>
+                </>
               )}
-            </div>
-          </DialogDescription>
-        </DialogHeader>
+            </DialogContent>
+          </Dialog>
 
-        {/* Corpo com scroll */}
-        <div className="p-4 space-y-0">
-          <div className="space-y-4 border-b pb-4">
-            <h3 className="text-base font-medium text-gray-900">Detalhes do Chamado</h3>
-            <div className="grid grid-cols-1 gap-3 text-sm">
-              <div>
-                <p className="font-medium text-gray-500">Tipo</p>
-                <p className="text-gray-700">{selectedRequest.tipo}</p>
-              </div>
-              <div>
-                <p className="font-medium text-gray-500">Unidade</p>
-                <p className="text-gray-700">{selectedRequest.unit}</p>
-              </div>
-              <div>
-                <p className="font-medium text-gray-500">Localização</p>
-                <p className="text-gray-700">{selectedRequest.location}</p>
-              </div>
-              <div>
-                <p className="font-medium text-gray-500">Categoria</p>
-                <p className="text-gray-700">{selectedRequest.category}</p>
-              </div>
-              <div>
-                <p className="font-medium text-gray-500">Prioridade</p>
-                <p className="text-gray-700">
-                  {getPriorityLevelBadge(selectedRequest.priority)}
-                </p>
-              </div>
-              {selectedRequest.deviceInfo && (
-                <div>
-                  <p className="font-medium text-gray-500">Identificação do Equipamento</p>
-                  <p className="text-gray-700">{selectedRequest.deviceInfo}</p>
-                </div>
-              )}
-              <div>
-                <p className="font-medium text-gray-500">Descrição Completa</p>
-                <pre className="whitespace-pre-wrap font-sans p-2 bg-gray-50 rounded-md text-xs sm:text-sm">
-                  {selectedRequest.description || "Nenhuma descrição fornecida"}
-                </pre>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4 border-b pb-4">
-            <h3 className="text-base font-medium text-gray-900">Alterar Status</h3>
-            <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-              <Select value={newStatus} onValueChange={(value) => setNewStatus(value as RequestStatus)}>
-                <SelectTrigger className="w-full sm:w-[180px] h-10 rounded-lg">
-                  <SelectValue placeholder="Selecionar status" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  <SelectItem value="pending" className="rounded-lg">Pendente</SelectItem>
-                  <SelectItem value="in-progress" className="rounded-lg">Em Andamento</SelectItem>
-                  <SelectItem value="completed" className="rounded-lg">Concluído</SelectItem>
-                  <SelectItem value="canceled" className="rounded-lg">Cancelado</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button 
-                onClick={handleStatusChange}
-                className="w-full sm:w-auto h-10 rounded-lg bg-gradient-to-r from-sidebar to-eccos-purple text-white hover:from-eccos-purple hover:to-sidebar"
-              >
-                Atualizar Status
-              </Button>
-              <Button 
-                variant="destructive" 
-                onClick={() => selectedRequest && handleDeleteRequest(selectedRequest)}
-                className="w-full sm:w-auto h-10 rounded-lg text-sm"
-              >
-                <Trash2 className="h-4 w-4 mr-2" /> Excluir
-              </Button>
-            </div>
-          </div>
-        </div>
-      </>
-    ) : (
-      <div className="p-4 text-destructive text-center">
-        Nenhuma solicitação selecionada
-      </div>
-    )}
-  </DialogContent>
-</Dialog>
-
+          {/* Chat Admin */}
           <ChatAdmin
             request={chatRequest}
             isOpen={isChatOpen}
             onOpenChange={setIsChatOpen}
-            onMessageSent={refetch}
+            onMessageSent={() => queryClient.invalidateQueries({ queryKey: ['allRequests'] })}
           />
 
-          <AlertDialog
-            open={isDeleteDialogOpen}
-            onOpenChange={setIsDeleteDialogOpen}
-          >
-            <AlertDialogContent className="rounded-2xl border-gray-100">
+          {/* Dialog de confirmação de exclusão */}
+          <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <AlertDialogContent className="rounded-2xl">
               <AlertDialogHeader>
-                <AlertDialogTitle className="text-gray-900">
-                  Confirmar exclusão
-                </AlertDialogTitle>
-                <AlertDialogDescription className="text-gray-600">
-                  Tem certeza que deseja excluir permanentemente este chamado?
+                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja excluir permanentemente este chamado? Esta ação não pode ser desfeita.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel className="rounded-xl h-12 border-gray-200">
-                  Cancelar
-                </AlertDialogCancel>
+                <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleDeleteConfirm}
-                  className="rounded-xl h-12 bg-red-600 hover:bg-red-700 text-white"
+                  className="rounded-xl bg-red-600 hover:bg-red-700"
                 >
                   Confirmar Exclusão
                 </AlertDialogAction>
@@ -550,6 +631,7 @@ const SuporteOperacional = () => {
           </AlertDialog>
         </div>
 
+        {/* Footer */}
         <footer className="relative z-10 bg-gray-50 py-10 px-4 md:px-12">
           <div className="max-w-6xl mx-auto text-center">
             <p className="text-gray-500 text-sm">

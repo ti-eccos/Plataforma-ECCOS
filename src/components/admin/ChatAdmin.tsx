@@ -19,7 +19,6 @@ import {
 import { toast } from "sonner";
 import { 
   addMessageToRequest,
-  getRequestById,
   uploadFile,
   markMessagesAsRead,
   editMessage,
@@ -51,9 +50,16 @@ interface ChatAdminProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onMessageSent: () => void;
+  onMessagesRead?: (requestId: string) => void; // Nova prop
 }
 
-const ChatAdmin = ({ request, isOpen, onOpenChange, onMessageSent }: ChatAdminProps) => {
+const ChatAdmin = ({ 
+  request, 
+  isOpen, 
+  onOpenChange, 
+  onMessageSent,
+  onMessagesRead // Nova prop
+}: ChatAdminProps) => {
   const { currentUser } = useAuth();
   const [newMessage, setNewMessage] = useState("");
   const [messages, setMessages] = useState<MessageData[]>([]);
@@ -88,10 +94,27 @@ const ChatAdmin = ({ request, isOpen, onOpenChange, onMessageSent }: ChatAdminPr
 
   useEffect(() => {
     if (request && isOpen && currentUser) {
-      // Marcar mensagens como lidas quando o chat é aberto
-      markMessagesAsRead(request.id, request.collectionName, currentUser.uid, true);
+      const markAsRead = async () => {
+        try {
+          await markMessagesAsRead(
+            request.id, 
+            request.collectionName, 
+            currentUser.uid, 
+            true
+          );
+          
+          // Notificar componente pai que as mensagens foram lidas
+          if (onMessagesRead) {
+            onMessagesRead(request.id);
+          }
+        } catch (error) {
+          console.error("Erro ao marcar mensagens como lidas:", error);
+        }
+      };
+      
+      markAsRead();
     }
-  }, [request, isOpen, currentUser]);
+  }, [request, isOpen, currentUser, onMessagesRead]);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
