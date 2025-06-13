@@ -13,7 +13,9 @@ import {
   CheckCircle,
   XCircle,
   AlertTriangle,
-  ChevronDown
+  ChevronDown,
+  Calendar,
+  Package
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -75,6 +77,7 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
+  DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
@@ -123,7 +126,6 @@ const SuporteOperacional = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRequest, setSelectedRequest] = useState<RequestData | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [newStatus, setNewStatus] = useState<RequestStatus>("pending");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<{ id: string; collectionName: string } | null>(
     null
@@ -190,23 +192,26 @@ const SuporteOperacional = () => {
     }
   };
 
-  const handleStatusChange = async () => {
-    if (!selectedRequest || !newStatus) return;
+  const handleStatusChange = async (status: RequestStatus) => {
+    if (!selectedRequest) return;
+    
     try {
       const docRef = doc(db, selectedRequest.collectionName, selectedRequest.id);
-      await updateDoc(docRef, { status: newStatus });
+      await updateDoc(docRef, { status });
+      
       await createNotification({
         title: "Alteração de Status",
-        message: `Status do seu chamado foi alterado para: ${newStatus}`,
+        message: `Status do seu chamado foi alterado para: ${status}`,
         link: "minhas-solicitacoes",
         createdAt: new Date(),
         readBy: [],
         recipients: [selectedRequest.userEmail],
         isBatch: false,
       });
+      
       toast.success("Status atualizado");
       queryClient.invalidateQueries({ queryKey: ['allRequests'] });
-      setSelectedRequest({ ...selectedRequest, status: newStatus });
+      setSelectedRequest({ ...selectedRequest, status });
     } catch (error) {
       toast.error("Erro ao atualizar");
       console.error("Error:", error);
@@ -422,7 +427,6 @@ const SuporteOperacional = () => {
                                     className="h-9 w-9 rounded-xl hover:bg-eccos-purple/10 hover:text-eccos-purple"
                                     onClick={() => {
                                       setSelectedRequest(request);
-                                      setNewStatus(request.status);
                                       setIsDetailsOpen(true);
                                     }}
                                   >
@@ -535,8 +539,7 @@ const SuporteOperacional = () => {
                       </div>
                     </div>
 
-                    {/* Controle de status */}
-                    <div className="flex items-center gap-2">
+                   <div className="flex items-center gap-2 p-2">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="outline" className="flex items-center gap-2">
@@ -544,45 +547,23 @@ const SuporteOperacional = () => {
                             <ChevronDown className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent>
+                        <DropdownMenuContent className="rounded-xl">
                           {["pending", "in-progress", "completed", "canceled"].map((status) => (
-                            <DropdownMenuCheckboxItem
-                              key={status}
-                              checked={newStatus === status}
-                              onCheckedChange={() => setNewStatus(status as RequestStatus)}
+                            <DropdownMenuItem 
+                              key={status} 
+                              onSelect={() => handleStatusChange(status as RequestStatus)}
+                              className="cursor-pointer px-4 py-2 hover:bg-gray-100"
                             >
-                              {getStatusBadge(status as RequestStatus)}
-                            </DropdownMenuCheckboxItem>
+                              <div className="flex items-center gap-2">
+                                {getStatusBadge(status as RequestStatus)}
+                              </div>
+                            </DropdownMenuItem>
                           ))}
                         </DropdownMenuContent>
                       </DropdownMenu>
-                      <Button
-                        onClick={handleStatusChange}
-                        disabled={!newStatus || newStatus === selectedRequest.status}
-                        className="bg-gradient-to-r from-sidebar to-eccos-purple hover:from-eccos-purple hover:to-sidebar text-white"
-                      >
-                        Salvar
-                      </Button>
                     </div>
-
                     {/* Histórico */}
                     <div className="space-y-4 pt-4 border-t border-gray-100">
-                      <h3 className="text-lg font-medium text-gray-800">Histórico</h3>
-                      <div className="space-y-2">
-                        {selectedRequest.history?.map((event: any, index: number) => (
-                          <div key={index} className="flex items-center gap-3 p-2 bg-gray-50 rounded">
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-gray-600">
-                                {format(event.timestamp.toDate(), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                              </p>
-                              <p className="text-sm text-gray-500">{event.message}</p>
-                            </div>
-                            {getStatusBadge(event.status)}
-                          </div>
-                        )) || (
-                          <p className="text-gray-500 text-sm">Nenhum histórico registrado</p>
-                        )}
-                      </div>
                     </div>
                   </div>
 

@@ -48,7 +48,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { doc, getDoc, updateDoc, deleteDoc, arrayUnion, Timestamp } from "firebase/firestore";
+import { doc, getDoc, updateDoc, arrayUnion, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { createNotification } from "@/services/notificationService";
 import ChatAdmin from "@/components/admin/ChatAdmin";
@@ -72,7 +72,6 @@ const Solicitacoes = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatuses, setSelectedStatuses] = useState<RequestStatus[]>(["pending", "approved", "in-progress"]);
   const [equipmentNames, setEquipmentNames] = useState<string[]>([]);
-  const [newStatus, setNewStatus] = useState<RequestStatus>();
   const equipmentCache = useRef(new Map<string, any>());
   const [selectedRequest, setSelectedRequest] = useState<RequestData | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -86,7 +85,8 @@ const Solicitacoes = () => {
   const [chatRequest, setChatRequest] = useState<RequestData | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<RequestData | null>(null);
-
+  const [newStatus, setNewStatus] = useState<RequestStatus>();
+  
   useEffect(() => {
     if (selectedRequest) {
       setNewStatus(selectedRequest.status);
@@ -102,7 +102,6 @@ const Solicitacoes = () => {
   useEffect(() => {
     const checkUnreadMessages = () => {
       const newUnread: Record<string, number> = {};
-      
       allRequests.forEach(req => {
         const messages = req.messages || [];
         const unreadCount = messages.filter(msg => 
@@ -112,10 +111,8 @@ const Solicitacoes = () => {
           newUnread[req.id] = unreadCount;
         }
       });
-      
       setUnreadMessages(newUnread);
     };
-
     checkUnreadMessages();
   }, [allRequests, viewedRequests]);
 
@@ -157,7 +154,6 @@ const Solicitacoes = () => {
     try {
       const fullRequest = await getRequestById(request.id, request.collectionName);
       setChatRequest(fullRequest);
-      
       setViewedRequests(prev => {
         const newSet = new Set(prev);
         (fullRequest.messages || []).forEach(msg => {
@@ -168,13 +164,11 @@ const Solicitacoes = () => {
         localStorage.setItem('adminViewedRequests', JSON.stringify(Array.from(newSet)));
         return newSet;
       });
-      
       setUnreadMessages(prev => {
         const newUnread = {...prev};
         delete newUnread[fullRequest.id];
         return newUnread;
       });
-      
       setIsChatOpen(true);
     } catch (error) {
       toast.error("Erro ao abrir chat");
@@ -189,10 +183,8 @@ const Solicitacoes = () => {
 
   const handleDeleteConfirm = async () => {
     if (!requestToDelete) return;
-
     try {
       await deleteRequest(requestToDelete.id, requestToDelete.collectionName);
-      
       await createNotification({
         title: 'Solicitação Excluída',
         message: `Sua solicitação foi excluída pelo administrador.`,
@@ -202,7 +194,6 @@ const Solicitacoes = () => {
         readBy: [],
         isBatch: false
       });
-      
       toast.success("Excluído com sucesso");
       setIsDeleteDialogOpen(false);
       setRequestToDelete(null);
@@ -214,23 +205,23 @@ const Solicitacoes = () => {
     }
   };
 
-  const handleStatusUpdate = async () => {
-    if (!selectedRequest || !newStatus) return;
-    
+  const handleStatusUpdate = async (status: RequestStatus) => {
+    if (!selectedRequest) return;
+
     try {
       const docRef = doc(db, selectedRequest.collectionName, selectedRequest.id);
       await updateDoc(docRef, {
-        status: newStatus,
+        status: status,
         history: arrayUnion({
-          status: newStatus,
-          message: `Status alterado para ${newStatus} por ${user?.displayName || user?.email}`,
+          status: status,
+          message: `Status alterado para ${status} por ${user?.displayName || user?.email}`,
           timestamp: Timestamp.now()
         })
       });
 
       await createNotification({
         title: 'Alteração de Status',
-        message: `Status da sua solicitação de reserva foi alterado para: ${newStatus}`,
+        message: `Status da sua solicitação de reserva foi alterado para: ${status}`,
         link: 'minhas-solicitacoes',
         createdAt: new Date(),
         readBy: [],
@@ -240,7 +231,7 @@ const Solicitacoes = () => {
 
       toast.success("Status atualizado");
       queryClient.invalidateQueries({ queryKey: ['allRequests'] });
-      setSelectedRequest({ ...selectedRequest, status: newStatus });
+      setSelectedRequest({ ...selectedRequest, status });
     } catch (error) {
       toast.error("Erro ao atualizar");
       console.error("Error:", error);
@@ -317,7 +308,6 @@ const Solicitacoes = () => {
                     </Badge>
                   </CardContent>
                 </Card>
-
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-gray-600">Pendentes</CardTitle>
@@ -332,7 +322,6 @@ const Solicitacoes = () => {
                     </Badge>
                   </CardContent>
                 </Card>
-
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-gray-600">Aprovadas</CardTitle>
@@ -347,7 +336,6 @@ const Solicitacoes = () => {
                     </Badge>
                   </CardContent>
                 </Card>
-
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-gray-600">Em Andamento</CardTitle>
@@ -377,7 +365,6 @@ const Solicitacoes = () => {
                         className="pl-10 h-12 rounded-xl border-gray-200 focus:border-eccos-purple"
                       />
                     </div>
-
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="flex items-center gap-2 h-12 rounded-xl border-gray-200 px-6">
@@ -510,7 +497,6 @@ const Solicitacoes = () => {
                       </div>
                     </DialogDescription>
                   </DialogHeader>
-
                   <div className="flex-1 overflow-y-auto space-y-6 py-4">
                     {/* Conteúdo específico para reservas */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -537,14 +523,12 @@ const Solicitacoes = () => {
                         </p>
                       </div>
                     </div>
-
                     <div className="space-y-2">
                       <p className="text-sm font-medium text-gray-500">Finalidade</p>
                       <div className="bg-gray-50 p-4 rounded-xl">
                         <p className="whitespace-pre-wrap break-words">{selectedRequest.purpose}</p>
                       </div>
                     </div>
-
                     {equipmentNames.length > 0 && (
                       <div className="space-y-2">
                         <p className="text-sm font-medium text-gray-500">Equipamentos</p>
@@ -557,9 +541,8 @@ const Solicitacoes = () => {
                         </div>
                       </div>
                     )}
-
                     {/* Controle de status */}
-                    <div className="flex items-center gap-2">
+                    <div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="outline" className="flex items-center gap-2">
@@ -571,23 +554,15 @@ const Solicitacoes = () => {
                           {["pending", "approved", "rejected", "in-progress", "completed", "canceled"].map((status) => (
                             <DropdownMenuCheckboxItem
                               key={status}
-                              checked={newStatus === status}
-                              onCheckedChange={() => setNewStatus(status as RequestStatus)}
+                              checked={selectedRequest.status === status}
+                              onCheckedChange={() => handleStatusUpdate(status as RequestStatus)}
                             >
                               {getStatusBadge(status as RequestStatus)}
                             </DropdownMenuCheckboxItem>
                           ))}
                         </DropdownMenuContent>
                       </DropdownMenu>
-                      <Button
-                        onClick={handleStatusUpdate}
-                        disabled={!newStatus || newStatus === selectedRequest.status}
-                        className="bg-gradient-to-r from-sidebar to-eccos-purple hover:from-eccos-purple hover:to-sidebar text-white"
-                      >
-                        Salvar
-                      </Button>
                     </div>
-
                     {/* Histórico */}
                     <div className="space-y-4 pt-4 border-t border-gray-100">
                       <h3 className="text-lg font-medium text-gray-800">Histórico</h3>
@@ -608,7 +583,6 @@ const Solicitacoes = () => {
                       </div>
                     </div>
                   </div>
-
                   <DialogFooter className="pt-4 border-t border-gray-100 gap-2">
                     <Button
                       variant="destructive"
@@ -655,16 +629,16 @@ const Solicitacoes = () => {
         </div>
 
         {/* Footer */}
-                <footer className="relative z-10 bg-gray-50 py-10 px-4 md:px-12">
-                  <div className="max-w-6xl mx-auto text-center">
-                    <p className="text-gray-500 text-sm">
-                      © 2025 Colégio ECCOS - Todos os direitos reservados
-                    </p>
-                  </div>
-                </footer>
-              </div>
-            </AppLayout>
-          );
-        };
+        <footer className="relative z-10 bg-gray-50 py-10 px-4 md:px-12">
+          <div className="max-w-6xl mx-auto text-center">
+            <p className="text-gray-500 text-sm">
+              © 2025 Colégio ECCOS - Todos os direitos reservados
+            </p>
+          </div>
+        </footer>
+      </div>
+    </AppLayout>
+  );
+};
 
-export default Solicitacoes
+export default Solicitacoes;
