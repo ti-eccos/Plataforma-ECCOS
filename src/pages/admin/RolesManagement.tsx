@@ -131,8 +131,12 @@ const permissionLabels: { [key: string]: { label: string; icon: React.ReactNode;
     icon: <FileText className="h-4 w-4" />,
     category: "Administração"
   },
+    "user-dropdown": {
+    label: "Dropdown de Usuários",
+    icon: <Users className="h-4 w-4" />,
+    category: "Administração"
+  },
 };
-
 const defaultPermissions = Object.keys(permissionLabels);
 
 const defaultInitialRoles: Role[] = [

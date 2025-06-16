@@ -32,6 +32,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { sendAdminNotification } from '@/lib/email';
 import { RequestData, MessageData, RequestStatus } from '@/services/types';
 import { getAllRequests, addMessageToRequest, uploadFile } from '@/services/sharedService'
+import UserDropdown from '@/components/UserDropdown';
+import { User } from '@/services/userService'; // Importar tipo User
 
 const LOCATIONS = [
   'Recepção', 'Secretaria', 'Sala de atendimento',
@@ -92,11 +94,13 @@ const autoCompleteTime = (value: string) => {
 };
 
 const NovaReserva = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, isSuperAdmin, userPermissions } = useAuth();
   const [availableDates, setAvailableDates] = useState<Date[]>([]);
   const [equipment, setEquipment] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [locationPopoverOpen, setLocationPopoverOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null); // Estado para usuário selecionado
+  const canSeeUserDropdown = isSuperAdmin || userPermissions['usuarios'];
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -136,6 +140,9 @@ const NovaReserva = () => {
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
     try {
+      // Usar usuário selecionado ou usuário atual
+      const user = selectedUser || currentUser;
+      
       const equipmentQuantities = values.selectedEquipment.reduce((acc, equipId) => {
         const equip = equipment.find(e => e.id === equipId);
         if (equip) {
@@ -179,9 +186,10 @@ const NovaReserva = () => {
         purpose: values.purpose,
         equipmentIds: values.selectedEquipment,
         equipmentQuantities,
-        userName: currentUser?.displayName || "Usuário",
-        userEmail: currentUser?.email || "email@exemplo.com",
-        userId: currentUser?.uid || "",
+        // Usar dados do usuário selecionado
+        userName: user?.displayName || "Usuário",
+        userEmail: user?.email || "email@exemplo.com",
+        userId: user?.uid || "",
         status: autoApproved ? 'approved' : 'pending'
       });
 
@@ -190,12 +198,19 @@ const NovaReserva = () => {
         : 'Solicitação enviada para aprovação');
 
       form.reset();
-      await sendAdminNotification('Reserva', currentUser?.displayName || 'Usuário');
+      setSelectedUser(null); // Limpar usuário selecionado após envio
+      await sendAdminNotification('Reserva', user?.displayName || 'Usuário');
     } catch (error) {
       toast.error("Erro ao processar reserva");
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Função para limpar formulário e usuário selecionado
+  const handleClearForm = () => {
+    form.reset();
+    setSelectedUser(null);
   };
 
   return (
@@ -215,6 +230,14 @@ const NovaReserva = () => {
           <p className="text-gray-600 mt-1">
             Preencha o formulário para reservar equipamentos
           </p>
+           {/* Renderização condicional do UserDropdown */}
+          {canSeeUserDropdown && (
+            <UserDropdown 
+              onSelectUser={setSelectedUser} 
+              selectedUser={selectedUser}
+              onClearSelection={() => setSelectedUser(null)}
+            />
+          )}
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               {/* Campo de data */}
@@ -467,7 +490,7 @@ const NovaReserva = () => {
                 <Button 
                   type="button" 
                   variant="outline"
-                  onClick={() => form.reset()}
+                  onClick={handleClearForm}
                   className="rounded-xl border-gray-200 hover:bg-gray-50 text-gray-700"
                 >
                   Limpar Formulário
@@ -475,8 +498,9 @@ const NovaReserva = () => {
                 <Button 
                   type="submit" 
                   className="rounded-xl bg-eccos-purple hover:bg-sidebar text-white px-8 py-6 text-lg font-semibold transition-all"
+                  disabled={isSubmitting}
                 >
-                  Enviar Solicitação
+                  {isSubmitting ? 'Enviando...' : 'Enviar Solicitação'}
                 </Button>
               </div>
             </form>
