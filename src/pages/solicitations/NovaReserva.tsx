@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { format } from 'date-fns';
+import { format, addDays, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, CalendarCheck, ChevronDown, MapPin } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
@@ -13,6 +13,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import {
   Popover,
@@ -23,6 +24,14 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { getAvailableDates, isDateInPast } from '@/services/availabilityService';
@@ -31,9 +40,8 @@ import { addReservation, checkConflicts } from '@/services/reservationService';
 import { useAuth } from '@/contexts/AuthContext';
 import { sendAdminNotification } from '@/lib/email';
 import { RequestData, MessageData, RequestStatus } from '@/services/types';
-import { getAllRequests, addMessageToRequest, uploadFile } from '@/services/sharedService'
 import UserDropdown from '@/components/UserDropdown';
-import { User } from '@/services/userService'; // Importar tipo User
+import { User } from '@/services/userService';
 
 const LOCATIONS = [
   'Recepção', 'Secretaria', 'Sala de atendimento',
@@ -65,7 +73,10 @@ const formSchema = z.object({
   purpose: z.string({
     required_error: "Finalidade é obrigatória",
     invalid_type_error: "Insira uma descrição válida"
-  }).min(10, "Finalidade deve ter pelo menos 10 caracteres")
+  }).min(10, "Finalidade deve ter pelo menos 10 caracteres"),
+  isRecurring: z.boolean().default(false),
+  recurrencePattern: z.enum(['daily', 'weekly']).optional(),
+  recurrenceEndDate: z.date().optional(),
 }).refine(data => {
   const [startH, startM] = data.startTime.split(':').map(Number);
   const [endH, endM] = data.endTime.split(':').map(Number);
@@ -80,6 +91,22 @@ const formSchema = z.object({
 }, {
   message: "O horário deve estar entre 07:00 e 19:00",
   path: ["endTime"]
+}).refine(data => {
+  if (data.isRecurring) {
+    return data.recurrencePattern && data.recurrenceEndDate;
+  }
+  return true;
+}, {
+  message: "Selecione o padrão de recorrência",
+  path: ["recurrencePattern"]
+}).refine(data => {
+  if (data.isRecurring) {
+    return data.recurrenceEndDate && data.recurrenceEndDate > data.date;
+  }
+  return true;
+}, {
+  message: "Data de término deve ser depois da data inicial",
+  path: ["recurrenceEndDate"]
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -93,13 +120,31 @@ const autoCompleteTime = (value: string) => {
   return formatted.substring(0, 5);
 };
 
+const generateRecurrenceDates = (
+  startDate: Date, 
+  endDate: Date, 
+  pattern: 'daily' | 'weekly'
+): Date[] => {
+  const dates: Date[] = [];
+  const current = new Date(startDate);
+  
+  while (current <= endDate) {
+    dates.push(new Date(current));
+    pattern === 'daily' 
+      ? current.setDate(current.getDate() + 1)
+      : current.setDate(current.getDate() + 7);
+  }
+  
+  return dates;
+};
+
 const NovaReserva = () => {
   const { currentUser, isSuperAdmin, userPermissions } = useAuth();
   const [availableDates, setAvailableDates] = useState<Date[]>([]);
   const [equipment, setEquipment] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [locationPopoverOpen, setLocationPopoverOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null); // Estado para usuário selecionado
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const canSeeUserDropdown = isSuperAdmin || userPermissions['usuarios'];
 
   const form = useForm<FormValues>({
@@ -110,8 +155,44 @@ const NovaReserva = () => {
       startTime: '',
       endTime: '',
       location: '',
+      isRecurring: false,
+      recurrencePattern: undefined,
+      recurrenceEndDate: undefined, 
     },
   });
+
+  // Adiciona suporte ao padrão de recorrência mensal
+  const recurrenceOptions = [
+    { value: 'daily', label: 'Diariamente' },
+    { value: 'weekly', label: 'Semanalmente' },
+    { value: 'monthly', label: 'Mensalmente' },
+  ];
+
+  // Atualiza a função para gerar datas mensais
+  const generateRecurrenceDates = (
+    startDate: Date, 
+    endDate: Date, 
+    pattern: 'daily' | 'weekly' | 'monthly'
+  ): Date[] => {
+    const dates: Date[] = [];
+    const current = new Date(startDate);
+
+    while (current <= endDate) {
+      dates.push(new Date(current));
+      if (pattern === 'daily') {
+        current.setDate(current.getDate() + 1);
+      } else if (pattern === 'weekly') {
+        current.setDate(current.getDate() + 7);
+      } else if (pattern === 'monthly') {
+        current.setMonth(current.getMonth() + 1);
+      }
+    }
+
+    return dates;
+  };
+
+  const recurrencePattern = form.watch('recurrencePattern');
+  const isRecurring = form.watch('isRecurring');
 
   useEffect(() => {
     const loadData = async () => {
@@ -140,7 +221,6 @@ const NovaReserva = () => {
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
     try {
-      // Usar usuário selecionado ou usuário atual
       const user = selectedUser || currentUser;
       
       const equipmentQuantities = values.selectedEquipment.reduce((acc, equipId) => {
@@ -151,54 +231,130 @@ const NovaReserva = () => {
         return acc;
       }, {} as Record<string, number>);
 
-      const conflicts = await checkConflicts({
-        date: values.date,
-        startTime: values.startTime,
-        endTime: values.endTime,
-        equipmentIds: values.selectedEquipment
-      });
-
-      if (conflicts.length > 0) {
-        toast.error(
-          <div>
-            <p>Conflitos detectados:</p>
-            <ul className="mt-2 list-disc pl-4">
-              {conflicts.map((conflict, i) => (
-                <li key={i}>
-                  {conflict.equipmentName}: {conflict.startTime} - {conflict.endTime}
-                </li>
-              ))}
-            </ul>
-          </div>
+      // Lógica para reservas recorrentes
+      if (values.isRecurring && values.recurrencePattern && values.recurrenceEndDate) {
+        const recurrenceDates = generateRecurrenceDates(
+          values.date,
+          values.recurrenceEndDate,
+          values.recurrencePattern
         );
-        return;
+
+        // Verificar conflitos para todas as datas
+        const allConflicts: { date: Date; conflicts: any[] }[] = [];
+        
+        for (const date of recurrenceDates) {
+          const conflicts = await checkConflicts({
+            date,
+            startTime: values.startTime,
+            endTime: values.endTime,
+            equipmentIds: values.selectedEquipment
+          });
+          
+          if (conflicts.length > 0) {
+            allConflicts.push({ date, conflicts });
+          }
+        }
+
+        if (allConflicts.length > 0) {
+          toast.error(
+            <div>
+              <p className="font-bold">Conflitos detectados em algumas datas:</p>
+              {allConflicts.map(({ date, conflicts }, idx) => (
+                <div key={idx} className="mt-2">
+                  <p className="font-medium">{format(date, 'dd/MM/yyyy')}:</p>
+                  <ul className="mt-1 list-disc pl-4">
+                    {conflicts.map((conflict, i) => (
+                      <li key={i}>
+                        {conflict.equipmentName}: {conflict.startTime} - {conflict.endTime}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          );
+          return;
+        }
+
+        // Criar todas as reservas recorrentes
+        for (const date of recurrenceDates) {
+          const autoApproved = isDateAvailable(date) &&
+            values.startTime >= '07:00' &&
+            values.endTime <= '19:00';
+
+          await addReservation({
+            date,
+            startTime: values.startTime,
+            endTime: values.endTime,
+            equipmentIds: values.selectedEquipment,
+            location: values.location,
+            purpose: values.purpose,
+            equipmentQuantities,
+            userName: user?.displayName || "Usuário",
+            userEmail: user?.email || "email@exemplo.com",
+            userId: user?.uid || "",
+            status: autoApproved ? 'approved' : 'pending',
+            isRecurring: values.isRecurring,
+            recurrencePattern: values.recurrencePattern,
+            recurrenceEndDate: values.recurrenceEndDate
+          });
+        }
+
+        toast.success(`Reservas recorrentes criadas (${recurrenceDates.length} dias)`);
+      } 
+      // Lógica para reserva única
+      else {
+        const conflicts = await checkConflicts({
+          date: values.date,
+          startTime: values.startTime,
+          endTime: values.endTime,
+          equipmentIds: values.selectedEquipment
+        });
+
+        if (conflicts.length > 0) {
+          toast.error(
+            <div>
+              <p>Conflitos detectados:</p>
+              <ul className="mt-2 list-disc pl-4">
+                {conflicts.map((conflict, i) => (
+                  <li key={i}>
+                    {conflict.equipmentName}: {conflict.startTime} - {conflict.endTime}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+          return;
+        }
+
+        const autoApproved = isDateAvailable(values.date) &&
+          values.startTime >= '07:00' &&
+          values.endTime <= '19:00';
+
+        await addReservation({
+          date: values.date,
+          startTime: values.startTime,
+          endTime: values.endTime,
+          equipmentIds: values.selectedEquipment,
+          location: values.location,
+          purpose: values.purpose,
+          equipmentQuantities,
+          userName: user?.displayName || "Usuário",
+          userEmail: user?.email || "email@exemplo.com",
+          userId: user?.uid || "",
+          status: autoApproved ? 'approved' : 'pending',
+          isRecurring: values.isRecurring,
+          recurrencePattern: values.recurrencePattern,
+          recurrenceEndDate: values.recurrenceEndDate
+        });
+
+        toast.success(autoApproved
+          ? 'Reserva aprovada automaticamente!'
+          : 'Solicitação enviada para aprovação');
       }
 
-      const autoApproved = isDateAvailable(values.date) &&
-        values.startTime >= '07:00' &&
-        values.endTime <= '19:00';
-
-      await addReservation({
-        date: values.date,
-        startTime: values.startTime,
-        endTime: values.endTime,
-        location: values.location,
-        purpose: values.purpose,
-        equipmentIds: values.selectedEquipment,
-        equipmentQuantities,
-        // Usar dados do usuário selecionado
-        userName: user?.displayName || "Usuário",
-        userEmail: user?.email || "email@exemplo.com",
-        userId: user?.uid || "",
-        status: autoApproved ? 'approved' : 'pending'
-      });
-
-      toast.success(autoApproved
-        ? 'Reserva aprovada automaticamente!'
-        : 'Solicitação enviada para aprovação');
-
       form.reset();
-      setSelectedUser(null); // Limpar usuário selecionado após envio
+      setSelectedUser(null);
       await sendAdminNotification('Reserva', user?.displayName || 'Usuário');
     } catch (error) {
       toast.error("Erro ao processar reserva");
@@ -207,7 +363,6 @@ const NovaReserva = () => {
     }
   };
 
-  // Função para limpar formulário e usuário selecionado
   const handleClearForm = () => {
     form.reset();
     setSelectedUser(null);
@@ -216,12 +371,10 @@ const NovaReserva = () => {
   return (
     <AppLayout>
       <div className="min-h-screen bg-white overflow-hidden relative">
-        {/* Fundos decorativos */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-sidebar blur-3xl opacity-5"></div>
           <div className="absolute right-1/4 bottom-1/4 h-80 w-80 rounded-full bg-eccos-purple blur-3xl opacity-5"></div>
         </div>
-        {/* Conteúdo principal */}
         <div className="relative z-10 space-y-8 p-6 md:p-12">
           <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
             <CalendarCheck className="text-eccos-purple" size={35} />
@@ -230,7 +383,6 @@ const NovaReserva = () => {
           <p className="text-gray-600 mt-1">
             Preencha o formulário para reservar equipamentos
           </p>
-           {/* Renderização condicional do UserDropdown */}
           {canSeeUserDropdown && (
             <UserDropdown 
               onSelectUser={setSelectedUser} 
@@ -240,7 +392,6 @@ const NovaReserva = () => {
           )}
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* Campo de data */}
               <FormField
                 control={form.control}
                 name="date"
@@ -294,7 +445,6 @@ const NovaReserva = () => {
                 )}
               />
 
-              {/* Horários */}
               <div className="grid gap-6 md:grid-cols-2">
                 <FormField
                   control={form.control}
@@ -342,7 +492,6 @@ const NovaReserva = () => {
                 />
               </div>
 
-              {/* Equipamentos */}
               <FormField
                 control={form.control}
                 name="selectedEquipment"
@@ -466,7 +615,6 @@ const NovaReserva = () => {
                 )}
               />
 
-              {/* Finalidade */}
               <FormField
                 control={form.control}
                 name="purpose"
@@ -486,6 +634,110 @@ const NovaReserva = () => {
                 )}
               />
 
+              {/* Seção de Recorrência */}
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                <FormField
+                  control={form.control}
+                  name="isRecurring"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Reserva Recorrente</FormLabel>
+                        <FormDescription>
+                          Marque para repetir esta reserva periodicamente
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
+                {isRecurring && (
+                  <>
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="recurrencePattern"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-gray-700">Frequência *</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                              <FormControl>
+                                <SelectTrigger className="rounded-xl border-gray-200">
+                                  <SelectValue placeholder="Selecione a frequência" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent className="rounded-xl">
+                                <SelectItem value="daily">Diariamente</SelectItem>
+                                <SelectItem value="weekly">Semanalmente</SelectItem>
+                                <SelectItem value="monthly">Mensalmente</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="recurrenceEndDate"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-col">
+                            <FormLabel className="text-gray-700">Data de Término *</FormLabel>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <FormControl>
+                                  <Button
+                                    variant="outline"
+                                    className={cn(
+                                      "w-full pl-3 text-left font-normal rounded-xl",
+                                      "bg-white border border-gray-200 hover:border-gray-300",
+                                      "shadow-sm hover:shadow-md transition-all duration-300",
+                                      "text-gray-700 hover:bg-gray-50",
+                                      !field.value && "text-gray-400"
+                                    )}
+                                  >
+                                    {field.value ? (
+                                      format(field.value, "PPP", { locale: ptBR })
+                                    ) : (
+                                      <span>Selecione uma data</span>
+                                    )}
+                                    <CalendarIcon className="ml-auto h-4 w-4 text-gray-500" />
+                                  </Button>
+                                </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent
+                                className="w-auto p-0 border-gray-200 shadow-xl rounded-2xl"
+                                align="start"
+                              >
+                                <Calendar
+                                  mode="single"
+                                  selected={field.value}
+                                  onSelect={field.onChange}
+                                  disabled={(date) => date < new Date()}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <p className="text-sm text-gray-500 mt-2">
+                      A reserva será repetida {recurrencePattern === 'daily' 
+                        ? 'diariamente' 
+                        : 'semanalmente no mesmo dia'} até a data de término.
+                    </p>
+                  </>
+                )}
+              </div>
+
               <div className="flex justify-end gap-4">
                 <Button 
                   type="button" 
@@ -500,7 +752,11 @@ const NovaReserva = () => {
                   className="rounded-xl bg-eccos-purple hover:bg-sidebar text-white px-8 py-6 text-lg font-semibold transition-all"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? 'Enviando...' : 'Enviar Solicitação'}
+                  {isSubmitting 
+                    ? 'Enviando...' 
+                    : isRecurring 
+                      ? 'Enviar Reservas Recorrentes' 
+                      : 'Enviar Solicitação'}
                 </Button>
               </div>
             </form>

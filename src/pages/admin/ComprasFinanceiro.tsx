@@ -519,186 +519,179 @@ const ComprasFinanceiro = () => {
 
           {/* Dialog de detalhes */}
           <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-            <DialogContent className="max-w-3xl bg-white border border-gray-100 max-h-[90vh] overflow-y-auto rounded-2xl">
-              {selectedRequest && (
-                <>
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                      <ShoppingCart className="h-5 w-5 text-purple-500" />
-                      <span className="bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
-                        Solicitação de Compra - {selectedRequest.userName || selectedRequest.userEmail}
-                      </span>
-                    </DialogTitle>
-                    <DialogDescription asChild>
-                      <div className="flex items-center justify-between text-gray-500 px-1">
-                        <div>
-                          {format(
-                            selectedRequest.createdAt.toDate(),
-                            "dd/MM/yyyy HH:mm",
-                            { locale: ptBR }
-                          )}
-                        </div>
-                        <div>{getStatusBadge(selectedRequest.status)}</div>
-                      </div>
-                    </DialogDescription>
-                  </DialogHeader>
+  <DialogContent className="max-w-3xl bg-white border border-gray-100 rounded-2xl overflow-hidden">
+    {selectedRequest && (
+      <div className="flex flex-col h-[80vh]">
+        {/* Cabeçalho fixo */}
+        <DialogHeader className="p-6 pb-2 border-b border-gray-100 bg-white sticky top-0 z-10">
+          <DialogTitle className="flex items-center gap-2">
+            <ShoppingCart className="h-5 w-5 text-purple-500" />
+            <span className="bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+              Solicitação de Compra - {selectedRequest.userName || selectedRequest.userEmail}
+            </span>
+          </DialogTitle>
+          <DialogDescription asChild>
+            <div className="flex items-center justify-between text-gray-500 px-1 mt-2">
+              <div>
+                {format(
+                  selectedRequest.createdAt.toDate(),
+                  "dd/MM/yyyy HH:mm",
+                  { locale: ptBR }
+                )}
+              </div>
+              <div>{getStatusBadge(selectedRequest.status)}</div>
+            </div>
+          </DialogDescription>
+        </DialogHeader>
 
-                  <div className="flex-1 overflow-y-auto space-y-6 py-4">
-                    {/* Conteúdo específico para compras */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Tipo</p>
-                        <p className="font-medium">{selectedRequest.tipo || "Não especificado"}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Solicitante</p>
-                        <p className="font-medium">{selectedRequest.userName}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Item</p>
-                        <p className="font-medium break-words">{selectedRequest.itemName}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Quantidade</p>
-                        <p className="font-medium">{selectedRequest.quantity}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Valor Unitário</p>
-                        <p className="font-medium">
-                          {new Intl.NumberFormat('pt-BR', {
-                            style: 'currency',
-                            currency: 'BRL'
-                          }).format(selectedRequest.unitPrice || 0)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Valor Total</p>
-                        <p className="font-bold text-lg bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
-                          {new Intl.NumberFormat('pt-BR', {
-                            style: 'currency',
-                            currency: 'BRL'
-                          }).format((selectedRequest.quantity || 0) * (selectedRequest.unitPrice || 0))}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-gray-500">Justificativa</p>
-                      <div className="bg-gray-50 p-4 rounded-xl">
-                        <p className="whitespace-pre-wrap break-words">{selectedRequest.justification}</p>
-                      </div>
-                    </div>
-
-                    {/* Campo de data de entrega */}
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium text-gray-500">Previsão de Entrega</p>
-                        
-                         {selectedRequest.status === 'waitingDelivery' && (
-    <div className="flex gap-2">
-      <Button
-        variant="outline"
-        size="sm"
-        className="h-8"
-        onClick={() => setIsEditingDeliveryDate(!isEditingDeliveryDate)}
-      >
-        {isEditingDeliveryDate ? "Cancelar" : "Editar"}
-      </Button>
-      
-      {isEditingDeliveryDate && (
-        <Button
-          variant="destructive"
-          size="sm"
-          className="h-8"
-          onClick={handleRemoveDeliveryDate}
-        >
-          <X className="h-4 w-4 mr-1" />
-          Remover
-        </Button>
-      )}
-    </div>
-  )}
-</div>
-                      
-                      {isEditingDeliveryDate ? (
-                        <div className="flex gap-2">
-                          <Input
-                            type="date"
-                            value={deliveryDate ? deliveryDate.toISOString().split('T')[0] : ""}
-                            onChange={(e) => {
-                              const [year, month, day] = e.target.value.split('-').map(Number);
-                              setDeliveryDate(new Date(year, month - 1, day));
-                            }}
-                            min={new Date().toISOString().split('T')[0]}
-                            className="rounded-xl flex-1"
-                          />
-                          <Button 
-                            variant="default"
-                            className="rounded-xl bg-eccos-purple hover:bg-eccos-purple-darker text-white"
-                            onClick={handleSaveDeliveryDate}
-                          >
-                            <Save className="h-4 w-4 mr-1" />
-                            Salvar
-                          </Button>
-                        </div>
-                      ) : selectedRequest.deliveryDate ? (
-                        <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl">
-                          <Calendar className="h-5 w-5 text-gray-500" />
-                          <p className="font-medium">
-                            {format(selectedRequest.deliveryDate.toDate(), "dd/MM/yyyy", { locale: ptBR })}
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="text-center py-4 text-gray-500">
-                          Nenhuma data de entrega definida
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Controle de status */}
-                    <div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" className="flex items-center gap-2">
-                            Alterar Status
-                            <ChevronDown className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="rounded-xl">
-                          {["pending", "approved", "rejected", "waitingDelivery", "delivered", "completed", "canceled"].map((status) => (
-                            <DropdownMenuItem 
-                              key={status} 
-                              onSelect={() => handleStatusChange(status as RequestStatus)}
-                              className="cursor-pointer px-4 py-2 hover:bg-gray-100"
-                            >
-                              <div className="flex items-center gap-2">
-                                {getStatusBadge(status as RequestStatus)}
-                              </div>
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-
-                    {/* Histórico */}
-                    <div className="space-y-4 pt-4 border-t border-gray-100">
-                    </div>
-                      </div>
-
-                  <DialogFooter className="pt-4 border-t border-gray-100 gap-2">
+        {/* Conteúdo rolável */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Conteúdo específico para compras */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm font-medium text-gray-500">Tipo</p>
+              <p className="font-medium">{selectedRequest.tipo || "Não especificado"}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Solicitante</p>
+              <p className="font-medium">{selectedRequest.userName}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Item</p>
+              <p className="font-medium break-words">{selectedRequest.itemName}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Quantidade</p>
+              <p className="font-medium">{selectedRequest.quantity}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Valor Unitário</p>
+              <p className="font-medium">
+                {new Intl.NumberFormat('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL'
+                }).format(selectedRequest.unitPrice || 0)}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Valor Total</p>
+              <p className="font-bold text-lg bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+                {new Intl.NumberFormat('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL'
+                }).format((selectedRequest.quantity || 0) * (selectedRequest.unitPrice || 0))}
+              </p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-gray-500">Justificativa</p>
+            <div className="bg-gray-50 p-4 rounded-xl">
+              <p className="whitespace-pre-wrap break-words">{selectedRequest.justification}</p>
+            </div>
+          </div>
+          {/* Campo de data de entrega */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-gray-500">Previsão de Entrega</p>
+              {selectedRequest.status === 'waitingDelivery' && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    onClick={() => setIsEditingDeliveryDate(!isEditingDeliveryDate)}
+                  >
+                    {isEditingDeliveryDate ? "Cancelar" : "Editar"}
+                  </Button>
+                  {isEditingDeliveryDate && (
                     <Button
                       variant="destructive"
-                      onClick={() => handleDeleteRequest(selectedRequest)}
-                      className="w-full sm:w-auto"
+                      size="sm"
+                      className="h-8"
+                      onClick={handleRemoveDeliveryDate}
                     >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Excluir Solicitação
+                      <X className="h-4 w-4 mr-1" />
+                      Remover
                     </Button>
-                  </DialogFooter>
-                </>
+                  )}
+                </div>
               )}
-            </DialogContent>
-          </Dialog>
+            </div>
+            {isEditingDeliveryDate ? (
+              <div className="flex gap-2">
+                <Input
+                  type="date"
+                  value={deliveryDate ? deliveryDate.toISOString().split('T')[0] : ""}
+                  onChange={(e) => {
+                    const [year, month, day] = e.target.value.split('-').map(Number);
+                    setDeliveryDate(new Date(year, month - 1, day));
+                  }}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="rounded-xl flex-1"
+                />
+                <Button 
+                  variant="default"
+                  className="rounded-xl bg-eccos-purple hover:bg-eccos-purple-darker text-white"
+                  onClick={handleSaveDeliveryDate}
+                >
+                  <Save className="h-4 w-4 mr-1" />
+                  Salvar
+                </Button>
+              </div>
+            ) : selectedRequest.deliveryDate ? (
+              <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl">
+                <Calendar className="h-5 w-5 text-gray-500" />
+                <p className="font-medium">
+                  {format(selectedRequest.deliveryDate.toDate(), "dd/MM/yyyy", { locale: ptBR })}
+                </p>
+              </div>
+            ) : (
+              <div className="text-center py-4 text-gray-500">
+                Nenhuma data de entrega definida
+              </div>
+            )}
+          </div>
+          {/* Controle de status */}
+          <div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2">
+                  Alterar Status
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="rounded-xl">
+                {["pending", "approved", "rejected", "waitingDelivery", "delivered", "completed", "canceled"].map((status) => (
+                  <DropdownMenuItem 
+                    key={status} 
+                    onSelect={() => handleStatusChange(status as RequestStatus)}
+                    className="cursor-pointer px-4 py-2 hover:bg-gray-100"
+                  >
+                    <div className="flex items-center gap-2">
+                      {getStatusBadge(status as RequestStatus)}
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        {/* Rodapé fixo opcional */}
+        <DialogFooter className="p-6 border-t border-gray-100 gap-2 bg-white sticky bottom-0 z-10">
+          <Button
+            variant="destructive"
+            onClick={() => handleDeleteRequest(selectedRequest)}
+            className="w-full sm:w-auto"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Excluir Solicitação
+          </Button>
+        </DialogFooter>
+      </div>
+    )}
+  </DialogContent>
+</Dialog>
 
           {/* Chat Admin */}
           <ChatAdmin 

@@ -9,7 +9,8 @@ import {
   query,
   where,
   updateDoc,
-  doc
+  doc,
+  deleteDoc,
 } from "firebase/firestore";
 import { ref, uploadBytes, listAll, getDownloadURL, deleteObject } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
@@ -21,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import AppLayout from "@/components/AppLayout";
+import { Trash2 } from 'lucide-react';
 
 interface BugReport {
   id: string;
@@ -311,6 +313,27 @@ const SuportePlataforma = () => {
     }
   };
 
+  const handleDeleteBug = async (id: string) => {
+  try {
+    const bugRef = doc(db, "bugReports", id);
+    await deleteDoc(bugRef);
+    toast({
+      title: "Bug Excluído",
+      description: "O relatório foi removido com sucesso.",
+    });
+    // Atualiza os estados removendo o bug excluído
+    setBugReports(bugReports.filter(report => report.id !== id));
+    setResolvedReports(resolvedReports.filter(report => report.id !== id));
+  } catch (error) {
+    console.error("Erro ao excluir bug:", error);
+    toast({
+      title: "Erro",
+      description: "Falha ao remover o relatório.",
+      variant: "destructive",
+    });
+  }
+};
+  
   if (loading) {
     return (
       <AppLayout>
@@ -495,15 +518,27 @@ const SuportePlataforma = () => {
                                   <p><span className="font-medium">Data:</span> {format(report.createdAt, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
                                 </div>
                               </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleResolveBug(report.id)}
-                                className="flex items-center gap-2 border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300 transition-all duration-200 relative z-10"
-                              >
-                                <CheckCircle2 className="h-4 w-4" />
-                                Resolver
-                              </Button>
+                              <div className="flex gap-2">
+  <Button
+    variant="outline"
+    size="sm"
+    onClick={() => handleResolveBug(report.id)}
+    className="flex items-center gap-2 border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300 transition-all duration-200"
+  >
+    <CheckCircle2 className="h-4 w-4" />
+    Resolver
+  </Button>
+
+  <Button
+    variant="outline"
+    size="sm"
+    onClick={() => handleDeleteBug(report.id)}
+    className="flex items-center gap-2 border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 transition-all duration-200"
+  >
+    <Trash2 className="h-4 w-4" />
+    Excluir
+  </Button>
+</div>
                             </div>
                           </div>
                         ))}
@@ -529,15 +564,27 @@ const SuportePlataforma = () => {
                                   <p><span className="font-medium">Data:</span> {format(report.createdAt, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
                                 </div>
                               </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleReopenBug(report.id)}
-                                className="flex items-center gap-2 border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 transition-all duration-200 relative z-10"
-                              >
-                                <XCircle className="h-4 w-4" />
-                                Reabrir
-                              </Button>
+                             <div className="flex gap-2">
+  <Button
+    variant="outline"
+    size="sm"
+    onClick={() => handleReopenBug(report.id)}
+    className="flex items-center gap-2 border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 transition-all duration-200"
+  >
+    <XCircle className="h-4 w-4" />
+    Reabrir
+  </Button>
+
+  <Button
+    variant="outline"
+    size="sm"
+    onClick={() => handleDeleteBug(report.id)}
+    className="flex items-center gap-2 border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 transition-all duration-200"
+  >
+    <Trash2 className="h-4 w-4" />
+    Excluir
+  </Button>
+</div>
                             </div>
                           </div>
                         ))}

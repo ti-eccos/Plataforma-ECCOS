@@ -23,6 +23,9 @@ export const addReservation = async (data: {
   userId: string;
   status?: RequestStatus;
   equipmentQuantities: { [type: string]: number };
+  isRecurring?: boolean;
+  recurrencePattern?: 'daily' | 'weekly';
+  recurrenceEndDate?: Date;
 }): Promise<string> => {
   try {
     const equipmentNames = await Promise.all(
@@ -43,7 +46,12 @@ export const addReservation = async (data: {
       createdAt: Timestamp.now(),
       hidden: false,
       unreadMessages: 0,
-      hasUnreadMessages: false
+      hasUnreadMessages: false,
+      isRecurring: data.isRecurring || false,
+      recurrencePattern: data.recurrencePattern || null,
+      recurrenceEndDate: data.recurrenceEndDate 
+        ? Timestamp.fromDate(data.recurrenceEndDate) 
+        : null
     });
 
     return docRef.id;

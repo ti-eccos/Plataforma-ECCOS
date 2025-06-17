@@ -122,6 +122,9 @@ const Solicitacoes = () => {
   });
 
   useEffect(() => {
+    // Convert Set to Array for stable dependency
+    const viewedRequestsArray = Array.from(viewedRequests);
+
     const checkUnreadMessages = () => {
       const newUnread: Record<string, number> = {};
       allRequests.forEach((req) => {
@@ -138,7 +141,8 @@ const Solicitacoes = () => {
       setUnreadMessages(newUnread);
     };
     checkUnreadMessages();
-  }, [allRequests, viewedRequests]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allRequests, Array.from(viewedRequests).join(",")]);
 
   const getEquipmentDetails = async (equipmentIds: string[] = []) => {
     try {
@@ -485,21 +489,24 @@ const Solicitacoes = () => {
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
-                          <TableRow className="border-gray-100">
-                            <TableHead className="font-semibold text-gray-700">
-                              Solicitante
-                            </TableHead>
-                            <TableHead className="font-semibold text-gray-700">
-                              Status
-                            </TableHead>
-                            <TableHead className="font-semibold text-gray-700 hidden lg:table-cell">
-                              Data
-                            </TableHead>
-                            <TableHead className="font-semibold text-gray-700">
-                              Ações
-                            </TableHead>
-                          </TableRow>
-                        </TableHeader>
+  <TableRow className="border-gray-100">
+    <TableHead className="font-semibold text-gray-700">
+      Solicitante
+    </TableHead>
+    <TableHead className="font-semibold text-gray-700">
+      Status
+    </TableHead>
+    <TableHead className="font-semibold text-gray-700 hidden lg:table-cell">
+      Data
+    </TableHead>
+    <TableHead className="font-semibold text-gray-700 hidden lg:table-cell">
+      Hora
+    </TableHead>
+    <TableHead className="font-semibold text-gray-700">
+      Ações
+    </TableHead>
+  </TableRow>
+</TableHeader>
                         <TableBody>
                           {filteredRequests.map((request) => (
                             <TableRow
@@ -510,13 +517,19 @@ const Solicitacoes = () => {
                                 {request.userName}
                               </TableCell>
                               <TableCell>{getStatusBadge(request.status)}</TableCell>
-                              <TableCell className="font-medium hidden lg:table-cell whitespace-nowrap min-w-[120px]">
-                                {format(
-                                  request.createdAt.toDate(),
-                                  "dd/MM/yyyy",
-                                  { locale: ptBR }
-                                )}
-                              </TableCell>
+                             <TableCell className="font-medium hidden lg:table-cell whitespace-nowrap min-w-[120px]">
+  {format(
+    request.date?.toDate() || request.createdAt.toDate(),
+    "dd/MM/yyyy",
+    { locale: ptBR }
+  )}
+</TableCell>
+
+<TableCell className="font-medium hidden lg:table-cell whitespace-nowrap min-w-[100px]">
+  {request.startTime && request.endTime
+    ? `${request.startTime} - ${request.endTime}`
+    : "Não informado"}
+</TableCell>
                               <TableCell>
                                 <div className="flex gap-2">
                                   <Button
@@ -649,23 +662,23 @@ const Solicitacoes = () => {
                     {/* Controle de status */}
                     <div>
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" className="flex items-center gap-2">
-                            Alterar Status
-                            <ChevronDown className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          {["pending", "approved", "rejected", "in-progress", "completed", "canceled"].map((status) => (
-                            <DropdownMenuCheckboxItem
-                              key={status}
-                              checked={selectedRequest.status === status}
-                              onCheckedChange={() => handleStatusUpdate(status as RequestStatus)}
-                            >
-                              {getStatusBadge(status as RequestStatus)}
-                            </DropdownMenuCheckboxItem>
-                          ))}
-                        </DropdownMenuContent>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="flex items-center gap-2">
+                        Alterar Status
+                        <ChevronDown className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        {["pending", "approved", "rejected", "in-progress", "completed", "canceled"].map((status) => (
+                        <DropdownMenuCheckboxItem
+                          key={status}
+                          checked={selectedRequest.status === status}
+                          onCheckedChange={() => handleStatusUpdate(status as RequestStatus)}
+                        >
+                          {getStatusBadge(status as RequestStatus)}
+                        </DropdownMenuCheckboxItem>
+                        ))}
+                      </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
                   </div>

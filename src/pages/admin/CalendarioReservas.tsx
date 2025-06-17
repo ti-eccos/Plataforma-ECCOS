@@ -401,99 +401,105 @@ const CalendarioReservas = () => {
 
           {/* Modal de Detalhes da Reserva */}
           {selectedReservation && (
-            <Dialog open={!!selectedReservation} onOpenChange={() => setSelectedReservation(null)}>
-              <DialogContent className="max-w-3xl bg-white border border-gray-100 max-h-[90vh] overflow-y-auto rounded-2xl">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5 text-purple-500" />
-                    <span className="bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
-                      Solicitação de Reserva - {selectedReservation.userName || selectedReservation.userEmail}
-                    </span>
-                  </DialogTitle>
-                  <DialogDescription asChild>
-                    <div className="flex items-center justify-between text-gray-500 px-1">
-                      <div>
-                        {format(selectedReservation.date.toDate(), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                      </div>
-                      {getStatusBadge(selectedReservation.status)}
-                    </div>
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="flex-1 overflow-y-auto space-y-6 py-4">
-                  {/* Conteúdo específico para reservas */}
-                  <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Solicitante</p>
-                      <p className="font-medium">{selectedReservation.userName}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Local</p>
-                      <p className="font-medium">{selectedReservation.location}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Data/Hora</p>
-                      <p className="font-medium">
-                        {format(selectedReservation.date.toDate(), "dd/MM/yyyy", { locale: ptBR })} •{" "}
-                        {selectedReservation.startTime} - {selectedReservation.endTime}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-gray-500">Finalidade</p>
-                    <div className="bg-gray-50 p-4 rounded-xl">
-                      <p className="whitespace-pre-wrap break-words">{selectedReservation.purpose}</p>
-                    </div>
-                  </div>
-                  {/* Equipamentos */}
-                  {equipmentNames[selectedReservation.id]?.length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-gray-500">Equipamentos</p>
-                      <div className="bg-gray-50 p-4 rounded-xl">
-                        <ul className="list-disc list-inside space-y-1">
-                          {equipmentNames[selectedReservation.id].map((name, idx) => (
-                            <li key={idx} className="text-gray-700">{name}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  )}
-                  {/* Controle de status */}
-                  <div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="flex items-center gap-2">
-                          Alterar Status
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="bg-background rounded-xl">
-                        {["pending", "approved", "rejected", "in-progress", "completed", "canceled"].map((status) => (
-                          <DropdownMenuCheckboxItem
-                            key={status}
-                            checked={selectedReservation.status === status}
-                            onCheckedChange={() => handleStatusUpdate(status)}
-                          >
-                            {getStatusBadge(status)}
-                          </DropdownMenuCheckboxItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-                <DialogFooter className="pt-4 border-t border-gray-100 gap-2">
-                  <Button
-                    variant="destructive"
-                    onClick={() => handleDeleteRequest(selectedReservation)}
-                    className="w-full sm:w-auto"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Excluir Solicitação
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          )}
+  <Dialog open={!!selectedReservation} onOpenChange={() => setSelectedReservation(null)}>
+    <DialogContent className="max-w-3xl bg-white border border-gray-100 rounded-2xl overflow-hidden">
+      <div className="flex flex-col h-[80vh]">
+        {/* Cabeçalho fixo */}
+        <DialogHeader className="p-6 pb-2 border-b border-gray-100 bg-white sticky top-0 z-10">
+          <DialogTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-purple-500" />
+            <span className="bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+              Solicitação de Reserva - {selectedReservation.userName || selectedReservation.userEmail}
+            </span>
+          </DialogTitle>
+          <DialogDescription asChild>
+            <div className="flex items-center justify-between text-gray-500 px-1 mt-2">
+              <div>
+                {format(selectedReservation.date.toDate(), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+              </div>
+              <div>{getStatusBadge(selectedReservation.status)}</div>
+            </div>
+          </DialogDescription>
+        </DialogHeader>
 
+        {/* Conteúdo rolável */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Conteúdo específico para reserva */}
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+            <div>
+              <p className="text-sm font-medium text-gray-500">Solicitante</p>
+              <p className="font-medium">{selectedReservation.userName}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Local</p>
+              <p className="font-medium">{selectedReservation.location}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Data/Hora</p>
+              <p className="font-medium">
+                {format(selectedReservation.date.toDate(), "dd/MM/yyyy", { locale: ptBR })} •{" "}
+                {selectedReservation.startTime} - {selectedReservation.endTime}
+              </p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-gray-500">Finalidade</p>
+            <div className="bg-gray-50 p-4 rounded-xl">
+              <p className="whitespace-pre-wrap break-words">{selectedReservation.purpose}</p>
+            </div>
+          </div>
+          {/* Equipamentos */}
+          {equipmentNames[selectedReservation.id]?.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-gray-500">Equipamentos</p>
+              <div className="bg-gray-50 p-4 rounded-xl">
+                <ul className="list-disc list-inside space-y-1">
+                  {equipmentNames[selectedReservation.id].map((name, idx) => (
+                    <li key={idx} className="text-gray-700">{name}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+          {/* Controle de status */}
+          <div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2">
+                  Alterar Status
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="bg-background rounded-xl">
+                {["pending", "approved", "rejected", "in-progress", "completed", "canceled"].map((status) => (
+                  <DropdownMenuCheckboxItem
+                    key={status}
+                    checked={selectedReservation.status === status}
+                    onCheckedChange={() => handleStatusUpdate(status)}
+                  >
+                    {getStatusBadge(status)}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        {/* Rodapé fixo opcional */}
+        <DialogFooter className="p-6 border-t border-gray-100 gap-2 bg-white sticky bottom-0 z-10">
+          <Button
+            variant="destructive"
+            onClick={() => handleDeleteRequest(selectedReservation)}
+            className="w-full sm:w-auto"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Excluir Solicitação
+          </Button>
+        </DialogFooter>
+      </div>
+    </DialogContent>
+  </Dialog>
+)}
           {/* Dialog de confirmação de exclusão */}
           <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
             <AlertDialogContent className="rounded-2xl">

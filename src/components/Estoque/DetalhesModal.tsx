@@ -36,95 +36,110 @@ const DetalhesModal: React.FC<DetalhesModalProps> = ({
   if (!selectedItemDetails) return null;
 
   const estadoClassNames: Record<string, string> = {
-    Ótimo: 'bg-green-100 text-green-800',
-    Bom: 'bg-blue-100 text-blue-800',
-    Razoável: 'bg-yellow-100 text-yellow-800',
-    Ruim: 'bg-orange-100 text-orange-800',
-    Péssimo: 'bg-red-100 text-red-800',
+    Ótimo: 'bg-green-500 text-white',
+    Bom: 'bg-blue-500 text-white',
+    Razoável: 'bg-yellow-500 text-white',
+    Ruim: 'bg-orange-500 text-white',
+    Péssimo: 'bg-red-500 text-white',
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-<DialogContent className="w-full max-w-[95vw] sm:max-w-md md:max-w-lg lg:max-w-xl rounded-lg p-4 max-h-[80vh] overflow-y-auto">        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
-            <ClipboardList className="h-5 w-5" /> Detalhes do Item
-          </DialogTitle>
-          <DialogDescription className="text-sm text-gray-500">
-            Informações completas sobre o item do estoque
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-w-3xl w-full bg-white border border-gray-100 rounded-2xl overflow-hidden">
+        <div className="flex flex-col h-[80vh]">
+          {/* Cabeçalho Fixo */}
+          <DialogHeader className="p-6 pb-2 border-b border-gray-100 bg-white sticky top-0 z-10 shadow-sm">
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardList className="h-5 w-5 text-purple-500" />
+              <span className="bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+                Detalhes do Item
+              </span>
+            </DialogTitle>
+            <DialogDescription asChild>
+              <div className="text-sm text-gray-500 mt-2">
+                Informações completas sobre o item do estoque
+              </div>
+            </DialogDescription>
+          </DialogHeader>
 
-        {/* Conteúdo Responsivo */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <Label className="text-xs font-medium">Nome:</Label>
-            <p className="font-medium text-sm">{selectedItemDetails.nome}</p>
+          {/* Conteúdo Rolável */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">Nome:</Label>
+                <p className="font-medium text-sm">{selectedItemDetails.nome}</p>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">Quantidade:</Label>
+                <p className="text-sm">{selectedItemDetails.quantidade}</p>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">Categoria:</Label>
+                <p className="text-sm">{selectedItemDetails.categoria}</p>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">Valor Unitário:</Label>
+                <p className="text-sm">
+                  {selectedItemDetails.valorUnitario?.toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL',
+                  }) || 'Não informado'}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">Valor Total:</Label>
+                <p className="text-sm">
+                  {(selectedItemDetails.quantidade *
+                    (selectedItemDetails.valorUnitario || 0)
+                  ).toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL',
+                  })}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">Unidade:</Label>
+                <p className="text-sm">{selectedItemDetails.unidade}</p>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">Localização:</Label>
+                <p className="text-sm">{selectedItemDetails.localizacao}</p>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">Estado:</Label>
+                <p
+                  className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${
+                    estadoClassNames[selectedItemDetails.estado] ||
+                    'bg-gray-100 text-gray-800'
+                  }`}
+                >
+                  {selectedItemDetails.estado}
+                </p>
+              </div>
+              <div className="col-span-1 sm:col-span-2 space-y-1">
+                <Label className="text-xs font-medium">Descrição:</Label>
+                <p className="text-sm whitespace-pre-wrap break-words">
+                  {selectedItemDetails.descricao || 'Não informada'}
+                </p>
+              </div>
+            </div>
           </div>
-          <div className="space-y-1">
-            <Label className="text-xs font-medium">Quantidade:</Label>
-            <p className="text-sm">{selectedItemDetails.quantidade}</p>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs font-medium">Categoria:</Label>
-            <p className="text-sm">{selectedItemDetails.categoria}</p>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs font-medium">Valor Unitário:</Label>
-            <p className="text-sm">
-              {selectedItemDetails.valorUnitario?.toLocaleString('pt-BR', {
-                style: 'currency',
-                currency: 'BRL',
-              }) || 'Não informado'}
-            </p>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs font-medium">Valor Total:</Label>
-            <p className="text-sm">
-              {(selectedItemDetails.quantidade *
-                (selectedItemDetails.valorUnitario || 0)
-              ).toLocaleString('pt-BR', {
-                style: 'currency',
-                currency: 'BRL',
-              })}
-            </p>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs font-medium">Unidade:</Label>
-            <p className="text-sm">{selectedItemDetails.unidade}</p>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs font-medium">Localização:</Label>
-            <p className="text-sm">{selectedItemDetails.localizacao}</p>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs font-medium">Estado:</Label>
-            <p
-              className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${
-                estadoClassNames[selectedItemDetails.estado] ||
-                'bg-gray-100 text-gray-800'
-              }`}
-            >
-              {selectedItemDetails.estado}
-            </p>
-          </div>
-          <div className="col-span-1 sm:col-span-2 space-y-1">
-            <Label className="text-xs font-medium">Descrição:</Label>
-            <p className="text-sm">{selectedItemDetails.descricao || 'Não informada'}</p>
-          </div>
+
+          {/* Rodapé Fixo */}
+          <DialogFooter className="p-6 border-t border-gray-100 bg-white sticky bottom-0 z-10">
+            <div className="flex flex-col-reverse sm:flex-row gap-2 justify-end w-full">
+              <Button variant="destructive" onClick={onDelete} className="w-full sm:w-auto">
+                <Trash2 className="mr-2 h-4 w-4" /> Excluir
+              </Button>
+              <Button onClick={onClone} className="w-full sm:w-auto">
+                <Copy className="mr-2 h-4 w-4" /> Copiar
+              </Button>
+              <Button onClick={onEdit} className="w-full sm:w-auto">
+                <Edit className="mr-2 h-4 w-4" /> Editar
+              </Button>
+            </div>
+          </DialogFooter>
         </div>
-
-        {/* Botões responsivos */}
-        <DialogFooter className="mt-6 flex flex-col-reverse sm:flex-row gap-2 justify-end">
-          <Button variant="destructive" onClick={onDelete} className="w-full sm:w-auto">
-            <Trash2 className="mr-2 h-4 w-4" /> Excluir
-          </Button>
-          <Button onClick={onClone} className="w-full sm:w-auto">
-            <Copy className="mr-2 h-4 w-4" /> Copiar
-          </Button>
-          <Button onClick={onEdit} className="w-full sm:w-auto">
-            <Edit className="mr-2 h-4 w-4" /> Editar
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

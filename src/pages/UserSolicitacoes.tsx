@@ -600,88 +600,89 @@ export default function UserSolicitacoes() {
               Limpar Filtros
             </Button>
             {/* Dropdown de Categoria */}
-           <DropdownMenu>
-  <DropdownMenuTrigger asChild>
-    <Button
-      variant="outline"
-      className="flex items-center gap-2 border-gray-200 hover:bg-gray-50"
-    >
-      <Filter className="h-4 w-4 text-eccos-purple" />
-      Categoria
-      <ChevronDown className="h-4 w-4" />
-    </Button>
-  </DropdownMenuTrigger>
-  <DropdownMenuContent align="end" className="bg-background">
-    {["reservation", "purchase", "support"].map((type) => (
-      <DropdownMenuCheckboxItem
-        key={type}
-        checked={selectedCategories.includes(type as RequestType)}
-        onCheckedChange={(checked) => {
-          if (checked) {
-            setSelectedCategories([...selectedCategories, type as RequestType]);
-          } else {
-            setSelectedCategories(
-              selectedCategories.filter((t) => t !== type)
-            );
-          }
-        }}
-        className="flex items-center gap-2"
-      >
-        {getRequestTypeIcon(type as RequestType)}
-        {getReadableRequestType(type as RequestType)}
-      </DropdownMenuCheckboxItem>
-    ))}
-  </DropdownMenuContent>
-</DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="flex items-center gap-2 border-gray-200 hover:bg-gray-50"
+                >
+                  <Filter className="h-4 w-4 text-eccos-purple" />
+                  Categoria
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-background">
+                {["reservation", "purchase", "support"].map((type) => (
+                  <DropdownMenuCheckboxItem
+                    key={type}
+                    checked={selectedCategories.includes(type as RequestType)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedCategories([...selectedCategories, type as RequestType]);
+                      } else {
+                        setSelectedCategories(
+                          selectedCategories.filter((t) => t !== type)
+                        );
+                      }
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    {getRequestTypeIcon(type as RequestType)}
+                    {getReadableRequestType(type as RequestType)}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             {/* Dropdown de Status */}
             <DropdownMenu>
-  <DropdownMenuTrigger asChild>
-    <Button
-      variant="outline"
-      className="flex items-center gap-2 border-gray-200 hover:bg-gray-50"
-    >
-      <Filter className="h-4 w-4 text-eccos-purple" />
-      Status
-      <ChevronDown className="h-4 w-4" />
-    </Button>
-  </DropdownMenuTrigger>
-  <DropdownMenuContent align="end" className="bg-background max-h-80 overflow-y-auto">
-    {Object.entries(statusByCategory).map(([type, statuses]) => {
-      if (selectedCategories.includes(type as RequestType)) {
-        const validStatuses = statuses.filter(
-          (status) => status !== "canceled" && status !== "rejected"
-        );
-        return (
-          <React.Fragment key={type}>
-            <div className="px-2 py-1 text-xs font-semibold text-gray-500">
-              {getReadableRequestType(type as RequestType)}
-            </div>
-            {validStatuses.map((status) => (
-              <DropdownMenuCheckboxItem
-                key={status}
-                checked={selectedStatuses.includes(status)}
-                onCheckedChange={(checked) => {
-                  if (checked) {
-                    setSelectedStatuses([...selectedStatuses, status]);
-                  } else {
-                    setSelectedStatuses(selectedStatuses.filter((s) => s !== status));
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="flex items-center gap-2 border-gray-200 hover:bg-gray-50"
+                >
+                  <Filter className="h-4 w-4 text-eccos-purple" />
+                  Status
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-background max-h-80 overflow-y-auto">
+                {Object.entries(statusByCategory).map(([type, statuses]) => {
+                  if (selectedCategories.includes(type as RequestType)) {
+                    const validStatuses = statuses.filter(
+                      (status) => status !== "canceled" && status !== "rejected"
+                    );
+                    return (
+                      <React.Fragment key={type}>
+                        <div className="px-2 py-1 text-xs font-semibold text-gray-500">
+                          {getReadableRequestType(type as RequestType)}
+                        </div>
+                        {validStatuses.map((status) => (
+                          <DropdownMenuCheckboxItem
+                            key={status}
+                            checked={selectedStatuses.includes(status)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedStatuses([...selectedStatuses, status]);
+                              } else {
+                                setSelectedStatuses(selectedStatuses.filter((s) => s !== status));
+                              }
+                            }}
+                            className="flex items-center gap-2"
+                          >
+                            {getStatusBadge(status)}
+                          </DropdownMenuCheckboxItem>
+                        ))}
+                        <DropdownMenuSeparator />
+                      </React.Fragment>
+                    );
                   }
-                }}
-                className="flex items-center gap-2"
-              >
-                {getStatusBadge(status)}
-              </DropdownMenuCheckboxItem>
-            ))}
-            <DropdownMenuSeparator />
-          </React.Fragment>
-        );
-      }
-      return null;
-    })}
-  </DropdownMenuContent>
-</DropdownMenu>
+                  return null;
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
+
         {/* Tabela de resultados */}
         {isLoading ? (
           <div className="flex justify-center items-center h-64">
@@ -785,12 +786,14 @@ export default function UserSolicitacoes() {
             </Table>
           </div>
         )}
+
         {/* Detalhes da Solicitação */}
         <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-          <DialogContent className="max-w-full sm:max-w-3xl border-gray-100 p-4">
+          <DialogContent className="max-w-full sm:max-w-3xl border-gray-100 p-0">
             {selectedRequest && (
               <>
-                <DialogHeader>
+                {/* Cabeçalho Fixo */}
+                <DialogHeader className="p-4 border-b bg-white sticky top-0 z-10">
                   <DialogTitle className="flex items-center gap-2">
                     {getRequestTypeIcon(selectedRequest.type)}
                     <span className="bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
@@ -799,7 +802,7 @@ export default function UserSolicitacoes() {
                     </span>
                   </DialogTitle>
                   <DialogDescription asChild>
-                    <div className="flex items-center justify-between text-gray-500 text-xs px-1">
+                    <div className="flex items-center justify-between text-gray-500 text-xs px-1 mt-1">
                       <div>
                         {format(
                           new Date(selectedRequest.createdAt.toMillis()),
@@ -811,117 +814,123 @@ export default function UserSolicitacoes() {
                     </div>
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-6 py-4">
-                  <div className="space-y-4 border-b pb-4">
-                    <h3 className="text-lg font-medium text-gray-800">Detalhes da Solicitação</h3>
-                    {selectedRequest.type === "reservation" && (
-                      <div className="grid grid-cols-1 gap-4">
-                        <div>
-                          <p className="text-sm font-medium text-gray-500">Data</p>
-                          <p className="text-sm text-gray-700">
-                            {format(
-                              new Date(selectedRequest.date.toMillis()),
-                              "dd/MM/yyyy",
-                              { locale: ptBR }
-                            )}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-500">Horário</p>
-                          <p className="text-sm text-gray-700">
-                            {selectedRequest.startTime} - {selectedRequest.endTime}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-500">Local</p>
-                          <p className="text-sm text-gray-700">{selectedRequest.location}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-500">Finalidade</p>
-                          <p className="text-sm text-gray-700">{selectedRequest.purpose}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-500">Equipamentos</p>
-                          {renderEquipmentCounts()}
-                        </div>
-                      </div>
-                    )}
-                    {selectedRequest.type === "purchase" && (
-                      <div className="grid grid-cols-1 gap-4">
-                        <div>
-                          <p className="text-sm font-medium text-gray-500">Item Solicitado</p>
-                          <p className="text-sm text-gray-700">{selectedRequest.itemName}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-500">Quantidade</p>
-                          <p className="text-sm text-gray-700">{selectedRequest.quantity}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-500">Valor Unitário</p>
-                          <p className="text-sm text-gray-700">
-                            {new Intl.NumberFormat("pt-BR", {
-                              style: "currency",
-                              currency: "BRL",
-                            }).format(selectedRequest.unitPrice || 0)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-500">Valor Total</p>
-                          <div className="bg-eccos-purple/10 p-2 rounded-md">
-                            <p className="text-sm font-semibold text-eccos-purple">
-                              {new Intl.NumberFormat("pt-BR", {
-                                style: "currency",
-                                currency: "BRL",
-                              }).format(
-                                (selectedRequest.quantity || 0) *
-                                  (selectedRequest.unitPrice || 0)
+
+                {/* Conteúdo Rolável */}
+                <div className="p-4 overflow-y-auto max-h-[70vh]">
+                  <div className="space-y-6">
+                    <div className="space-y-4 border-b pb-4">
+                      <h3 className="text-lg font-medium text-gray-800">Detalhes da Solicitação</h3>
+                      {selectedRequest.type === "reservation" && (
+                        <div className="grid grid-cols-1 gap-4">
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">Data</p>
+                            <p className="text-sm text-gray-700">
+                              {format(
+                                new Date(selectedRequest.date.toMillis()),
+                                "dd/MM/yyyy",
+                                { locale: ptBR }
                               )}
                             </p>
                           </div>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-500">Urgência</p>
-                          <div className="flex items-center gap-2">
-                            {getPriorityLevelBadge(selectedRequest.urgency)}
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">Horário</p>
+                            <p className="text-sm text-gray-700">
+                              {selectedRequest.startTime} - {selectedRequest.endTime}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">Local</p>
+                            <p className="text-sm text-gray-700">{selectedRequest.location}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">Finalidade</p>
+                            <p className="text-sm text-gray-700">{selectedRequest.purpose}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">Equipamentos</p>
+                            {renderEquipmentCounts()}
                           </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-500">Justificativa</p>
-                          <p className="text-sm text-gray-700">{selectedRequest.justification}</p>
-                        </div>
-                      </div>
-                    )}
-                    {selectedRequest.type === "support" && (
-                      <div className="grid grid-cols-1 gap-4">
-                        <div>
-                          <p className="text-sm font-medium text-gray-500">Unidade</p>
-                          <p className="text-sm text-gray-700">{selectedRequest.unit}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-500">Localização</p>
-                          <p className="text-sm text-gray-700">{selectedRequest.location}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-500">Categoria</p>
-                          <p className="text-sm text-gray-700">{selectedRequest.category}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-500">Prioridade</p>
-                          <div className="flex items-center gap-2">
-                            {getPriorityLevelBadge(selectedRequest.priority)}
+                      )}
+                      {selectedRequest.type === "purchase" && (
+                        <div className="grid grid-cols-1 gap-4">
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">Item Solicitado</p>
+                            <p className="text-sm text-gray-700">{selectedRequest.itemName}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">Quantidade</p>
+                            <p className="text-sm text-gray-700">{selectedRequest.quantity}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">Valor Unitário</p>
+                            <p className="text-sm text-gray-700">
+                              {new Intl.NumberFormat("pt-BR", {
+                                style: "currency",
+                                currency: "BRL",
+                              }).format(selectedRequest.unitPrice || 0)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">Valor Total</p>
+                            <div className="bg-eccos-purple/10 p-2 rounded-md">
+                              <p className="text-sm font-semibold text-eccos-purple">
+                                {new Intl.NumberFormat("pt-BR", {
+                                  style: "currency",
+                                  currency: "BRL",
+                                }).format(
+                                  (selectedRequest.quantity || 0) *
+                                    (selectedRequest.unitPrice || 0)
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">Urgência</p>
+                            <div className="flex items-center gap-2">
+                              {getPriorityLevelBadge(selectedRequest.urgency)}
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">Justificativa</p>
+                            <p className="text-sm text-gray-700">{selectedRequest.justification}</p>
                           </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-500">Descrição</p>
-                          <pre className="whitespace-pre-wrap break-words bg-gray-50 p-3 rounded-md text-sm text-gray-700">
-                            {selectedRequest.description || "Nenhuma descrição"}
-                          </pre>
+                      )}
+                      {selectedRequest.type === "support" && (
+                        <div className="grid grid-cols-1 gap-4">
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">Unidade</p>
+                            <p className="text-sm text-gray-700">{selectedRequest.unit}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">Localização</p>
+                            <p className="text-sm text-gray-700">{selectedRequest.location}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">Categoria</p>
+                            <p className="text-sm text-gray-700">{selectedRequest.category}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">Prioridade</p>
+                            <div className="flex items-center gap-2">
+                              {getPriorityLevelBadge(selectedRequest.priority)}
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">Descrição</p>
+                            <pre className="whitespace-pre-wrap break-words bg-gray-50 p-3 rounded-md text-sm text-gray-700">
+                              {selectedRequest.description || "Nenhuma descrição"}
+                            </pre>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
-                <DialogFooter className="gap-2 mt-6">
+
+                {/* Rodapé Fixo */}
+                <DialogFooter className="p-4 border-t bg-white sticky bottom-0 z-10 flex-row gap-2 justify-end">
                   {selectedRequest.type === "purchase" &&
                     selectedRequest.status === "waitingDelivery" && (
                       <Button
@@ -957,6 +966,7 @@ export default function UserSolicitacoes() {
             )}
           </DialogContent>
         </Dialog>
+
         {/* Chat */}
         <ChatUser
           request={chatRequest}
@@ -964,6 +974,7 @@ export default function UserSolicitacoes() {
           onOpenChange={setIsChatOpen}
           onMessageSent={refetch}
         />
+
         {/* Confirmação de Cancelamento */}
         <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
           <AlertDialogContent className="border-gray-100">
