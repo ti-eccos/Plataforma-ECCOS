@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from "@tanstack/react-query";
-import { format, startOfWeek, addDays, isSameWeek } from 'date-fns';
+import { format, startOfWeek, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   Calendar,
@@ -8,7 +8,16 @@ import {
   ChevronRight,
   Clock,
   MapPin,
-  User
+  User,
+  Trash2,
+  Eye,
+  RefreshCw,
+  CheckCircle2,
+  XCircle,
+  MessageSquare,
+  Filter,
+  Search,
+  ChevronDown,
 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -17,23 +26,64 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getAllRequests} from "@/services/sharedService";
-import {RequestData, RequestType} from "@/services/types";
-import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { getAllRequests, deleteRequest } from "@/services/sharedService";
+import { RequestData } from "@/services/types";
+import { doc, getDoc, updateDoc, arrayUnion, Timestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 // Tipagem específica para Reserva
 interface Reservation extends RequestData {
   equipmentQuantities: { [type: string]: number };
 }
 
+const getStatusBadge = (status: string) => {
+  switch (status) {
+    case "pending": return <Badge variant="outline" className="border-yellow-500 text-yellow-600">Pendente</Badge>;
+    case "approved": return <Badge className="bg-green-500 text-white">Aprovada</Badge>;
+    case "rejected": return <Badge variant="destructive">Reprovada</Badge>;
+    case "in-progress": return <Badge className="bg-blue-500 text-white">Em Andamento</Badge>;
+    case "completed": return <Badge className="bg-slate-500 text-white">Concluída</Badge>;
+    case "canceled": return <Badge className="bg-amber-500 text-white">Cancelada</Badge>;
+    default: return <Badge variant="outline">Desconhecido</Badge>;
+  }
+};
+
 const CalendarioReservas = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
-  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [requestToDelete, setRequestToDelete] = useState<Reservation | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  // Estados para busca e filtro
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(["pending", "approved", "in-progress"]);
+  const [equipmentNames, setEquipmentNames] = useState<{ [key: string]: string[] }>({});
+
+  const { currentUser } = useAuth();
+  const isAdmin = (currentUser?.role || []).includes("admin");
 
   // Busca todas as reservas
   const { data: reservas = [], isLoading, isError, refetch } = useQuery({
@@ -43,32 +93,24 @@ const CalendarioReservas = () => {
     retry: 2,
   });
 
-  // Animação de entrada (fade-up)
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('visible');
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-    document.querySelectorAll('.fade-up').forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
+  // Carrega nomes dos equipamentos
+  const loadEquipmentNames = async (reservationId: string, equipmentIds: string[]) => {
+    if (!equipmentIds.length) return [];
 
-  // Gera os slots horários do dia todo (00:00 a 23:00)
-  const getTimeSlots = () => {
-    const slots = [];
-    for (let hour = 0; hour < 24; hour++) {
-      slots.push(`${hour.toString().padStart(2, '0')}:00`);
-    }
-    return slots;
+    const names = await Promise.all(
+      equipmentIds.map(async (id) => {
+        const equipDoc = await getDoc(doc(db, "equipment", id));
+        return equipDoc.exists() ? equipDoc.data().name : "Equipamento desconhecido";
+      })
+    );
+
+    setEquipmentNames(prev => ({
+      ...prev,
+      [reservationId]: names.filter(Boolean)
+    }));
   };
 
-  // Converte uma string de hora em objeto Date baseado na data informada
+    // Converte hora em objeto Date
   const parseTime = (dateString: string, timeString: string) => {
     const date = new Date(dateString);
     const [hours, minutes] = timeString.split(':').map(Number);
@@ -76,7 +118,7 @@ const CalendarioReservas = () => {
     return date;
   };
 
-  // Agrupa as reservas por data e adiciona objetos Date para início e fim
+  // Agrupa por data
   const groupedReservations = reservas.reduce((acc: { [key: string]: Reservation[] }, reserva) => {
     const date = format(reserva.date.toDate(), 'yyyy-MM-dd');
     if (!acc[date]) acc[date] = [];
@@ -88,13 +130,22 @@ const CalendarioReservas = () => {
     return acc;
   }, {});
 
-  // Retorna os dias da semana (domingo a sábado)
+  // Gera os slots horários
+  const getTimeSlots = () => {
+    const slots = [];
+    for (let hour = 0; hour < 24; hour++) {
+      slots.push(`${hour.toString().padStart(2, '0')}:00`);
+    }
+    return slots;
+  };
+
+  // Retorna dias da semana
   const getWeekDays = () => {
-    const start = startOfWeek(currentDate, { weekStartsOn: 0 }); // começa no domingo
+    const start = startOfWeek(currentDate, { weekStartsOn: 0 });
     return Array.from({ length: 7 }).map((_, i) => addDays(start, i));
   };
 
-  // Calcula estatísticas para o dashboard
+  // Calcula estatísticas
   const totalReservations = reservas.length;
   const weekReservations = getWeekDays().reduce((count, day) => {
     const dateKey = format(day, 'yyyy-MM-dd');
@@ -103,7 +154,49 @@ const CalendarioReservas = () => {
   const uniqueLocations = [...new Set(reservas.map(r => r.location))].length;
   const uniqueUsers = [...new Set(reservas.map(r => r.userId))].length;
 
+  // Funções auxiliares
+  const handleViewDetails = async (reservation: Reservation) => {
+    await loadEquipmentNames(reservation.id, reservation.equipmentIds || []);
+    setSelectedReservation(reservation);
+  };
 
+  const handleStatusUpdate = async (status: string) => {
+    if (!selectedReservation) return;
+    try {
+      const docRef = doc(db, selectedReservation.collectionName, selectedReservation.id);
+      await updateDoc(docRef, {
+        status,
+        history: arrayUnion({
+          status,
+          message: `Status alterado para ${status}`,
+          timestamp: Timestamp.now()
+        })
+      });
+      toast.success("Status atualizado");
+      refetch();
+    } catch (error) {
+      toast.error("Erro ao atualizar status");
+    }
+  };
+
+  const handleDeleteRequest = (request: Reservation) => {
+    setRequestToDelete(request);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!requestToDelete) return;
+    try {
+      await deleteRequest(requestToDelete.id, requestToDelete.collectionName);
+      toast.success("Excluído com sucesso");
+      setIsDeleteDialogOpen(false);
+      setRequestToDelete(null);
+      refetch();
+    } catch (error) {
+      toast.error("Erro ao excluir");
+      console.error("Error:", error);
+    }
+  };
 
   return (
     <AppLayout>
@@ -146,7 +239,6 @@ const CalendarioReservas = () => {
             <div className="space-y-6 fade-up">
               {/* Cards com estatísticas */}
               <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-                {/* Total de Reservas */}
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 relative group overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   <CardHeader className="pb-2">
@@ -157,8 +249,6 @@ const CalendarioReservas = () => {
                     <Badge variant="outline" className="mt-2 border-eccos-purple text-eccos-purple text-xs">Agendamentos</Badge>
                   </CardContent>
                 </Card>
-
-                {/* Reservas na Semana */}
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 relative group overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   <CardHeader className="pb-2">
@@ -169,8 +259,6 @@ const CalendarioReservas = () => {
                     <Badge variant="outline" className="mt-2 border-eccos-purple text-eccos-purple text-xs">Esta Semana</Badge>
                   </CardContent>
                 </Card>
-
-                {/* Locais Diferentes */}
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 relative group overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   <CardHeader className="pb-2">
@@ -181,8 +269,6 @@ const CalendarioReservas = () => {
                     <Badge variant="outline" className="mt-2 border-eccos-purple text-eccos-purple text-xs">Espaços</Badge>
                   </CardContent>
                 </Card>
-
-                {/* Usuários Diferentes */}
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 relative group overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   <CardHeader className="pb-2">
@@ -227,19 +313,16 @@ const CalendarioReservas = () => {
                 </Button>
               </div>
 
-              {/* Calendário em grade para todas as telas */}
-              <Card className="border border-gray-200 rounded-2xl shadow-lg overflow-hidden bg-white">
+              {/* Calendário em grade */}
+              <Card className="rounded-2xl shadow-lg overflow-hidden bg-white">
                 {/* Cabeçalho Fixo */}
-                <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
-                  <div className="grid grid-cols-8 h-12 md:h-16">
-                    {/* Coluna Horário */}
-                    <div className="flex items-center justify-center text-xs md:text-sm font-medium border-r border-gray-200"></div>
-                    {/* Dias da Semana */}
+                <div className="bg-white sticky top-0 z-10">
+                  <div className="grid grid-cols-8 h-12 md:h-12">
+                    <div className="flex items-center justify-center text-xs md:text-sm font-medium"></div>
                     {getWeekDays().map((date, i) => {
                       const dayInitials = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-                      
                       return (
-                        <div key={i} className="flex flex-col items-center justify-center text-xs md:text-sm font-medium border-r border-gray-200">
+                        <div key={i} className="flex flex-col items-center justify-center text-xs md:text-sm font-medium">
                           <span className="text-xs font-bold text-black">{dayInitials[i]}</span>
                           <span className="mt-1 text-sm md:text-lg font-bold text-eccos-purple">{format(date, "d")}</span>
                         </div>
@@ -247,14 +330,14 @@ const CalendarioReservas = () => {
                     })}
                   </div>
                 </div>
-
-                <div className="bg-white overflow-x-auto">
-                  <div className="grid grid-cols-8 min-w-full">
-                    {/* Conteúdo da Grade Horária */}
+                <div className="bg-white overflow-x-auto p-0">
+                  <div className="grid grid-cols-8 min-w-full mt-0">
                     {getTimeSlots().map((timeSlot) => (
                       <React.Fragment key={timeSlot}>
                         {/* Slot Horário */}
-                        <div className="border-t border-r border-gray-200 p-1 md:p-2 text-xs text-blue-600 text-center font-medium h-12 md:h-16 flex items-center justify-center min-w-[50px]">
+                        <div
+                          className="border-r border-gray-200 p-1 md:p-2 text-xs text-blue-600 text-center font-medium h-8 md:h-10 flex items-center justify-center min-w-[50px]"
+                        >
                           {timeSlot}
                         </div>
                         {/* Dias da Semana */}
@@ -264,7 +347,7 @@ const CalendarioReservas = () => {
                           return (
                             <div
                               key={dayIndex}
-                              className="border-t border-r border-gray-200 relative hover:bg-gray-50 transition-colors bg-white h-12 md:h-16 min-w-[50px]"
+                              className="border-t border-r border-gray-200 relative hover:bg-gray-50 transition-colors bg-white h-8 md:h-10 min-w-[50px]"
                               style={{ overflow: 'visible' }}
                             >
                               {reservations
@@ -278,19 +361,19 @@ const CalendarioReservas = () => {
                                 .map((reserva, i) => {
                                   const durationInHours =
                                     (reserva.end.getTime() - reserva.start.getTime()) / (1000 * 60 * 60);
-                                  const topOffset = (reserva.start.getMinutes() / 60) * 100;
+                                  const topOffset = ((reserva.start.getHours() * 60 + reserva.start.getMinutes()) % 60) / 60 * 100;
                                   return (
                                     <div
                                       key={i}
                                       role="button"
                                       tabIndex={0}
-                                      onClick={() => setSelectedReservation(reserva)}
+                                      onClick={() => handleViewDetails(reserva)}
                                       onKeyDown={(e) => {
                                         if (e.key === 'Enter' || e.key === ' ') {
-                                          setSelectedReservation(reserva);
+                                          handleViewDetails(reserva);
                                         }
                                       }}
-                                      className="absolute bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-300 rounded p-1 md:p-2 m-0.5 md:m-1 text-xs w-[95%] cursor-pointer z-20 shadow-md hover:shadow-lg transition-shadow"
+                                      className="absolute bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-300 rounded p-1 md:p-2 m-0.5 md:m-1 text-xs w-[95%] cursor-pointer z-20 shadow-md hover:shadow-lg transition-shadow flex flex-col justify-center"
                                       style={{
                                         top: `${topOffset}%`,
                                         height: `${durationInHours * 100}%`
@@ -319,76 +402,126 @@ const CalendarioReservas = () => {
           {/* Modal de Detalhes da Reserva */}
           {selectedReservation && (
             <Dialog open={!!selectedReservation} onOpenChange={() => setSelectedReservation(null)}>
-              <DialogContent className="max-w-md mx-4 bg-white rounded-2xl border border-gray-100 shadow-xl">
+              <DialogContent className="max-w-3xl bg-white border border-gray-100 max-h-[90vh] overflow-y-auto rounded-2xl">
                 <DialogHeader>
-                  <DialogTitle className="text-xl font-bold bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
-                    Detalhes da Reserva
+                  <DialogTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-purple-500" />
+                    <span className="bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+                      Solicitação de Reserva - {selectedReservation.userName || selectedReservation.userEmail}
+                    </span>
                   </DialogTitle>
                   <DialogDescription asChild>
-                    <div className="text-sm text-muted-foreground">
-                      Visualize os detalhes completos desta reserva.
+                    <div className="flex items-center justify-between text-gray-500 px-1">
+                      <div>
+                        {format(selectedReservation.date.toDate(), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                      </div>
+                      {getStatusBadge(selectedReservation.status)}
                     </div>
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Nome do Usuário</label>
-                    <p className="font-medium">{selectedReservation.userName}</p>
+                <div className="flex-1 overflow-y-auto space-y-6 py-4">
+                  {/* Conteúdo específico para reservas */}
+                  <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Solicitante</p>
+                      <p className="font-medium">{selectedReservation.userName}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Local</p>
+                      <p className="font-medium">{selectedReservation.location}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Data/Hora</p>
+                      <p className="font-medium">
+                        {format(selectedReservation.date.toDate(), "dd/MM/yyyy", { locale: ptBR })} •{" "}
+                        {selectedReservation.startTime} - {selectedReservation.endTime}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Propósito</label>
-                    <p>{selectedReservation.purpose}</p>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-gray-500">Finalidade</p>
+                    <div className="bg-gray-50 p-4 rounded-xl">
+                      <p className="whitespace-pre-wrap break-words">{selectedReservation.purpose}</p>
+                    </div>
                   </div>
+                  {/* Equipamentos */}
+                  {equipmentNames[selectedReservation.id]?.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-gray-500">Equipamentos</p>
+                      <div className="bg-gray-50 p-4 rounded-xl">
+                        <ul className="list-disc list-inside space-y-1">
+                          {equipmentNames[selectedReservation.id].map((name, idx) => (
+                            <li key={idx} className="text-gray-700">{name}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+                  {/* Controle de status */}
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">Local</label>
-                    <p>{selectedReservation.location}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Data</label>
-                    <p>{format(selectedReservation.date.toDate(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Horário</label>
-                    <p>
-                      {selectedReservation.startTime} - {selectedReservation.endTime}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Equipamentos</label>
-                    {Object.entries(selectedReservation.equipmentQuantities).length > 0 ? (
-                      <ul className="list-disc pl-5 space-y-1 mt-1">
-                        {Object.entries(selectedReservation.equipmentQuantities).map(([tipo, quantidade]) => (
-                          <li key={tipo}>
-                            {tipo}: <strong>{typeof quantidade === 'number' ? quantidade : 0}</strong>
-                          </li>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="flex items-center gap-2">
+                          Alterar Status
+                          <ChevronDown className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="bg-background rounded-xl">
+                        {["pending", "approved", "rejected", "in-progress", "completed", "canceled"].map((status) => (
+                          <DropdownMenuCheckboxItem
+                            key={status}
+                            checked={selectedReservation.status === status}
+                            onCheckedChange={() => handleStatusUpdate(status)}
+                          >
+                            {getStatusBadge(status)}
+                          </DropdownMenuCheckboxItem>
                         ))}
-                      </ul>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">Nenhum equipamento solicitado.</p>
-                    )}
-                  </div>
-                  <div className="pt-2">
-                    <Button
-                      className="w-full bg-eccos-purple hover:bg-sidebar text-white"
-                      onClick={() => setSelectedReservation(null)}
-                    >
-                      Fechar
-                    </Button>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
+                <DialogFooter className="pt-4 border-t border-gray-100 gap-2">
+                  <Button
+                    variant="destructive"
+                    onClick={() => handleDeleteRequest(selectedReservation)}
+                    className="w-full sm:w-auto"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir Solicitação
+                  </Button>
+                </DialogFooter>
               </DialogContent>
             </Dialog>
           )}
+
+          {/* Dialog de confirmação de exclusão */}
+          <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <AlertDialogContent className="rounded-2xl">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja excluir permanentemente esta solicitação? Esta ação não pode ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={handleDeleteConfirm} 
+                  className="rounded-xl bg-red-600 hover:bg-red-700"
+                >
+                  Confirmar Exclusão
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
 
         {/* Rodapé */}
         <footer className="relative z-10 bg-gray-50 py-10 px-4 md:px-12 fade-up">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center">
-              <p className="text-gray-500 text-sm">
-                © 2025 Colégio ECCOS - Todos os direitos reservados
-              </p>
-            </div>
+          <div className="max-w-6xl mx-auto text-center">
+            <p className="text-gray-500 text-sm">
+              © 2025 Colégio ECCOS - Todos os direitos reservados
+            </p>
           </div>
         </footer>
       </div>

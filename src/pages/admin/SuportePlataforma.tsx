@@ -1,5 +1,5 @@
 // src/pages/admin/SuportePlataforma.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   useToast
 } from "@/hooks/use-toast";
@@ -39,20 +39,36 @@ const SuportePlataforma = () => {
   const [file, setFile] = useState<File | null>(null);
   const [manuais, setManuais] = useState<{ name: string; url: string }[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'bugs' | 'manuais'>('bugs');
+  const [resolvedReports, setResolvedReports] = useState<BugReport[]>([]);
+  const [showResolved, setShowResolved] = useState(false);
+  const [isDragActive, setIsDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Carregar relatórios de bugs
   useEffect(() => {
     const fetchBugReports = async () => {
       try {
-        const q = query(
+        const openQuery = query(
           collection(db, "bugReports"),
           where("status", "==", "open")
         );
-        const querySnapshot = await getDocs(q);
-        const reports: BugReport[] = [];
-        querySnapshot.forEach((doc) => {
+        const resolvedQuery = query(
+          collection(db, "bugReports"),
+          where("status", "==", "resolved")
+        );
+        
+        const [openSnapshot, resolvedSnapshot] = await Promise.all([
+          getDocs(openQuery),
+          getDocs(resolvedQuery)
+        ]);
+        
+        const openReports: BugReport[] = [];
+        const resolvedReports: BugReport[] = [];
+        
+        openSnapshot.forEach((doc) => {
           const data = doc.data();
-          reports.push({
+          openReports.push({
             id: doc.id,
             title: data.title,
             description: data.description,
@@ -62,8 +78,25 @@ const SuportePlataforma = () => {
             pageUrl: data.pageUrl
           });
         });
+        
+        resolvedSnapshot.forEach((doc) => {
+          const data = doc.data();
+          resolvedReports.push({
+            id: doc.id,
+            title: data.title,
+            description: data.description,
+            createdAt: data.createdAt.toDate(),
+            status: data.status,
+            userEmail: data.userEmail,
+            pageUrl: data.pageUrl
+          });
+        });
+        
         // Ordenar por data (mais recente primeiro)
-        setBugReports(reports.sort((a, b) =>
+        setBugReports(openReports.sort((a, b) =>
+          b.createdAt.getTime() - a.createdAt.getTime()
+        ));
+        setResolvedReports(resolvedReports.sort((a, b) =>
           b.createdAt.getTime() - a.createdAt.getTime()
         ));
         setLoading(false);
@@ -124,6 +157,40 @@ const SuportePlataforma = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
+    }
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setIsDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setIsDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const droppedFile = e.dataTransfer.files[0];
+      if (droppedFile.type === 'application/pdf') {
+        setFile(droppedFile);
+      } else {
+        toast({
+          title: "Tipo de arquivo inválido",
+          description: "Apenas arquivos PDF são permitidos.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const openFileDialog = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
     }
   };
 
@@ -199,12 +266,46 @@ const SuportePlataforma = () => {
         title: "Bug resolvido",
         description: "O problema foi marcado como resolvido.",
       });
-      setBugReports(bugReports.filter(report => report.id !== id));
+      
+      // Mover bug para lista de resolvidos
+      const resolvedBug = bugReports.find(report => report.id === id);
+      if (resolvedBug) {
+        setResolvedReports([resolvedBug, ...resolvedReports]);
+        setBugReports(bugReports.filter(report => report.id !== id));
+      }
     } catch (error) {
       console.error("Erro ao marcar bug como resolvido:", error);
       toast({
         title: "Erro",
         description: "Falha ao atualizar o status do bug.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleReopenBug = async (id: string) => {
+    try {
+      const bugRef = doc(db, "bugReports", id);
+      await updateDoc(bugRef, {
+        status: "open",
+        resolvedAt: null
+      });
+      toast({
+        title: "Bug reaberto",
+        description: "O problema foi marcado como aberto novamente.",
+      });
+      
+      // Mover bug de volta para lista de abertos
+      const reopenedBug = resolvedReports.find(report => report.id === id);
+      if (reopenedBug) {
+        setBugReports([reopenedBug, ...bugReports]);
+        setResolvedReports(resolvedReports.filter(report => report.id !== id));
+      }
+    } catch (error) {
+      console.error("Erro ao reabrir bug:", error);
+      toast({
+        title: "Erro",
+        description: "Falha ao reabrir o bug.",
         variant: "destructive",
       });
     }
@@ -227,16 +328,37 @@ const SuportePlataforma = () => {
 
   return (
     <AppLayout>
-      <div className="min-h-screen bg-white overflow-hidden relative">
+      <div className="min-h-screen bg-white relative">
         {/* Conteúdo principal */}
         <div className="relative z-20 space-y-8 p-6 md:p-12 fade-up">
-          <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
-            <Headphones className="text-eccos-purple" size={35} />
-            Suporte da Plataforma
-          </h1>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+              <Headphones className="text-eccos-purple" size={35} />
+              Suporte da Plataforma
+            </h1>
+            
+            <div className="flex gap-2">
+              <Button 
+                variant={activeTab === 'bugs' ? 'default' : 'outline'}
+                onClick={() => setActiveTab('bugs')}
+                className="flex items-center gap-2"
+              >
+                <Bug className="h-4 w-4" />
+                Relatórios de Bugs
+              </Button>
+              <Button 
+                variant={activeTab === 'manuais' ? 'default' : 'outline'}
+                onClick={() => setActiveTab('manuais')}
+                className="flex items-center gap-2"
+              >
+                <FileText className="h-4 w-4" />
+                Manuais
+              </Button>
+            </div>
+          </div>
 
           {/* Cards de estatísticas */}
-              <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             {/* Card Bugs Abertos */}
             <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg transition-all duration-300">
               <CardHeader className="pb-2">
@@ -250,6 +372,23 @@ const SuportePlataforma = () => {
                 </div>
                 <Badge variant="outline" className="mt-2 border-red-500 text-red-500">
                   Em Aberto
+                </Badge>
+              </CardContent>
+            </Card>
+
+            {/* Card Bugs Resolvidos */}
+            <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg transition-all duration-300">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">
+                  Bugs Resolvidos
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+                  {resolvedReports.length}
+                </div>
+                <Badge variant="outline" className="mt-2 border-green-500 text-green-500">
+                  Concluídos
                 </Badge>
               </CardContent>
             </Card>
@@ -272,7 +411,7 @@ const SuportePlataforma = () => {
             </Card>
 
             {/* Card Status */}
-            <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg transition-all duration-300 xs:col-span-2 lg:col-span-1">
+            <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg transition-all duration-300">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600">
                   Status do Sistema
@@ -290,22 +429,40 @@ const SuportePlataforma = () => {
           </div>
 
           {/* Seções principais */}
-          <div className="grid grid-cols-1 xs:grid-cols-2 gap-8 fade-up">
-            {/* Seção de Relatórios de Bugs */}
-            <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg transition-all duration-300">
+          {activeTab === 'bugs' ? (
+            <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg transition-all duration-300 fade-up">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Bug className="text-red-500" size={24} />
-                  <span className="bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
-                    Relatórios de Bugs
-                  </span>
-                  <Badge variant="destructive" className="ml-2">
-                    {bugReports.length}
-                  </Badge>
-                </CardTitle>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    <Bug className="text-red-500" size={24} />
+                    <CardTitle className="bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+                      Relatórios de Bugs
+                    </CardTitle>
+                    <Badge variant="destructive" className="ml-2">
+                      {bugReports.length}
+                    </Badge>
+                  </div>
+                  <Button 
+                    variant={showResolved ? "default" : "outline"} 
+                    onClick={() => setShowResolved(!showResolved)}
+                    className="flex items-center gap-2"
+                  >
+                    {showResolved ? (
+                      <>
+                        <XCircle className="h-4 w-4" />
+                        Ocultar Resolvidos
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-4 w-4" />
+                        Mostrar Resolvidos
+                      </>
+                    )}
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
-                {bugReports.length === 0 ? (
+                {bugReports.length === 0 && !showResolved ? (
                   <div className="text-center py-12">
                     <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 text-green-600 mb-4">
                       <CheckCircle2 size={24} />
@@ -319,72 +476,166 @@ const SuportePlataforma = () => {
                   </div>
                 ) : (
                   <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
-                    {bugReports.map((report) => (
-                      <div key={report.id} className="border border-gray-100 rounded-xl p-4 hover:bg-gray-50 transition-all duration-200 hover:shadow-md relative">
-                        <div className="flex justify-between items-start gap-4">
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-lg text-gray-800 mb-2">{report.title}</h3>
-                            <p className="text-gray-600 mb-3 leading-relaxed">{report.description}</p>
-                            <div className="space-y-1 text-sm text-gray-500">
-                              <p><span className="font-medium">Reportado por:</span> {report.userEmail}</p>
-                              <p><span className="font-medium">Página:</span> {report.pageUrl}</p>
-                              <p><span className="font-medium">Data:</span> {format(report.createdAt, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
+                    {/* Bugs Abertos */}
+                    {bugReports.length > 0 && (
+                      <div className="mb-6">
+                        <h3 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
+                          <span className="w-3 h-3 rounded-full bg-red-500"></span>
+                          Bugs Abertos ({bugReports.length})
+                        </h3>
+                        {bugReports.map((report) => (
+                          <div key={report.id} className="border border-gray-100 rounded-xl p-4 hover:bg-gray-50 transition-all duration-200 hover:shadow-md relative mb-4">
+                            <div className="flex justify-between items-start gap-4">
+                              <div className="flex-1">
+                                <h3 className="font-semibold text-lg text-gray-800 mb-2">{report.title}</h3>
+                                <p className="text-gray-600 mb-3 leading-relaxed">{report.description}</p>
+                                <div className="space-y-1 text-sm text-gray-500">
+                                  <p><span className="font-medium">Reportado por:</span> {report.userEmail}</p>
+                                  <p><span className="font-medium">Página:</span> {report.pageUrl}</p>
+                                  <p><span className="font-medium">Data:</span> {format(report.createdAt, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
+                                </div>
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleResolveBug(report.id)}
+                                className="flex items-center gap-2 border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300 transition-all duration-200 relative z-10"
+                              >
+                                <CheckCircle2 className="h-4 w-4" />
+                                Resolver
+                              </Button>
                             </div>
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleResolveBug(report.id)}
-                            className="flex items-center gap-2 border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300 transition-all duration-200 relative z-10"
-                          >
-                            <CheckCircle2 className="h-4 w-4" />
-                            Resolver
-                          </Button>
-                        </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
+
+                    {/* Bugs Resolvidos */}
+                    {showResolved && resolvedReports.length > 0 && (
+                      <div className="mt-8 pt-6 border-t border-gray-100">
+                        <h3 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
+                          <span className="w-3 h-3 rounded-full bg-green-500"></span>
+                          Bugs Resolvidos ({resolvedReports.length})
+                        </h3>
+                        {resolvedReports.map((report) => (
+                          <div key={report.id} className="border border-gray-100 rounded-xl p-4 hover:bg-gray-50 transition-all duration-200 hover:shadow-md relative mb-4">
+                            <div className="flex justify-between items-start gap-4">
+                              <div className="flex-1">
+                                <h3 className="font-semibold text-lg text-gray-800 mb-2">{report.title}</h3>
+                                <p className="text-gray-600 mb-3 leading-relaxed">{report.description}</p>
+                                <div className="space-y-1 text-sm text-gray-500">
+                                  <p><span className="font-medium">Reportado por:</span> {report.userEmail}</p>
+                                  <p><span className="font-medium">Página:</span> {report.pageUrl}</p>
+                                  <p><span className="font-medium">Data:</span> {format(report.createdAt, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
+                                </div>
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleReopenBug(report.id)}
+                                className="flex items-center gap-2 border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 transition-all duration-200 relative z-10"
+                              >
+                                <XCircle className="h-4 w-4" />
+                                Reabrir
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {showResolved && resolvedReports.length === 0 && (
+                      <div className="text-center py-8">
+                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 text-gray-600 mb-4">
+                          <FileText size={24} />
+                        </div>
+                        <h3 className="text-lg font-semibold mb-2 text-gray-800">
+                          Nenhum bug resolvido
+                        </h3>
+                        <p className="text-gray-500">
+                          Todos os bugs reportados estão em aberto.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
             </Card>
-
-            {/* Seção de Manuais e Tutoriais */}
-            <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg transition-all duration-300">
+          ) : (
+            <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg transition-all duration-300 fade-up">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
                   <FileText className="text-blue-500" size={24} />
-                  <span className="bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+                  <CardTitle className="bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
                     Manuais e Tutoriais
-                  </span>
+                  </CardTitle>
                   <Badge variant="secondary" className="ml-2">
                     {manuais.length}
                   </Badge>
-                </CardTitle>
+                </div>
               </CardHeader>
               <CardContent>
                 {/* Upload de arquivos */}
                 <div className="mb-8 p-6 bg-gray-50 rounded-xl border border-gray-100">
                   <h3 className="font-semibold text-lg mb-4 text-gray-800">Adicionar Novo Manual</h3>
-                  <div className="flex gap-3">
-                    <Input
+                  
+                  <div 
+                    className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                      isDragActive 
+                        ? 'border-eccos-purple bg-purple-50' 
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                    onDragEnter={handleDrag}
+                    onDragOver={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDrop={handleDrop}
+                    onClick={openFileDialog}
+                  >
+                    <input
+                      ref={fileInputRef}
                       type="file"
                       accept=".pdf"
                       onChange={handleFileChange}
-                      className="flex-1 border-gray-200 focus:border-eccos-purple focus:ring-eccos-purple"
+                      className="hidden"
                     />
+                    <div className="flex flex-col items-center justify-center gap-3">
+                      <Upload className="h-10 w-10 text-gray-400" />
+                      <p className="text-gray-600">
+                        <span className="text-eccos-purple font-medium">Clique para enviar</span> ou arraste e solte
+                      </p>
+                      <p className="text-sm text-gray-500">PDF (máx. 10MB)</p>
+                    </div>
+                  </div>
+                  
+                  {file && (
+                    <div className="mt-4 flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <FileText className="text-gray-500" />
+                        <span className="font-medium">{file.name}</span>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => setFile(null)}
+                        className="text-gray-500 hover:text-red-500"
+                      >
+                        <XCircle className="h-5 w-5" />
+                      </Button>
+                    </div>
+                  )}
+                  
+                  <div className="mt-4 flex justify-end">
                     <Button
                       onClick={handleUpload}
                       disabled={!file || uploading}
                       className="flex items-center gap-2 bg-eccos-purple hover:bg-sidebar text-white transition-all duration-200"
                     >
                       <Upload className="h-4 w-4" />
-                      {uploading ? "Enviando..." : "Enviar"}
+                      {uploading ? "Enviando..." : "Enviar Arquivo"}
                     </Button>
                   </div>
-                  <p className="text-sm text-gray-500 mt-3">
-                    Apenas arquivos PDF são permitidos. Tamanho máximo: 10MB.
-                  </p>
                 </div>
+                
                 <h3 className="font-semibold text-lg mb-4 text-gray-800">Manuais Disponíveis</h3>
                 {manuais.length === 0 ? (
                   <div className="text-center py-12">
@@ -399,14 +650,14 @@ const SuportePlataforma = () => {
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                  <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
                     {manuais.map((manual, index) => (
                       <div key={index} className="flex items-center justify-between p-4 border border-gray-100 rounded-xl hover:bg-gray-50 transition-all duration-200 hover:shadow-md">
                         <div className="flex items-center gap-3">
                           <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100 text-blue-600">
                             <FileText className="h-5 w-5" />
                           </div>
-                          <span className="font-medium text-gray-800 truncate max-w-[200px]">{manual.name}</span>
+                          <span className="font-medium text-gray-800 truncate max-w-xs">{manual.name}</span>
                         </div>
                         <div className="flex gap-2">
                           <a
@@ -435,7 +686,7 @@ const SuportePlataforma = () => {
                 )}
               </CardContent>
             </Card>
-          </div>
+          )}
         </div>
 
         {/* Rodapé */}
