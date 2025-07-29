@@ -5,12 +5,12 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyByPn9InuXX2Dp-_nef-Om0ii4zfBwfMFk",
-  authDomain: "plataforma-de-tecnologia.firebaseapp.com",
-  projectId: "plataforma-de-tecnologia",
-  storageBucket: "plataforma-de-tecnologia.firebasestorage.app",
-  messagingSenderId: "1083542320286",
-  appId: "1:1083542320286:web:5c1a5b7203f050186e778f"
+  apiKey: "AIzaSyBa-bbn3UllojrA9z23jsBEDrytq0X978c",
+  authDomain: "plataforma-eccos-232ee.firebaseapp.com",
+  projectId: "plataforma-eccos-232ee",
+  storageBucket: "plataforma-eccos-232ee.firebasestorage.app",
+  messagingSenderId: "347524267259",
+  appId: "1:347524267259:web:9042fa48eb19caec01445e"
 };
 
 const app = initializeApp(firebaseConfig);
