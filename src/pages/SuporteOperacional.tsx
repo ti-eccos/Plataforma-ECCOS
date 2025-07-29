@@ -218,6 +218,32 @@ const SuporteOperacional = () => {
     }
   };
 
+  const handleTypeChange = async (newType: string) => {
+    if (!selectedRequest) return;
+    
+    try {
+      const docRef = doc(db, selectedRequest.collectionName, selectedRequest.id);
+      await updateDoc(docRef, { tipo: newType });
+      
+      await createNotification({
+        title: "Alteração de Tipo",
+        message: `Tipo do seu chamado foi alterado para: ${newType}`,
+        link: "minhas-solicitacoes",
+        createdAt: new Date(),
+        readBy: [],
+        recipients: [selectedRequest.userEmail],
+        isBatch: false,
+      });
+      
+      toast.success("Tipo atualizado");
+      queryClient.invalidateQueries({ queryKey: ['allRequests'] });
+      setSelectedRequest({ ...selectedRequest, tipo: newType });
+    } catch (error) {
+      toast.error("Erro ao atualizar tipo");
+      console.error("Error:", error);
+    }
+  };
+
   const handleDeleteRequest = (request: RequestData) => {
     setRequestToDelete({
       id: request.id,
@@ -272,7 +298,7 @@ const SuporteOperacional = () => {
           {/* Header */}
           <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
             <Wrench className="text-eccos-purple" size={35} />
-            Solicitações de Suporte
+            Solicitações de Manutenção
           </h1>
 
           {isLoading ? (
@@ -391,7 +417,7 @@ const SuporteOperacional = () => {
                   <CardContent className="p-12">
                     <div className="text-center text-muted-foreground">
                       <Wrench className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                      <p className="text-lg">Nenhuma solicitação de suporte encontrada</p>
+                      <p className="text-lg">Nenhuma solicitação de Manutenção encontrada</p>
                       <p className="text-sm">Tente ajustar os filtros para ver mais resultados</p>
                     </div>
                   </CardContent>
@@ -459,118 +485,135 @@ const SuporteOperacional = () => {
           )}
 
           {/* Dialog de detalhes */}
-         <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-  <DialogContent className="max-w-3xl bg-white border border-gray-100 rounded-2xl overflow-hidden">
-    {selectedRequest && (
-      <div className="flex flex-col h-[80vh]">
-        {/* Cabeçalho fixo */}
-        <DialogHeader className="p-6 pb-2 border-b border-gray-100 bg-white sticky top-0 z-10">
-          <DialogTitle className="flex items-center gap-2">
-            <Wrench className="h-5 w-5 text-purple-500" />
-            <span className="bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
-              Chamado de Suporte - {selectedRequest.userName || selectedRequest.userEmail}
-            </span>
-          </DialogTitle>
-          <DialogDescription asChild>
-            <div className="flex items-center justify-between text-gray-500 px-1 mt-2">
-              <div>
-                {format(
-                  selectedRequest.createdAt.toDate(),
-                  "dd/MM/yyyy HH:mm",
-                  { locale: ptBR }
-                )}
-              </div>
-              <div>{getStatusBadge(selectedRequest.status)}</div>
-            </div>
-          </DialogDescription>
-        </DialogHeader>
+          <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+            <DialogContent className="max-w-3xl bg-white border border-gray-100 rounded-2xl overflow-hidden">
+              {selectedRequest && (
+                <div className="flex flex-col h-[80vh]">
+                  {/* Cabeçalho fixo */}
+                  <DialogHeader className="p-6 pb-2 border-b border-gray-100 bg-white sticky top-0 z-10">
+                    <DialogTitle className="flex items-center gap-2">
+                      <Wrench className="h-5 w-5 text-purple-500" />
+                      <span className="bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+                        Chamado de Manutenção - {selectedRequest.userName || selectedRequest.userEmail}
+                      </span>
+                    </DialogTitle>
+                    <DialogDescription asChild>
+                      <div className="flex items-center justify-between text-gray-500 px-1 mt-2">
+                        <div>
+                          {format(
+                            selectedRequest.createdAt.toDate(),
+                            "dd/MM/yyyy HH:mm",
+                            { locale: ptBR }
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button className="cursor-pointer">
+                                {getStatusBadge(selectedRequest.status)}
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="rounded-xl" align="end">
+                              {["pending", "in-progress", "completed", "canceled"].map((status) => (
+                                <DropdownMenuItem 
+                                  key={status} 
+                                  onSelect={() => handleStatusChange(status as RequestStatus)}
+                                  className="cursor-pointer px-4 py-2 hover:bg-gray-100"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    {getStatusBadge(status as RequestStatus)}
+                                  </div>
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    </DialogDescription>
+                  </DialogHeader>
 
-        {/* Conteúdo rolável */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Conteúdo específico para suporte */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Tipo</p>
-              <p className="font-medium">{selectedRequest.tipo || "Não especificado"}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Solicitante</p>
-              <p className="font-medium">{selectedRequest.userName}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Unidade</p>
-              <p className="font-medium">{selectedRequest.unit}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Localização</p>
-              <p className="font-medium">{selectedRequest.location}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Categoria</p>
-              <p className="font-medium">{selectedRequest.category}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Prioridade</p>
-              <div className="mt-1">
-                {getPriorityLevelBadge(selectedRequest.priority)}
-              </div>
-            </div>
-          </div>
-          {selectedRequest.deviceInfo && (
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-gray-500">Identificação do Equipamento</p>
-              <div className="bg-gray-50 p-4 rounded-xl">
-                <p className="break-words">{selectedRequest.deviceInfo}</p>
-              </div>
-            </div>
-          )}
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-gray-500">Descrição do Problema</p>
-            <div className="bg-gray-50 p-4 rounded-xl">
-              <p className="whitespace-pre-wrap break-words">{selectedRequest.description}</p>
-            </div>
-          </div>
-          {/* Controle de status */}
-          <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
-                  Alterar Status
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="rounded-xl">
-                {["pending", "in-progress", "completed", "canceled"].map((status) => (
-                  <DropdownMenuItem 
-                    key={status} 
-                    onSelect={() => handleStatusChange(status as RequestStatus)}
-                    className="cursor-pointer px-4 py-2 hover:bg-gray-100"
-                  >
-                    <div className="flex items-center gap-2">
-                      {getStatusBadge(status as RequestStatus)}
+                  {/* Conteúdo rolável */}
+                  <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                    {/* Conteúdo específico para suporte */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Tipo</p>
+                        <div className="flex items-center gap-2">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="sm" className="flex items-center gap-1">
+                                {selectedRequest.tipo || "Não especificado"}
+                                <ChevronDown className="h-3 w-3" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="rounded-xl">
+                              {supportTypes.map((type) => (
+                                <DropdownMenuItem 
+                                  key={type} 
+                                  onSelect={() => handleTypeChange(type)}
+                                  className="cursor-pointer px-4 py-2 hover:bg-gray-100"
+                                >
+                                  {type}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Solicitante</p>
+                        <p className="font-medium">{selectedRequest.userName}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Unidade</p>
+                        <p className="font-medium">{selectedRequest.unit}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Localização</p>
+                        <p className="font-medium">{selectedRequest.location}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Categoria</p>
+                        <p className="font-medium">{selectedRequest.category}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Prioridade</p>
+                        <div className="mt-1">
+                          {getPriorityLevelBadge(selectedRequest.priority)}
+                        </div>
+                      </div>
                     </div>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
+                    {selectedRequest.deviceInfo && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-gray-500">Identificação do Equipamento</p>
+                        <div className="bg-gray-50 p-4 rounded-xl">
+                          <p className="break-words">{selectedRequest.deviceInfo}</p>
+                        </div>
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-gray-500">Descrição do Problema</p>
+                      <div className="bg-gray-50 p-4 rounded-xl">
+                        <p className="whitespace-pre-wrap break-words">{selectedRequest.description}</p>
+                      </div>
+                    </div>
+                  </div>
 
-        {/* Rodapé fixo opcional */}
-        <DialogFooter className="p-6 border-t border-gray-100 gap-2 bg-white sticky bottom-0 z-10">
-          <Button
-            variant="destructive"
-            onClick={() => handleDeleteRequest(selectedRequest)}
-            className="w-full sm:w-auto"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Excluir Chamado
-          </Button>
-        </DialogFooter>
-      </div>
-    )}
-  </DialogContent>
-</Dialog>
+                  {/* Rodapé fixo opcional */}
+                  <DialogFooter className="p-6 border-t border-gray-100 gap-2 bg-white sticky bottom-0 z-10">
+                    <Button
+                      variant="destructive"
+                      onClick={() => handleDeleteRequest(selectedRequest)}
+                      className="w-full sm:w-auto"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir Chamado
+                    </Button>
+                  </DialogFooter>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
 
           {/* Chat Admin */}
           <ChatAdmin

@@ -1,8 +1,14 @@
 // src/pages/admin/SuportePlataforma.tsx
 import React, { useState, useEffect, useRef } from 'react';
+import { useToast } from "@/hooks/use-toast";
 import {
-  useToast
-} from "@/hooks/use-toast";
+  getStorage,
+  ref,
+  listAll,
+  getDownloadURL,
+  uploadBytes,
+  deleteObject
+} from "firebase/storage";
 import {
   collection,
   getDocs,
@@ -12,9 +18,10 @@ import {
   doc,
   deleteDoc,
 } from "firebase/firestore";
-import { ref, uploadBytes, listAll, getDownloadURL, deleteObject } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
-import { FileText, Download, XCircle, CheckCircle2, Bug, Upload, Headphones } from 'lucide-react';
+import app from "@/lib/firebase";
+import { getFirestore } from "firebase/firestore";
+const db = getFirestore(app);
+import { FileText, Download, XCircle, CheckCircle2, Bug, Upload, Headphones, Trash2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +29,6 @@ import { Badge } from "@/components/ui/badge";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import AppLayout from "@/components/AppLayout";
-import { Trash2 } from 'lucide-react';
 
 interface BugReport {
   id: string;
@@ -37,20 +43,22 @@ interface BugReport {
 const SuportePlataforma = () => {
   const { toast } = useToast();
   const [bugReports, setBugReports] = useState<BugReport[]>([]);
+  const [resolvedReports, setResolvedReports] = useState<BugReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [file, setFile] = useState<File | null>(null);
   const [manuais, setManuais] = useState<{ name: string; url: string }[]>([]);
   const [uploading, setUploading] = useState(false);
   const [activeTab, setActiveTab] = useState<'bugs' | 'manuais'>('bugs');
-  const [resolvedReports, setResolvedReports] = useState<BugReport[]>([]);
   const [showResolved, setShowResolved] = useState(false);
   const [isDragActive, setIsDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const storage = getStorage(app);
 
   // Carregar relatórios de bugs
   useEffect(() => {
     const fetchBugReports = async () => {
       try {
+        setLoading(true);
         const openQuery = query(
           collection(db, "bugReports"),
           where("status", "==", "open")
@@ -94,14 +102,8 @@ const SuportePlataforma = () => {
           });
         });
         
-        // Ordenar por data (mais recente primeiro)
-        setBugReports(openReports.sort((a, b) =>
-          b.createdAt.getTime() - a.createdAt.getTime()
-        ));
-        setResolvedReports(resolvedReports.sort((a, b) =>
-          b.createdAt.getTime() - a.createdAt.getTime()
-        ));
-        setLoading(false);
+        setBugReports(openReports.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
+        setResolvedReports(resolvedReports.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
       } catch (error) {
         console.error("Erro ao carregar relatórios de bugs:", error);
         toast({
@@ -109,6 +111,7 @@ const SuportePlataforma = () => {
           description: "Não foi possível carregar os relatórios de bugs.",
           variant: "destructive",
         });
+      } finally {
         setLoading(false);
       }
     };
@@ -118,47 +121,48 @@ const SuportePlataforma = () => {
   // Carregar manuais existentes
   useEffect(() => {
     const fetchManuais = async () => {
-      const storageRef = ref(storage, 'manuais/');
       try {
+        const storageRef = ref(storage, 'manuais/');
         const listResult = await listAll(storageRef);
+        
         const files = await Promise.all(
           listResult.items.map(async (item) => {
-            const url = await getDownloadURL(item);
-            return { name: item.name, url };
+            try {
+              const url = await getDownloadURL(item);
+              return { name: item.name, url };
+            } catch (error) {
+              console.error(`Erro ao obter URL para ${item.name}:`, error);
+              return null;
+            }
           })
         );
-        setManuais(files);
+        
+        setManuais(files.filter(Boolean) as { name: string; url: string }[]);
       } catch (error) {
         console.error("Erro ao carregar manuais:", error);
         toast({
           title: "Erro",
-          description: "Não foi possível carregar os manuais.",
+          description: "Não foi possível carregar os manuais. Verifique sua conexão.",
           variant: "destructive",
         });
+        setTimeout(fetchManuais, 5000);
       }
     };
     fetchManuais();
-  }, [toast]);
-
-  // Animação de entrada (fade-up)
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('visible');
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-    document.querySelectorAll('.fade-up').forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
+  }, [toast, storage]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+      const selectedFile = e.target.files[0];
+      if (selectedFile.type === 'application/pdf') {
+        setFile(selectedFile);
+      } else {
+        toast({
+          title: "Tipo de arquivo inválido",
+          description: "Apenas arquivos PDF são permitidos.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -191,9 +195,7 @@ const SuportePlataforma = () => {
   };
 
   const openFileDialog = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
+    fileInputRef.current?.click();
   };
 
   const handleUpload = async () => {
@@ -205,27 +207,20 @@ const SuportePlataforma = () => {
       });
       return;
     }
+
     setUploading(true);
     try {
-      // Verificar se o arquivo é PDF
-      if (file.type !== 'application/pdf') {
-        toast({
-          title: "Tipo de arquivo inválido",
-          description: "Apenas arquivos PDF são permitidos.",
-          variant: "destructive",
-        });
-        return;
-      }
       const storageRef = ref(storage, `manuais/${file.name}`);
       await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      
+      setManuais([...manuais, { name: file.name, url }]);
+      setFile(null);
+      
       toast({
         title: "Sucesso!",
         description: "Arquivo enviado com sucesso.",
       });
-      // Atualizar a lista de manuais
-      const url = await getDownloadURL(storageRef);
-      setManuais([...manuais, { name: file.name, url }]);
-      setFile(null);
     } catch (error) {
       console.error("Erro ao fazer upload:", error);
       toast({
@@ -242,11 +237,11 @@ const SuportePlataforma = () => {
     try {
       const storageRef = ref(storage, `manuais/${name}`);
       await deleteObject(storageRef);
+      setManuais(manuais.filter(m => m.name !== name));
       toast({
         title: "Sucesso",
         description: "Manual removido com sucesso.",
       });
-      setManuais(manuais.filter(m => m.name !== name));
     } catch (error) {
       console.error("Erro ao excluir manual:", error);
       toast({
@@ -264,17 +259,17 @@ const SuportePlataforma = () => {
         status: "resolved",
         resolvedAt: new Date()
       });
+      
+      const resolvedBug = bugReports.find(report => report.id === id);
+      if (resolvedBug) {
+        setResolvedReports([{...resolvedBug, status: 'resolved'}, ...resolvedReports]);
+        setBugReports(bugReports.filter(report => report.id !== id));
+      }
+      
       toast({
         title: "Bug resolvido",
         description: "O problema foi marcado como resolvido.",
       });
-      
-      // Mover bug para lista de resolvidos
-      const resolvedBug = bugReports.find(report => report.id === id);
-      if (resolvedBug) {
-        setResolvedReports([resolvedBug, ...resolvedReports]);
-        setBugReports(bugReports.filter(report => report.id !== id));
-      }
     } catch (error) {
       console.error("Erro ao marcar bug como resolvido:", error);
       toast({
@@ -292,17 +287,17 @@ const SuportePlataforma = () => {
         status: "open",
         resolvedAt: null
       });
+      
+      const reopenedBug = resolvedReports.find(report => report.id === id);
+      if (reopenedBug) {
+        setBugReports([{...reopenedBug, status: 'open'}, ...bugReports]);
+        setResolvedReports(resolvedReports.filter(report => report.id !== id));
+      }
+      
       toast({
         title: "Bug reaberto",
         description: "O problema foi marcado como aberto novamente.",
       });
-      
-      // Mover bug de volta para lista de abertos
-      const reopenedBug = resolvedReports.find(report => report.id === id);
-      if (reopenedBug) {
-        setBugReports([reopenedBug, ...bugReports]);
-        setResolvedReports(resolvedReports.filter(report => report.id !== id));
-      }
     } catch (error) {
       console.error("Erro ao reabrir bug:", error);
       toast({
@@ -314,26 +309,25 @@ const SuportePlataforma = () => {
   };
 
   const handleDeleteBug = async (id: string) => {
-  try {
-    const bugRef = doc(db, "bugReports", id);
-    await deleteDoc(bugRef);
-    toast({
-      title: "Bug Excluído",
-      description: "O relatório foi removido com sucesso.",
-    });
-    // Atualiza os estados removendo o bug excluído
-    setBugReports(bugReports.filter(report => report.id !== id));
-    setResolvedReports(resolvedReports.filter(report => report.id !== id));
-  } catch (error) {
-    console.error("Erro ao excluir bug:", error);
-    toast({
-      title: "Erro",
-      description: "Falha ao remover o relatório.",
-      variant: "destructive",
-    });
-  }
-};
-  
+    try {
+      await deleteDoc(doc(db, "bugReports", id));
+      setBugReports(bugReports.filter(report => report.id !== id));
+      setResolvedReports(resolvedReports.filter(report => report.id !== id));
+      
+      toast({
+        title: "Bug Excluído",
+        description: "O relatório foi removido com sucesso.",
+      });
+    } catch (error) {
+      console.error("Erro ao excluir bug:", error);
+      toast({
+        title: "Erro",
+        description: "Falha ao remover o relatório.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <AppLayout>
@@ -352,7 +346,6 @@ const SuportePlataforma = () => {
   return (
     <AppLayout>
       <div className="min-h-screen bg-white relative">
-        {/* Conteúdo principal */}
         <div className="relative z-20 space-y-8 p-6 md:p-12 fade-up">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
@@ -382,7 +375,6 @@ const SuportePlataforma = () => {
 
           {/* Cards de estatísticas */}
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-            {/* Card Bugs Abertos */}
             <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg transition-all duration-300">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600">
@@ -399,7 +391,6 @@ const SuportePlataforma = () => {
               </CardContent>
             </Card>
 
-            {/* Card Bugs Resolvidos */}
             <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg transition-all duration-300">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600">
@@ -416,7 +407,6 @@ const SuportePlataforma = () => {
               </CardContent>
             </Card>
 
-            {/* Card Manuais */}
             <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg transition-all duration-300">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600">
@@ -433,7 +423,6 @@ const SuportePlataforma = () => {
               </CardContent>
             </Card>
 
-            {/* Card Status */}
             <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg transition-all duration-300">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600">
@@ -451,7 +440,6 @@ const SuportePlataforma = () => {
             </Card>
           </div>
 
-          {/* Seções principais */}
           {activeTab === 'bugs' ? (
             <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg transition-all duration-300 fade-up">
               <CardHeader>
@@ -499,7 +487,6 @@ const SuportePlataforma = () => {
                   </div>
                 ) : (
                   <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
-                    {/* Bugs Abertos */}
                     {bugReports.length > 0 && (
                       <div className="mb-6">
                         <h3 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
@@ -519,33 +506,31 @@ const SuportePlataforma = () => {
                                 </div>
                               </div>
                               <div className="flex gap-2">
-  <Button
-    variant="outline"
-    size="sm"
-    onClick={() => handleResolveBug(report.id)}
-    className="flex items-center gap-2 border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300 transition-all duration-200"
-  >
-    <CheckCircle2 className="h-4 w-4" />
-    Resolver
-  </Button>
-
-  <Button
-    variant="outline"
-    size="sm"
-    onClick={() => handleDeleteBug(report.id)}
-    className="flex items-center gap-2 border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 transition-all duration-200"
-  >
-    <Trash2 className="h-4 w-4" />
-    Excluir
-  </Button>
-</div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleResolveBug(report.id)}
+                                  className="flex items-center gap-2 border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300 transition-all duration-200"
+                                >
+                                  <CheckCircle2 className="h-4 w-4" />
+                                  Resolver
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDeleteBug(report.id)}
+                                  className="flex items-center gap-2 border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 transition-all duration-200"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  Excluir
+                                </Button>
+                              </div>
                             </div>
                           </div>
                         ))}
                       </div>
                     )}
 
-                    {/* Bugs Resolvidos */}
                     {showResolved && resolvedReports.length > 0 && (
                       <div className="mt-8 pt-6 border-t border-gray-100">
                         <h3 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
@@ -564,27 +549,26 @@ const SuportePlataforma = () => {
                                   <p><span className="font-medium">Data:</span> {format(report.createdAt, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
                                 </div>
                               </div>
-                             <div className="flex gap-2">
-  <Button
-    variant="outline"
-    size="sm"
-    onClick={() => handleReopenBug(report.id)}
-    className="flex items-center gap-2 border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 transition-all duration-200"
-  >
-    <XCircle className="h-4 w-4" />
-    Reabrir
-  </Button>
-
-  <Button
-    variant="outline"
-    size="sm"
-    onClick={() => handleDeleteBug(report.id)}
-    className="flex items-center gap-2 border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 transition-all duration-200"
-  >
-    <Trash2 className="h-4 w-4" />
-    Excluir
-  </Button>
-</div>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleReopenBug(report.id)}
+                                  className="flex items-center gap-2 border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 transition-all duration-200"
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                  Reabrir
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDeleteBug(report.id)}
+                                  className="flex items-center gap-2 border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 transition-all duration-200"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  Excluir
+                                </Button>
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -622,7 +606,6 @@ const SuportePlataforma = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                {/* Upload de arquivos */}
                 <div className="mb-8 p-6 bg-gray-50 rounded-xl border border-gray-100">
                   <h3 className="font-semibold text-lg mb-4 text-gray-800">Adicionar Novo Manual</h3>
                   
@@ -736,7 +719,6 @@ const SuportePlataforma = () => {
           )}
         </div>
 
-        {/* Rodapé */}
         <footer className="relative z-20 bg-gray-50 py-10 px-4 md:p-12 fade-up">
           <div className="max-w-6xl mx-auto">
             <div className="text-center">
