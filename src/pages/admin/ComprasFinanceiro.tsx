@@ -23,7 +23,7 @@ import {
   getRequestById,
   deleteRequest
 } from "@/services/sharedService";
-import {  RequestStatus, RequestData} from '@/services/types'
+import { RequestStatus, RequestData } from '@/services/types'
 import { useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/components/AppLayout";
 import { 
@@ -73,6 +73,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Timestamp } from "firebase/firestore";
+import { Navigate } from "react-router-dom";
+import Unauthorized from "@/pages/Unauthorized";
 
 const getStatusBadge = (status: RequestStatus) => {
   switch (status) {
@@ -90,7 +92,7 @@ const getStatusBadge = (status: RequestStatus) => {
 
 const ComprasFinanceiro = () => {
   const queryClient = useQueryClient();
-  const { currentUser } = useAuth();
+  const { currentUser, userPermissions } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRequest, setSelectedRequest] = useState<RequestData | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -108,6 +110,13 @@ const ComprasFinanceiro = () => {
   
   const purchaseTypes = ["Compra Pedagógica", "Compra Administrativa", "Compra Infraestrutura"];
   const [selectedTypes, setSelectedTypes] = useState<string[]>(purchaseTypes);
+
+  // Verificar permissões
+  const hasPermission = userPermissions['compras-financeiro'] || currentUser?.email === "suporte@colegioeccos.com.br";
+  
+  if (!hasPermission) {
+    return <Unauthorized />;
+  }
 
   const { data: allRequests = [], isLoading } = useQuery({
     queryKey: ['allRequests'],
@@ -177,7 +186,6 @@ const ComprasFinanceiro = () => {
     try {
       const updateData: any = { status: newStatus };
       
-      // Adiciona data de entrega se status for 'waitingDelivery'
       if (newStatus === "waitingDelivery" && deliveryDate) {
         updateData.deliveryDate = Timestamp.fromDate(deliveryDate);
       }
@@ -204,7 +212,6 @@ const ComprasFinanceiro = () => {
     }
   };
 
-  // Função para salvar/atualizar a data de entrega
   const handleSaveDeliveryDate = async () => {
     if (!selectedRequest) return;
     
@@ -215,13 +222,11 @@ const ComprasFinanceiro = () => {
       if (deliveryDate) {
         updateData.deliveryDate = Timestamp.fromDate(deliveryDate);
       } else {
-        // Remove a data de entrega se deliveryDate for null
         updateData.deliveryDate = null;
       }
 
       await updateDoc(docRef, updateData);
       
-      // Atualiza localmente
       setSelectedRequest({ 
         ...selectedRequest, 
         deliveryDate: deliveryDate ? Timestamp.fromDate(deliveryDate) : null 
@@ -236,7 +241,6 @@ const ComprasFinanceiro = () => {
     }
   };
 
-  // Função para remover a data de entrega
   const handleRemoveDeliveryDate = async () => {
     if (!selectedRequest) return;
     
@@ -247,7 +251,6 @@ const ComprasFinanceiro = () => {
         deliveryDate: null
       });
       
-      // Atualiza localmente
       setSelectedRequest({ 
         ...selectedRequest, 
         deliveryDate: null 
@@ -298,7 +301,6 @@ const ComprasFinanceiro = () => {
         selectedTypes.includes(req.tipo))
     });
 
-  // Calcular estatísticas
   const totalRequests = filteredRequests.length;
   const pendingRequests = filteredRequests.filter(req => req.status === 'pending').length;
   const approvedRequests = filteredRequests.filter(req => req.status === 'approved').length;
@@ -307,14 +309,12 @@ const ComprasFinanceiro = () => {
   return (
     <AppLayout>
       <div className="min-h-screen bg-white relative overflow-hidden">
-        {/* Background decorativo */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-sidebar blur-3xl opacity-5"></div>
           <div className="absolute right-1/4 bottom-1/4 h-80 w-80 rounded-full bg-eccos-purple blur-3xl opacity-5"></div>
         </div>
 
         <div className="relative z-10 space-y-8 p-6 md:p-12">
-          {/* Header */}
           <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
             <ShoppingCart className="text-eccos-purple" size={35} />
             Solicitações de Compra
@@ -326,7 +326,6 @@ const ComprasFinanceiro = () => {
             </div>
           ) : (
             <>
-              {/* Cards de estatísticas */}
               <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
                   <CardHeader className="pb-2">
@@ -392,7 +391,6 @@ const ComprasFinanceiro = () => {
                 </Card>
               </div>
 
-              {/* Filtros */}
               <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg">
                 <CardContent className="p-6">
                   <div className="flex flex-col sm:flex-row gap-4">
@@ -434,7 +432,6 @@ const ComprasFinanceiro = () => {
                 </CardContent>
               </Card>
 
-              {/* Tabela */}
               {filteredRequests.length === 0 ? (
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg">
                   <CardContent className="p-12">
@@ -518,12 +515,10 @@ const ComprasFinanceiro = () => {
             </>
           )}
 
-          {/* Dialog de detalhes */}
           <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
             <DialogContent className="max-w-3xl bg-white border border-gray-100 rounded-2xl overflow-hidden">
               {selectedRequest && (
                 <div className="flex flex-col h-[80vh]">
-                  {/* Cabeçalho fixo */}
                   <DialogHeader className="p-6 pb-2 border-b border-gray-100 bg-white sticky top-0 z-10">
                     <DialogTitle className="flex items-center gap-2">
                       <ShoppingCart className="h-5 w-5 text-purple-500" />
@@ -566,9 +561,7 @@ const ComprasFinanceiro = () => {
                     </DialogDescription>
                   </DialogHeader>
 
-                  {/* Conteúdo rolável */}
                   <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                    {/* Conteúdo específico para compras */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm font-medium text-gray-500">Tipo</p>
@@ -611,7 +604,6 @@ const ComprasFinanceiro = () => {
                         <p className="whitespace-pre-wrap break-words">{selectedRequest.justification}</p>
                       </div>
                     </div>
-                    {/* Campo de data de entrega */}
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium text-gray-500">Previsão de Entrega</p>
@@ -675,7 +667,6 @@ const ComprasFinanceiro = () => {
                     </div>
                   </div>
 
-                  {/* Rodapé fixo opcional */}
                   <DialogFooter className="p-6 border-t border-gray-100 gap-2 bg-white sticky bottom-0 z-10">
                     <Button
                       variant="destructive"
@@ -691,7 +682,6 @@ const ComprasFinanceiro = () => {
             </DialogContent>
           </Dialog>
 
-          {/* Chat Admin */}
           <ChatAdmin 
             request={chatRequest} 
             isOpen={isChatOpen} 
@@ -699,7 +689,6 @@ const ComprasFinanceiro = () => {
             onMessageSent={() => queryClient.invalidateQueries({ queryKey: ['allRequests'] })}
           />
 
-          {/* Dialog de confirmação de exclusão */}
           <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
             <AlertDialogContent className="rounded-2xl">
               <AlertDialogHeader>
@@ -721,7 +710,6 @@ const ComprasFinanceiro = () => {
           </AlertDialog>
         </div>
 
-        {/* Footer */}
         <footer className="relative z-10 bg-gray-50 py-10 px-4 md:px-12">
           <div className="max-w-6xl mx-auto text-center">
             <p className="text-gray-500 text-sm">
