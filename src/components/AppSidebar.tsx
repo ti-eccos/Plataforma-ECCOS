@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";import { Link, useLocation } from "react-router-dom";
+import React, { useMemo, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import {
   Home,
   Laptop,
@@ -15,7 +16,9 @@ import {
   Wrench,
   Warehouse,
   Bug,
-  Calendar1,
+  Calendar as CalendarIcon,
+  Shield,
+  Settings
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,21 +31,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Logo from "@/images/logo-eccos.png";
-type UserRole = "admin" | "financeiro" | "operacional" | "";
 
-interface User {
-  role: UserRole;
-}
-
-declare module "@/contexts/AuthContext" {
-  interface AuthContextType {
-    currentUser: User | null;
-    isAdmin: boolean;
-    signOut: () => void;
-  }
-}
-
-// Item principal da Sidebar
 const SidebarItem = ({ icon: Icon, label, href, active, expanded }: any) => {
   return (
     <Link
@@ -59,7 +48,6 @@ const SidebarItem = ({ icon: Icon, label, href, active, expanded }: any) => {
       tabIndex={0}
       aria-current={active ? "page" : undefined}
     >
-      {/* Efeito de brilho */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
       <Icon
         className={cn(
@@ -80,7 +68,6 @@ const SidebarItem = ({ icon: Icon, label, href, active, expanded }: any) => {
   );
 };
 
-// Submenu da Sidebar
 const SubMenuItem = ({ href, active, expanded, children, icon: Icon }: any) => {
   return (
     <Link
@@ -117,7 +104,6 @@ const SubMenuItem = ({ href, active, expanded, children, icon: Icon }: any) => {
   );
 };
 
-// Menu com subitens expansíveis
 const SidebarSubMenu = ({ label, icon: Icon, children, expanded }: any) => {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
@@ -197,13 +183,11 @@ const SidebarSubMenu = ({ label, icon: Icon, children, expanded }: any) => {
   );
 };
 
-// Sidebar Principal
 export const AppSidebar = () => {
   const [expanded, setExpanded] = useState(true);
   const location = useLocation();
   const { signOut, currentUser, userPermissions, isSuperAdmin } = useAuth();
   
-  // Menus dinâmicos baseados em permissões
   const userMenuItems = [
     { icon: Home, label: "Página Inicial", href: "/" },
     { icon: FileText, label: "Minhas Solicitações", href: "/minhas-solicitacoes" },
@@ -218,34 +202,90 @@ export const AppSidebar = () => {
     },
   ];
 
-  // Itens administrativos baseados em permissões
   const adminMenuItems = [
-  { icon: ShoppingCart, label: "Compras", href: "/compras-financeiro", permission: "financeiro" },
-  { icon: ShoppingCart, label: "Compras Tecnologia", href: "/compras-tecnologia", permission: "financeiro" },
-  { icon: Wrench, label: "Manutenção", href: "/suporte-operacional", permission: "suporte-operacional" },
-  { icon: CalendarCheck, label: "Reservas", href: "/solicitacoes", permission: "solicitacoes" },
-  { icon: Calendar1, label: "Calendário", href: "/calendario", permission: "solicitacoes" },
-  { icon: CalendarCheck2, label: "Disponibilidade", href: "/disponibilidade", permission: "equipamentos" },
-  { icon: Laptop, label: "Equipamentos", href: "/equipamentos", permission: "equipamentos" },
-  { icon: Users, label: "Usuários", href: "/usuarios", permission: "usuarios" },
-  { icon: Warehouse, label: "Estoque", href: "/estoque", permission: "estoque" },
-  { icon: Bell, label: "Notificações", href: "/notificacoes", permission: "notificacoes" },
-  { icon: Bug, label: "Suporte Plataforma", href: "/suporte-plataforma", permission: "suporte-plataforma" },
-];
-if (isSuperAdmin) {
-  adminMenuItems.push({
-    icon: Users,
-    label: "Permissões",
-    href: "/roles",
-    permission: null // Sem verificação extra, só aparece se for superadmin
-  });
-}
-  // Filtra itens administrativos baseado nas permissões
- const filteredAdminItems = useMemo(() => {
-  return adminMenuItems.filter(item => 
-    isSuperAdmin || (item.permission && userPermissions[item.permission])
-  );
-}, [adminMenuItems, isSuperAdmin, userPermissions]);
+    { 
+      icon: ShoppingCart, 
+      label: "Compras Financeiro", 
+      href: "/compras-financeiro", 
+      permission: "compras-financeiro" 
+    },
+    { 
+      icon: ShoppingCart, 
+      label: "Compras Tecnologia", 
+      href: "/compras-tecnologia", 
+      permission: "compras-tecnologia" 
+    },
+    { 
+      icon: Wrench, 
+      label: "Manutenção", 
+      href: "/suporte-operacional", 
+      permission: "suporte-operacional" 
+    },
+    { 
+      icon: CalendarCheck, 
+      label: "Reservas", 
+      href: "/solicitacoes", 
+      permission: "solicitacoes" 
+    },
+    { 
+      icon: CalendarIcon, 
+      label: "Calendário", 
+      href: "/calendario", 
+      permission: "calendario-reservas" 
+    },
+    { 
+      icon: CalendarCheck2, 
+      label: "Disponibilidade", 
+      href: "/disponibilidade", 
+      permission: "disponibilidade" 
+    },
+    { 
+      icon: Laptop, 
+      label: "Equipamentos", 
+      href: "/equipamentos", 
+      permission: "equipamentos" 
+    },
+    { 
+      icon: Users, 
+      label: "Usuários", 
+      href: "/usuarios", 
+      permission: "usuarios" 
+    },
+    { 
+      icon: Warehouse, 
+      label: "Estoque", 
+      href: "/estoque", 
+      permission: "estoque" 
+    },
+    { 
+      icon: Bell, 
+      label: "Notificações", 
+      href: "/notificacoes", 
+      permission: "notificacoes" 
+    },
+    { 
+      icon: Bug, 
+      label: "Suporte Plataforma", 
+      href: "/suporte-plataforma", 
+      permission: "suporte-plataforma" 
+    },
+  ];
+
+  if (isSuperAdmin) {
+    adminMenuItems.push({
+      icon: Shield,
+      label: "Permissões",
+      href: "/roles",
+      permission: "roles-management"
+    });
+  }
+
+  const filteredAdminItems = useMemo(() => {
+    return adminMenuItems.filter(item => 
+      isSuperAdmin || 
+      (item.permission && userPermissions[item.permission])
+    );
+  }, [adminMenuItems, isSuperAdmin, userPermissions]);
 
   return (
     <div
@@ -255,14 +295,12 @@ if (isSuperAdmin) {
         expanded ? "w-72" : "w-20"
       )}
     >
-      {/* Fundos decorativos */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-gradient-to-br from-sidebar/20 to-eccos-purple/20 blur-2xl opacity-50"></div>
         <div className="absolute top-1/3 -left-10 h-24 w-24 rounded-full bg-gradient-to-tr from-eccos-purple/15 to-sidebar/15 blur-xl opacity-40"></div>
         <div className="absolute bottom-1/4 -right-8 h-20 w-20 rounded-full bg-gradient-to-bl from-sidebar/25 to-eccos-purple/25 blur-xl opacity-30"></div>
       </div>
 
-      {/* Cabeçalho Fixo */}
       <div className="h-24 shrink-0 flex items-center justify-between p-1 relative z-10">
         <Link
           to="/"
@@ -279,7 +317,6 @@ if (isSuperAdmin) {
         </Link>
       </div>
 
-      {/* Conteúdo Rolável */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2 relative z-10 custom-scrollbar">
         {userMenuItems.map((item, index) => {
           if ("items" in item) {
@@ -347,43 +384,41 @@ if (isSuperAdmin) {
         )}
       </div>
 
-
-      {/* Rodapé Fixo */}
       <div className="shrink-0 pt-4 pb-4 px-4 border-t border-gray-100 relative z-10">
-       <Link 
-  to="/perfil"
-  className={cn(
-    "flex items-center gap-3 p-3 mb-3 rounded-xl transition-all duration-300 group relative overflow-hidden",
-    "hover:bg-gradient-to-r hover:from-sidebar/10 hover:to-eccos-purple/10 hover:shadow-md hover:scale-[1.02]",
-    "border border-transparent hover:border-gray-100/50",
-    location.pathname === "/perfil" 
-      ? "bg-gradient-to-r from-sidebar/15 to-eccos-purple/15 text-eccos-purple shadow-lg border-eccos-purple/20 scale-[1.02]" 
-      : "",
-    expanded ? "w-full" : "w-12 justify-center"
-  )}
->
-  {currentUser?.photoURL ? (
-    <img 
-      src={currentUser.photoURL} 
-      alt="User profile" 
-      className="h-8 w-8 rounded-full object-cover"
-    />
-  ) : (
-    <div className="h-8 w-8 rounded-full flex items-center justify-center bg-gradient-to-br from-sidebar to-eccos-purple text-white font-bold">
-      {currentUser?.displayName?.charAt(0) || currentUser?.email?.charAt(0).toUpperCase() || 'U'}
-    </div>
-  )}
-  {expanded && (
-    <div className="flex flex-col min-w-0">
-      <span className="text-sm font-medium text-gray-700 group-hover:text-eccos-purple transition-colors duration-300 truncate">
-        {currentUser?.displayName || currentUser?.email?.split('@')[0]}
-      </span>
-      <span className="text-xs text-gray-500 group-hover:text-eccos-purple/80 transition-colors duration-300 capitalize">
-        {currentUser?.role}
-      </span>
-    </div>
-  )}
-</Link>
+        <Link 
+          to="/perfil"
+          className={cn(
+            "flex items-center gap-3 p-3 mb-3 rounded-xl transition-all duration-300 group relative overflow-hidden",
+            "hover:bg-gradient-to-r hover:from-sidebar/10 hover:to-eccos-purple/10 hover:shadow-md hover:scale-[1.02]",
+            "border border-transparent hover:border-gray-100/50",
+            location.pathname === "/perfil" 
+              ? "bg-gradient-to-r from-sidebar/15 to-eccos-purple/15 text-eccos-purple shadow-lg border-eccos-purple/20 scale-[1.02]" 
+              : "",
+            expanded ? "w-full" : "w-12 justify-center"
+          )}
+        >
+          {currentUser?.photoURL ? (
+            <img 
+              src={currentUser.photoURL} 
+              alt="User profile" 
+              className="h-8 w-8 rounded-full object-cover"
+            />
+          ) : (
+            <div className="h-8 w-8 rounded-full flex items-center justify-center bg-gradient-to-br from-sidebar to-eccos-purple text-white font-bold">
+              {currentUser?.displayName?.charAt(0) || currentUser?.email?.charAt(0).toUpperCase() || 'U'}
+            </div>
+          )}
+          {expanded && (
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-medium text-gray-700 group-hover:text-eccos-purple transition-colors duration-300 truncate">
+                {currentUser?.displayName || currentUser?.email?.split('@')[0]}
+              </span>
+              <span className="text-xs text-gray-500 group-hover:text-eccos-purple/80 transition-colors duration-300 capitalize">
+                {currentUser?.role}
+              </span>
+            </div>
+          )}
+        </Link>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
