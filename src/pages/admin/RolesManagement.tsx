@@ -90,7 +90,7 @@ const permissionLabels: { [key: string]: { label: string; icon: React.ReactNode;
     category: "Ações"
   },
   "nova-suporte": {
-    label: "Nova Solicitação Suporte",
+    label: "Nova Solicitação de Manutenção",
     icon: <Wrench className="h-4 w-4" />,
     category: "Ações"
   },
@@ -113,6 +113,11 @@ const permissionLabels: { [key: string]: { label: string; icon: React.ReactNode;
     label: "Compras Infraestrutura",
     icon: <ShoppingCart className="h-4 w-4" />,
     category: "Operacional"
+  },
+  "compras-pedagogicoadmin": {
+    label: "Compras Pedagógico / Administrativo",
+    icon: <ShoppingCart className="h-4 w-4" />,
+    category: "Apoio"
   },
   "suporte-operacional": {
     label: "Suporte Operacional",
@@ -173,6 +178,8 @@ const defaultInitialRoles: Role[] = [
       notificacoes: true,
       "compras-financeiro": true,
       "compras-tecnologia": true,
+      "compras-infraestrutura": true,
+      "compras-pedagogicoadmin": true,
       "suporte-operacional": true,
       "calendario-reservas": true,
       "suporte-plataforma": true,

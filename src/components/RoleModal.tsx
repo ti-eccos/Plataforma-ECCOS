@@ -87,7 +87,7 @@ const permissionLabels: { [key: string]: { label: string; icon: React.ReactNode;
     category: "Ações"
   },
   "nova-suporte": {
-    label: "Nova Solicitação Suporte",
+    label: "Nova Solicitação de Manutenção",
     icon: <Wrench className="h-4 w-4" />,
     category: "Ações"
   },
