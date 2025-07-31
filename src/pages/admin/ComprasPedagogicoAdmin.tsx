@@ -73,7 +73,7 @@ import {
 const getStatusBadge = (status: RequestStatus) => {
   switch (status) {
     case "pending": return <Badge variant="outline" className="border-yellow-500 text-yellow-600">Pendente</Badge>;
-    case "analyzing": return <Badge variant="outline" className="border-blue-500 text-blue-600">Em Análise</Badge>;
+    case "analyzing": return <Badge variant="outline" className="bg-yellow-500 text-white">Em Análise</Badge>;
     case "approved": return <Badge className="bg-green-500 text-white">Aprovado</Badge>;
     case "rejected": return <Badge variant="destructive">Reprovado</Badge>;
     case "completed": return <Badge className="bg-slate-500 text-white">Concluído</Badge>;
@@ -163,6 +163,12 @@ const ComprasPedagogicoAdmin = () => {
     if (!selectedRequest) return;
     
     try {
+      const updateData: any = { status: newStatus };
+
+      if (newStatus === "approved") {
+        updateData.financeiroVisible = true;
+      }
+
       const docRef = doc(db, selectedRequest.collectionName, selectedRequest.id);
       await updateDoc(docRef, { status: newStatus });
   
@@ -338,11 +344,8 @@ const ComprasPedagogicoAdmin = () => {
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg">
                   <CardContent className="p-12">
                     <div className="text-center text-muted-foreground">
-                      <div className="flex justify-center mb-4">
-                        <Book className="h-16 w-16 mx-2 text-blue-300" />
-                        <ClipboardList className="h-16 w-16 mx-2 text-green-300" />
-                      </div>
-                      <p className="text-lg">Nenhuma solicitação encontrada</p>
+                      <ShoppingCart className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                      <p className="text-lg">Nenhuma solicitação de compra encontrada</p>
                       <p className="text-sm">Tente ajustar os filtros para ver mais resultados</p>
                     </div>
                   </CardContent>

@@ -76,7 +76,7 @@ import { Timestamp } from "firebase/firestore";
 const getStatusBadge = (status: RequestStatus) => {
   switch (status) {
     case "pending": return <Badge variant="outline" className="border-yellow-500 text-yellow-600">Pendente</Badge>;
-    case "analyzing": return <Badge variant="outline" className="border-blue-500 text-blue-600">Em Análise</Badge>;
+    case "analyzing": return <Badge variant="outline" className="bg-yellow-500 text-white">Em Análise</Badge>;
     case "approved": return <Badge className="bg-green-500 text-white">Aprovado</Badge>;
     case "rejected": return <Badge variant="destructive">Reprovado</Badge>;
     case "waitingDelivery": return <Badge className="bg-blue-500 text-white">Aguardando entrega</Badge>;
@@ -176,6 +176,10 @@ const ComprasInfraestrutura = () => {
     
     try {
       const updateData: any = { status: newStatus };
+
+      if (newStatus === "approved") {
+        updateData.financeiroVisible = true;
+        }
 
       const docRef = doc(db, selectedRequest.collectionName, selectedRequest.id);
       await updateDoc(docRef, updateData);
@@ -408,13 +412,13 @@ const ComprasInfraestrutura = () => {
               {/* Tabela */}
               {filteredRequests.length === 0 ? (
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg">
-                  <CardContent className="p-12">
+                    <CardContent className="p-12">
                     <div className="text-center text-muted-foreground">
-                      <HardHat className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                      <p className="text-lg">Nenhuma solicitação de infraestrutura encontrada</p>
-                      <p className="text-sm">Tente ajustar os filtros para ver mais resultados</p>
+                        <ShoppingCart className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                        <p className="text-lg">Nenhuma solicitação de compra encontrada</p>
+                        <p className="text-sm">Tente ajustar os filtros para ver mais resultados</p>
                     </div>
-                  </CardContent>
+                    </CardContent>
                 </Card>
               ) : (
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg overflow-hidden">

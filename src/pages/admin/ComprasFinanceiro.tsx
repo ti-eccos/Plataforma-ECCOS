@@ -79,7 +79,7 @@ import Unauthorized from "@/pages/Unauthorized";
 const getStatusBadge = (status: RequestStatus) => {
   switch (status) {
     case "pending": return <Badge variant="outline" className="border-yellow-500 text-yellow-600">Pendente</Badge>;
-    case "analyzing": return <Badge variant="outline" className="border-yellow-500 text-yellow-600">Em Análise</Badge>;
+    case "analyzing": return <Badge variant="outline" className="bg-yellow-500 text-white">Em Análise</Badge>;
     case "approved": return <Badge className="bg-green-500 text-white">Aprovado</Badge>;
     case "rejected": return <Badge variant="destructive">Reprovado</Badge>;
     case "waitingDelivery": return <Badge className="bg-blue-500 text-white">Aguardando entrega</Badge>;
@@ -108,8 +108,29 @@ const ComprasFinanceiro = () => {
   const [deliveryDate, setDeliveryDate] = useState<Date | null>(null);
   const [isEditingDeliveryDate, setIsEditingDeliveryDate] = useState(false);
   
-  const purchaseTypes = ["Compra Pedagógica", "Compra Administrativa", "Compra Infraestrutura"];
+  const purchaseTypes = ["Tecnologia", "Infraestrutura", "Pedagógico", "Administrativo"];
   const [selectedTypes, setSelectedTypes] = useState<string[]>(purchaseTypes);
+
+  // Lista de todos os status disponíveis
+  const allStatuses: RequestStatus[] = [
+    "pending", 
+    "analyzing", 
+    "approved", 
+    "rejected", 
+    "waitingDelivery", 
+    "delivered", 
+    "completed", 
+    "canceled"
+  ];
+  
+  // Estado para os status selecionados (inicialmente todos exceto os indesejados)
+  const [selectedStatuses, setSelectedStatuses] = useState<RequestStatus[]>([
+    "pending",
+    "analyzing",
+    "approved",
+    "waitingDelivery",
+    "delivered"
+  ]);
 
   // Verificar permissões
   const hasPermission = userPermissions['compras-financeiro'] || currentUser?.email === "suporte@colegioeccos.com.br";
@@ -291,14 +312,19 @@ const ComprasFinanceiro = () => {
   };
 
   const filteredRequests = allRequests
-    .filter(req => req.type === 'purchase')
+    .filter(req => req.type === 'purchase' && 
+            (req.financeiroVisible || 
+            req.status === 'approved' || 
+            req.userEmail === currentUser?.email))
     .filter(req => {
       const search = searchTerm.toLowerCase();
       return (
         (req.userName?.toLowerCase().includes(search) ||
         req.userEmail?.toLowerCase().includes(search) ||
         req.itemName?.toLowerCase().includes(search)) &&
-        selectedTypes.includes(req.tipo))
+        selectedTypes.includes(req.tipo) &&
+        selectedStatuses.includes(req.status)
+      )
     });
 
   const totalRequests = filteredRequests.length;
@@ -404,30 +430,59 @@ const ComprasFinanceiro = () => {
                       />
                     </div>
 
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="flex items-center gap-2 h-12 rounded-xl border-gray-200 px-6">
-                          <Filter className="h-4 w-4" /> Tipo ({selectedTypes.length})
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-background rounded-xl">
-                        {purchaseTypes.map((type) => (
-                          <DropdownMenuCheckboxItem
-                            key={type}
-                            checked={selectedTypes.includes(type)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSelectedTypes([...selectedTypes, type]);
-                              } else {
-                                setSelectedTypes(selectedTypes.filter(t => t !== type));
-                              }
-                            }}
-                          >
-                            {type}
-                          </DropdownMenuCheckboxItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex gap-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" className="flex items-center gap-2 h-12 rounded-xl border-gray-200 px-6">
+                            <Filter className="h-4 w-4" /> Tipo ({selectedTypes.length})
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-background rounded-xl">
+                          {purchaseTypes.map((type) => (
+                            <DropdownMenuCheckboxItem
+                              key={type}
+                              checked={selectedTypes.includes(type)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedTypes([...selectedTypes, type]);
+                                } else {
+                                  setSelectedTypes(selectedTypes.filter(t => t !== type));
+                                }
+                              }}
+                            >
+                              {type}
+                            </DropdownMenuCheckboxItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" className="flex items-center gap-2 h-12 rounded-xl border-gray-200 px-6">
+                            <Filter className="h-4 w-4" /> Status ({selectedStatuses.length})
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-background rounded-xl">
+                          {allStatuses.map((status) => (
+                            <DropdownMenuCheckboxItem
+                              key={status}
+                              checked={selectedStatuses.includes(status)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedStatuses([...selectedStatuses, status]);
+                                } else {
+                                  setSelectedStatuses(selectedStatuses.filter(s => s !== status));
+                                }
+                              }}
+                            >
+                              <div className="flex items-center gap-2">
+                                {getStatusBadge(status)}
+                              </div>
+                            </DropdownMenuCheckboxItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -543,7 +598,7 @@ const ComprasFinanceiro = () => {
                               </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="rounded-xl" align="end">
-                              {["pending", "approved", "rejected", "waitingDelivery", "delivered", "completed", "canceled"].map((status) => (
+                              {allStatuses.map((status) => (
                                 <DropdownMenuItem 
                                   key={status} 
                                   onSelect={() => handleStatusChange(status as RequestStatus)}

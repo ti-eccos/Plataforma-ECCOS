@@ -7,6 +7,7 @@ export const addPurchaseRequest = async (data: Omit<RequestData, 'id' | 'collect
     const docRef = await addDoc(collection(db, 'purchases'), {
       tipo: data.tipo, 
       ...data,
+      financeiroVisible: false,
       type: 'purchase',
       status: 'pending',
       createdAt: Timestamp.now(),

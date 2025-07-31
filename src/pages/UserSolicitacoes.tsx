@@ -219,6 +219,7 @@ export default function UserSolicitacoes() {
   ]);
   const [selectedStatuses, setSelectedStatuses] = useState<RequestStatus[]>([
     "pending",
+    "analyzing",
     "approved",
     "in-progress",
     "waitingDelivery",
@@ -551,6 +552,7 @@ export default function UserSolicitacoes() {
       ],
       purchase: [
         "pending",
+        "analyzing",
         "approved",
         "rejected",
         "waitingDelivery",
@@ -595,6 +597,7 @@ export default function UserSolicitacoes() {
                 setSelectedCategories(["reservation", "purchase", "support"]);
                 setSelectedStatuses([
                   "pending",
+                  "analyzing",
                   "approved",
                   "in-progress",
                   "waitingDelivery",

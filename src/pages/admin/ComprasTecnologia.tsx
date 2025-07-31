@@ -76,7 +76,7 @@ import { Timestamp } from "firebase/firestore";
 const getStatusBadge = (status: RequestStatus) => {
   switch (status) {
     case "pending": return <Badge variant="outline" className="border-yellow-500 text-yellow-600">Pendente</Badge>;
-    case "analyzing": return <Badge variant="outline" className="border-blue-500 text-blue-600">Em Análise</Badge>;
+    case "analyzing": return <Badge variant="outline" className="bg-yellow-500 text-white">Em Análise</Badge>;
     case "approved": return <Badge className="bg-green-500 text-white">Aprovado</Badge>;
     case "rejected": return <Badge variant="destructive">Reprovado</Badge>;
     case "waitingDelivery": return <Badge className="bg-blue-500 text-white">Aguardando entrega</Badge>;
@@ -165,6 +165,12 @@ const ComprasTecnologia = () => {
     if (!selectedRequest) return;
     
     try {
+      const updateData: any = { status: newStatus };
+
+      if (newStatus === "approved") {
+        updateData.financeiroVisible = true;
+      }
+
       const docRef = doc(db, selectedRequest.collectionName, selectedRequest.id);
       await updateDoc(docRef, { status: newStatus });
   
