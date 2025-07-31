@@ -10,14 +10,10 @@ import {
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { changeUserRole, User, UserRole } from "@/services/userService";
-import { useState } from "react";
-
-interface RoleChangeDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  user: User | null;
-  onSuccess: () => void;
-}
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { auth } from "@/lib/firebase";
 
 const ROLE_OPTIONS = [
   { value: "user", label: "Usuário Padrão" },
@@ -26,9 +22,24 @@ const ROLE_OPTIONS = [
   { value: "admin", label: "Administrador" },
 ];
 
+interface RoleChangeDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  user: User | null;
+  onSuccess: () => void;
+}
+
 export const RoleChangeDialog = ({ open, onOpenChange, user, onSuccess }: RoleChangeDialogProps) => {
   const [selectedRole, setSelectedRole] = useState<UserRole>(user?.role || "user");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+  const { refreshUser, reloadPermissions } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      setSelectedRole(user.role);
+    }
+  }, [user]);
 
   const handleSave = async () => {
     if (!user || !selectedRole) return;
@@ -36,10 +47,30 @@ export const RoleChangeDialog = ({ open, onOpenChange, user, onSuccess }: RoleCh
     setIsSubmitting(true);
     try {
       await changeUserRole(user.uid, selectedRole);
+      
+      // Disparar evento para atualizar a sidebar
+      window.dispatchEvent(new CustomEvent('userRoleChanged'));
+      
+      // Se o usuário atual estiver alterando a si mesmo
+      if (user.uid === auth.currentUser?.uid) {
+        await refreshUser();
+        await reloadPermissions();
+      }
+      
       onSuccess();
       onOpenChange(false);
+      
+      toast({
+        title: "Sucesso",
+        description: `Função alterada para ${ROLE_OPTIONS.find(r => r.value === selectedRole)?.label}`,
+      });
     } catch (error) {
       console.error("Error changing role:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível alterar a função",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -91,7 +122,7 @@ export const RoleChangeDialog = ({ open, onOpenChange, user, onSuccess }: RoleCh
           <Button
             type="button"
             onClick={handleSave}
-            disabled={isSubmitting || !selectedRole}
+            disabled={isSubmitting || !selectedRole || selectedRole === user?.role}
           >
             {isSubmitting ? "Salvando..." : "Confirmar Alteração"}
           </Button>

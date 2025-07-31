@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { AppSidebar } from "./AppSidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
 import { NotificationBell } from "./NotificationBell";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -12,7 +13,18 @@ interface AppLayoutProps {
 
 const AppLayout = ({ children }: AppLayoutProps) => {
   const isMobile = useIsMobile();
-  
+  const { currentUser } = useAuth();
+
+  useEffect(() => {
+    const handleRoleChange = () => {
+      // Forçar recarregamento da sidebar quando o role muda
+      console.log("Role changed - reloading sidebar");
+    };
+
+    window.addEventListener('userRoleChanged', handleRoleChange);
+    return () => window.removeEventListener('userRoleChanged', handleRoleChange);
+  }, []);
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {isMobile ? (
@@ -28,16 +40,16 @@ const AppLayout = ({ children }: AppLayoutProps) => {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="p-0 w-64">
-              <AppSidebar />
+              {/* Adicione key para forçar recriação */}
+              <AppSidebar key={currentUser?.role} />
             </SheetContent>
           </Sheet>
           
-          {/* Ícone flutuante */}
           <div className="fixed top-4 right-4 z-40">
             <NotificationBell />
           </div>
           
-          <main className="flex-1 overflow-auto p-6 pt-16"> {/* Reduzido pt-20 para pt-16 */}
+          <main className="flex-1 overflow-auto p-6 pt-16">
             <div className="max-w-7xl mx-auto animate-fade-in">
               {children}
             </div>
@@ -45,14 +57,14 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         </>
       ) : (
         <>
-          <AppSidebar />
+          {/* Adicione key para forçar recriação */}
+          <AppSidebar key={currentUser?.role} />
           
-          {/* Ícone flutuante */}
           <div className="fixed top-4 right-4 z-40">
             <NotificationBell />
           </div>
           
-          <main className="flex-1 overflow-auto p-6"> {/* Removido mt-14 */}
+          <main className="flex-1 overflow-auto p-6">
             <div className="max-w-7xl mx-auto animate-fade-in">
               {children}
             </div>

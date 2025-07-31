@@ -7,7 +7,7 @@ import {
 } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 export interface Permissions {
@@ -40,6 +40,8 @@ interface AuthContextType {
   isSuperAdmin: boolean;
   updateUserData: (updates: Partial<AuthUser>) => void;
   hasDashboardPermission: boolean;
+  refreshUser: () => Promise<void>;
+  reloadPermissions: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -56,6 +58,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateUserData = useCallback((updates: Partial<AuthUser>) => {
     setCurrentUser((prev) => (prev ? { ...prev, ...updates } : null));
   }, []);
+
+  const loadUserPermissions = useCallback(async (roleName: string) => {
+    try {
+      if (roleName === "superadmin") {
+        setUserPermissions({ all: true });
+        return;
+      }
+
+      const roleRef = doc(db, "roles", roleName);
+      const roleSnap = await getDoc(roleRef);
+      
+      if (roleSnap.exists()) {
+        const roleData = roleSnap.data() as Role;
+        setUserPermissions(roleData.permissions || {});
+      } else {
+        setUserPermissions({});
+      }
+    } catch (error) {
+      console.error("Error loading permissions:", error);
+      setUserPermissions({});
+    }
+  }, []);
+
+  const reloadPermissions = useCallback(async () => {
+    if (currentUser?.role) {
+      await loadUserPermissions(currentUser.role);
+    }
+  }, [currentUser?.role, loadUserPermissions]);
+
+  const refreshUser = useCallback(async () => {
+    if (!auth.currentUser?.uid) {
+      setCurrentUser(null);
+      setUserPermissions({});
+      return;
+    }
+
+    try {
+      const userRef = doc(db, "users", auth.currentUser.uid);
+      const docSnap = await getDoc(userRef);
+
+      if (docSnap.exists()) {
+        const userData = docSnap.data() as AuthUser;
+        setCurrentUser(userData);
+        await loadUserPermissions(userData.role);
+      }
+    } catch (error) {
+      console.error("Error refreshing user:", error);
+      toast({
+        title: "Erro",
+        description: "Falha ao atualizar dados do usuário",
+        variant: "destructive",
+      });
+    }
+  }, [loadUserPermissions, toast]);
 
   const handleUserDocument = useCallback(
     async (firebaseUser: FirebaseUser) => {
@@ -82,11 +138,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return null;
           }
 
-          await setDoc(
-            userRef,
-            { lastActive: new Date(), role: userData.role },
-            { merge: true }
-          );
+          await updateDoc(userRef, {
+            lastActive: new Date(),
+            role: userData.role,
+          });
         } else {
           const role =
             firebaseUser.email === "suporte@colegioeccos.com.br"
@@ -125,22 +180,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [toast]
   );
 
-  const loadUserPermissions = useCallback(async (roleName: string) => {
-    if (roleName === "superadmin") {
-      setUserPermissions({ all: true });
-      return;
-    }
-
-    const roleRef = doc(db, "roles", roleName);
-    const roleSnap = await getDoc(roleRef);
-    if (roleSnap.exists()) {
-      const roleData = roleSnap.data() as Role;
-      setUserPermissions(roleData.permissions || {});
-    } else {
-      setUserPermissions({});
-    }
-  }, []);
-
   useEffect(() => {
     let isMounted = true;
 
@@ -172,7 +211,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.error("Auth state error:", error);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     });
 
@@ -218,6 +259,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isSuperAdmin,
     updateUserData,
     hasDashboardPermission,
+    refreshUser,
+    reloadPermissions,
   };
 
   return (

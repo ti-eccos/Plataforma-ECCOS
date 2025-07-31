@@ -1,4 +1,3 @@
-
 import { db } from "@/lib/firebase";
 import { 
   collection, 
@@ -24,15 +23,14 @@ export interface User {
   lastActive: string;
   department?: string;
   pendingRoleChange?: {
-  from: UserRole;
-  to: UserRole;
-  requestedBy: string;
-  approvals: string[];
-  createdAt?: string;
-  birthDate?: string;
+    from: UserRole;
+    to: UserRole;
+    requestedBy: string;
+    approvals: string[];
+    createdAt?: string;
+    birthDate?: string;
   };
 }
-
 
 const usersCollectionRef = collection(db, "users");
 
@@ -41,7 +39,6 @@ export const getAllUsers = async (): Promise<User[]> => {
     const snapshot = await getDocs(usersCollectionRef);
     return snapshot.docs.map(doc => {
       const data = doc.data();
-
       const lastActive = data.lastActive ? data.lastActive.toDate().toISOString() : null;
       return {
         ...data,
@@ -72,6 +69,12 @@ export const changeUserRole = async (uid: string, role: UserRole): Promise<boole
       role,
       pendingRoleChange: null
     });
+    
+    // Disparar evento para notificar a mudança
+    window.dispatchEvent(new CustomEvent('userRoleChanged', {
+      detail: { uid, newRole: role }
+    }));
+    
     return true;
   } catch (error) {
     console.error("Error changing user role:", error);
@@ -132,6 +135,11 @@ export const approveRoleChange = async (
         role: updatedData.pendingRoleChange.to,
         pendingRoleChange: null
       });
+      
+      // Disparar evento para notificar a mudança
+      window.dispatchEvent(new CustomEvent('userRoleChanged', {
+        detail: { uid, newRole: updatedData.pendingRoleChange.to }
+      }));
     }
     
     return true;
@@ -169,6 +177,7 @@ export const getUserById = async (uid: string): Promise<User | null> => {
     throw error;
   }
 };
+
 export const getUserRequests = async (userId: string): Promise<any[]> => {
   try {
     const collections = ["reservations", "purchases", "supports"];
@@ -192,16 +201,15 @@ export const getUserRequests = async (userId: string): Promise<any[]> => {
     throw error;
   }
 };
+
 export const getAdminEmails = async (): Promise<string[]> => {
   try {
     const users = await getAllUsers();
-
     const filtered = users.filter(user => 
       (user.role === 'admin' || user.role === 'superadmin') && 
       !user.blocked &&
       user.email
     );
-    
     return filtered.map(user => user.email).filter(Boolean);
   } catch (error) {
     console.error("[Admins] Erro crítico:", error);
