@@ -99,6 +99,13 @@ const getStatusBadge = (status: RequestStatus) => {
           Pendente
         </Badge>
       );
+    case "analyzing":
+    return (
+      <Badge className="bg-amber-50 text-amber-600 border-amber-100">
+        <Clock className="h-4 w-4 mr-1 hidden sm:inline-block" />
+        Em Análise
+      </Badge>
+    );
     case "approved":
       return (
         <Badge className="bg-green-50 text-green-600 border-green-100">

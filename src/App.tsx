@@ -20,6 +20,7 @@ import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 import UserSolicitacoes from "@/pages/UserSolicitacoes";
 import ComprasFinanceiro from "@/pages/admin/ComprasFinanceiro";
+import ComprasTecnologia from "@/pages/admin/ComprasTecnologia";
 import Equipamentos from "./pages/admin/Equipamentos";
 import Disponibilidade from "./pages/admin/Disponibilidade";
 import Usuarios from "./pages/admin/Usuarios";
@@ -108,6 +109,14 @@ const router = createBrowserRouter(
           element: (
             <ProtectedRoute requiredPermission="financeiro">
               <ComprasFinanceiro />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "compras-tecnologia",
+          element: (
+            <ProtectedRoute requiredPermission="tecnologia">
+              <ComprasTecnologia />
             </ProtectedRoute>
           ),
         },

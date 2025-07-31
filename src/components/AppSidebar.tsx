@@ -221,6 +221,7 @@ export const AppSidebar = () => {
   // Itens administrativos baseados em permissões
   const adminMenuItems = [
   { icon: ShoppingCart, label: "Compras", href: "/compras-financeiro", permission: "financeiro" },
+  { icon: ShoppingCart, label: "Compras Tecnologia", href: "/compras-tecnologia", permission: "financeiro" },
   { icon: Wrench, label: "Manutenção", href: "/suporte-operacional", permission: "suporte-operacional" },
   { icon: CalendarCheck, label: "Reservas", href: "/solicitacoes", permission: "solicitacoes" },
   { icon: Calendar1, label: "Calendário", href: "/calendario", permission: "solicitacoes" },

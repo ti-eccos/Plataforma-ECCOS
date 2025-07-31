@@ -31,7 +31,7 @@ import { RequestData, MessageData, RequestStatus } from '@/services/types';
 import { getAllRequests, addMessageToRequest, uploadFile } from '@/services/sharedService'
 
 const formSchema = z.object({
-  tipo: z.enum(["Compra Pedagógica", "Compra Administrativa", "Compra Infraestrutura"], {
+  tipo: z.enum(["Tecnologia", "Infraestrutura", "Pedagógico", "Administrativo"], {
     required_error: "Selecione o tipo de compra"
   }),
   itemName: z.string().min(1, 'Nome do item é obrigatório'),
@@ -139,9 +139,10 @@ const NovaCompra = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent className="rounded-xl border-gray-200">
-                          <SelectItem value="Compra Pedagógica">Compra Pedagógica</SelectItem>
-                          <SelectItem value="Compra Administrativa">Compra Administrativa</SelectItem>
-                          <SelectItem value="Compra Infraestrutura">Compra Infraestrutura</SelectItem>
+                          <SelectItem value="Tecnologia">Tecnologia</SelectItem>
+                          <SelectItem value="Infraestrutura">Infraestrutura</SelectItem>
+                          <SelectItem value="Pedagógico">Pedagógico</SelectItem>
+                          <SelectItem value="Administrativo">Administrativo</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

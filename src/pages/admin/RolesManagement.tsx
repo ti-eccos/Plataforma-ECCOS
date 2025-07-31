@@ -101,6 +101,11 @@ const permissionLabels: { [key: string]: { label: string; icon: React.ReactNode;
     icon: <ShoppingCart className="h-4 w-4" />,
     category: "Financeiro"
   },
+  "compras-tecnologia": {
+    label: "Compras Tecnologia",
+    icon: <ShoppingCart className="h-4 w-4" />,
+    category: "Tecnologia"
+  },
   "suporte-operacional": {
     label: "Suporte Operacional",
     icon: <Wrench className="h-4 w-4" />,
@@ -158,6 +163,7 @@ const defaultInitialRoles: Role[] = [
       "nova-suporte": true,
       notificacoes: true,
       "compras-financeiro": true,
+      "compras-tecnologia": true,
       "suporte-operacional": true,
       "calendario-reservas": true,
       "suporte-plataforma": true,
