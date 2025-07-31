@@ -111,6 +111,11 @@ const permissionLabels: { [key: string]: { label: string; icon: React.ReactNode;
     icon: <ShoppingCart className="h-4 w-4" />,
     category: "Operacional"
   },
+  "compras-pedagogicoadmin": {
+    label: "Compras Pedagogico / Administrativo",
+    icon: <ShoppingCart className="h-4 w-4" />,
+    category: "Apoio"
+  },
   "suporte-operacional": {
     label: "Suporte Operacional",
     icon: <Wrench className="h-4 w-4" />,
@@ -150,7 +155,7 @@ const categoryColors = {
   'Geral': 'bg-blue-50 border-blue-200 text-blue-800',
   'Recursos': 'bg-green-50 border-green-200 text-green-800',
   'Ações': 'bg-purple-50 border-purple-200 text-purple-800',
-  'Financeiro': 'bg-yellow-50 border-yellow-200 text-yellow-800',
+  'Apoio': 'bg-yellow-800 border-yellow-200 text-yellow-50',
   'Operacional': 'bg-orange-50 border-orange-200 text-orange-800',
   'Tecnologia': 'bg-blue-800 border-blue-200 text-blue-50',
   'Técnico': 'bg-gray-50 border-gray-200 text-gray-800',
