@@ -12,10 +12,8 @@ import {
   Clock,
   CheckCircle,
   ChevronDown,
-  Calendar,
-  Save,
-  X,
-  HardHat
+  Book,
+  ClipboardList
 } from "lucide-react";
 import { toast } from "sonner";
 import { 
@@ -71,7 +69,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Timestamp } from "firebase/firestore";
 
 const getStatusBadge = (status: RequestStatus) => {
   switch (status) {
@@ -79,15 +76,13 @@ const getStatusBadge = (status: RequestStatus) => {
     case "analyzing": return <Badge variant="outline" className="border-blue-500 text-blue-600">Em Análise</Badge>;
     case "approved": return <Badge className="bg-green-500 text-white">Aprovado</Badge>;
     case "rejected": return <Badge variant="destructive">Reprovado</Badge>;
-    case "waitingDelivery": return <Badge className="bg-blue-500 text-white">Aguardando entrega</Badge>;
-    case "delivered": return <Badge className="bg-indigo-500 text-white">Recebido</Badge>;
     case "completed": return <Badge className="bg-slate-500 text-white">Concluído</Badge>;
     case "canceled": return <Badge className="bg-amber-500 text-white">Cancelado</Badge>;
     default: return <Badge variant="outline">Desconhecido</Badge>;
-    }
+  }
 };
 
-const ComprasInfraestrutura = () => {
+const ComprasPedagogicoAdmin = () => {
   const queryClient = useQueryClient();
   const { currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
@@ -99,13 +94,11 @@ const ComprasInfraestrutura = () => {
   const [chatRequest, setChatRequest] = useState<RequestData | null>(null);
   const [unreadMessages, setUnreadMessages] = useState<Record<string, number>>({});
   const [viewedRequests, setViewedRequests] = useState<Set<string>>(() => {
-    const saved = typeof window !== 'undefined' ? localStorage.getItem('infraViewedRequests') : null;
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('pedAdminViewedRequests') : null;
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
-  const [executionDate, setExecutionDate] = useState<Date | null>(null);
-  const [isEditingExecutionDate, setIsEditingExecutionDate] = useState(false);
   
-  // Filtrar apenas solicitações de infraestrutura
+  // Filtrar apenas solicitações pedagógicas e administrativas
   const { data: allRequests = [], isLoading } = useQuery({
     queryKey: ['allRequests'],
     queryFn: () => getAllRequests(),
@@ -115,10 +108,13 @@ const ComprasInfraestrutura = () => {
     const checkUnreadMessages = () => {
       const newUnread: Record<string, number> = {};
       
-      // Considerar apenas solicitações de infraestrutura
-      const infraRequests = allRequests.filter(req => req.type === 'purchase' && req.tipo === "Infraestrutura");
+      // Considerar apenas solicitações pedagógicas e administrativas
+      const pedAdminRequests = allRequests.filter(req => 
+        req.type === 'purchase' && 
+        (req.tipo === "Pedagógico" || req.tipo === "Administrativo")
+      );
       
-      infraRequests.forEach(req => {
+      pedAdminRequests.forEach(req => {
         const messages = req.messages || [];
         const unreadCount = messages.filter(msg => 
           !msg.isAdmin && !viewedRequests.has(`${req.id}-${msg.timestamp.toMillis()}`)
@@ -134,14 +130,6 @@ const ComprasInfraestrutura = () => {
     checkUnreadMessages();
   }, [allRequests, viewedRequests]);
 
-  useEffect(() => {
-    if (selectedRequest && selectedRequest.executionDate) {
-      setExecutionDate(selectedRequest.executionDate.toDate());
-    } else {
-      setExecutionDate(null);
-    }
-  }, [selectedRequest]);
-
   const handleOpenChat = async (request: RequestData) => {
     try {
       const fullRequest = await getRequestById(request.id, request.collectionName);
@@ -154,7 +142,7 @@ const ComprasInfraestrutura = () => {
             newSet.add(`${fullRequest.id}-${msg.timestamp.toMillis()}`);
           }
         });
-        localStorage.setItem('infraViewedRequests', JSON.stringify(Array.from(newSet)));
+        localStorage.setItem('pedAdminViewedRequests', JSON.stringify(Array.from(newSet)));
         return newSet;
       });
       
@@ -175,14 +163,12 @@ const ComprasInfraestrutura = () => {
     if (!selectedRequest) return;
     
     try {
-      const updateData: any = { status: newStatus };
-
       const docRef = doc(db, selectedRequest.collectionName, selectedRequest.id);
-      await updateDoc(docRef, updateData);
+      await updateDoc(docRef, { status: newStatus });
   
       await createNotification({
         title: 'Alteração de Status',
-        message: `Status da sua solicitação de infraestrutura foi alterado para: ${newStatus}`,
+        message: `Status da sua solicitação de compra foi alterado para: ${newStatus}`,
         link: 'minhas-solicitacoes',
         createdAt: new Date(),
         readBy: [],
@@ -192,68 +178,9 @@ const ComprasInfraestrutura = () => {
   
       toast.success("Status atualizado");
       queryClient.invalidateQueries({ queryKey: ['allRequests'] });
-      setSelectedRequest({ ...selectedRequest, status: newStatus, ...updateData });
+      setSelectedRequest({ ...selectedRequest, status: newStatus });
     } catch (error) {
       toast.error("Erro ao atualizar");
-      console.error("Error:", error);
-    }
-  };
-
-  // Função para salvar/atualizar a data de execução
-  const handleSaveExecutionDate = async () => {
-    if (!selectedRequest) return;
-    
-    try {
-      const docRef = doc(db, selectedRequest.collectionName, selectedRequest.id);
-      const updateData: any = {};
-      
-      if (executionDate) {
-        updateData.executionDate = Timestamp.fromDate(executionDate);
-      } else {
-        // Remove a data de execução se executionDate for null
-        updateData.executionDate = null;
-      }
-
-      await updateDoc(docRef, updateData);
-      
-      // Atualiza localmente
-      setSelectedRequest({ 
-        ...selectedRequest, 
-        executionDate: executionDate ? Timestamp.fromDate(executionDate) : null 
-      });
-      
-      toast.success("Data de execução atualizada");
-      setIsEditingExecutionDate(false);
-      queryClient.invalidateQueries({ queryKey: ['allRequests'] });
-    } catch (error) {
-      toast.error("Erro ao atualizar data de execução");
-      console.error("Error:", error);
-    }
-  };
-
-  // Função para remover a data de execução
-  const handleRemoveExecutionDate = async () => {
-    if (!selectedRequest) return;
-    
-    try {
-      const docRef = doc(db, selectedRequest.collectionName, selectedRequest.id);
-      
-      await updateDoc(docRef, {
-        executionDate: null
-      });
-      
-      // Atualiza localmente
-      setSelectedRequest({ 
-        ...selectedRequest, 
-        executionDate: null 
-      });
-      
-      setExecutionDate(null);
-      toast.success("Data de execução removida");
-      setIsEditingExecutionDate(false);
-      queryClient.invalidateQueries({ queryKey: ['allRequests'] });
-    } catch (error) {
-      toast.error("Erro ao remover data de execução");
       console.error("Error:", error);
     }
   };
@@ -282,9 +209,10 @@ const ComprasInfraestrutura = () => {
     }
   };
 
-  // Filtrar apenas solicitações de infraestrutura
+  // Filtrar apenas solicitações pedagógicas e administrativas
   const filteredRequests = allRequests
-    .filter(req => req.type === 'purchase' && req.tipo === "Infraestrutura")
+    .filter(req => req.type === 'purchase' && 
+              (req.tipo === "Pedagógico" || req.tipo === "Administrativo"))
     .filter(req => {
       const search = searchTerm.toLowerCase();
       return (
@@ -294,7 +222,7 @@ const ComprasInfraestrutura = () => {
       );
     });
 
-  // Calcular estatísticas apenas para infraestrutura
+  // Calcular estatísticas
   const totalRequests = filteredRequests.length;
   const pendingRequests = filteredRequests.filter(req => req.status === 'pending').length;
   const analyzingRequests = filteredRequests.filter(req => req.status === 'analyzing').length;
@@ -312,9 +240,9 @@ const ComprasInfraestrutura = () => {
         <div className="relative z-10 space-y-8 p-6 md:p-12">
           {/* Header */}
           <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
-                <ShoppingCart className="text-eccos-purple" size={35} />
-                Solicitações de Compra - Infraestrutura
-            </h1>
+            <ShoppingCart className="text-eccos-purple" size={35} />
+            Solicitações de Compra - Pedagógico / Administrativo
+          </h1>
 
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
@@ -355,15 +283,15 @@ const ComprasInfraestrutura = () => {
 
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-600">Em análise</CardTitle>
+                    <CardTitle className="text-sm font-medium text-gray-600">Em Análise</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold bg-gradient-to-r from-cyan-500 to-cyan-600 bg-clip-text text-transparent">
+                    <div className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-blue-600 bg-clip-text text-transparent">
                       {analyzingRequests}
                     </div>
-                    <Badge variant="outline" className="mt-2 border-cyan-500 text-cyan-500">
-                      <HardHat className="h-3 w-3 mr-1" />
-                      Em análise
+                    <Badge variant="outline" className="mt-2 border-blue-500 text-blue-500">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Em Análise
                     </Badge>
                   </CardContent>
                 </Card>
@@ -410,8 +338,11 @@ const ComprasInfraestrutura = () => {
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg">
                   <CardContent className="p-12">
                     <div className="text-center text-muted-foreground">
-                      <HardHat className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                      <p className="text-lg">Nenhuma solicitação de infraestrutura encontrada</p>
+                      <div className="flex justify-center mb-4">
+                        <Book className="h-16 w-16 mx-2 text-blue-300" />
+                        <ClipboardList className="h-16 w-16 mx-2 text-green-300" />
+                      </div>
+                      <p className="text-lg">Nenhuma solicitação encontrada</p>
                       <p className="text-sm">Tente ajustar os filtros para ver mais resultados</p>
                     </div>
                   </CardContent>
@@ -423,6 +354,7 @@ const ComprasInfraestrutura = () => {
                       <Table>
                         <TableHeader>
                           <TableRow className="border-gray-100">
+                            <TableHead className="font-semibold text-gray-700">Tipo</TableHead>
                             <TableHead className="font-semibold text-gray-700">Solicitante</TableHead>
                             <TableHead className="font-semibold text-gray-700 hidden md:table-cell">Item</TableHead>
                             <TableHead className="font-semibold text-gray-700">Status</TableHead>
@@ -433,6 +365,15 @@ const ComprasInfraestrutura = () => {
                         <TableBody>
                           {filteredRequests.map((request) => (
                             <TableRow key={request.id} className="border-gray-100 hover:bg-gray-50/50 transition-colors">
+                              <TableCell>
+                                <Badge 
+                                  className={request.tipo === "Pedagógico" 
+                                    ? "bg-blue-100 text-blue-800" 
+                                    : "bg-green-100 text-green-800"}
+                                >
+                                  {request.tipo}
+                                </Badge>
+                              </TableCell>
                               <TableCell className="font-medium">{request.userName}</TableCell>
                               <TableCell className="hidden md:table-cell">{request.itemName}</TableCell>
                               <TableCell>{getStatusBadge(request.status)}</TableCell>
@@ -489,9 +430,11 @@ const ComprasInfraestrutura = () => {
                   {/* Cabeçalho fixo */}
                   <DialogHeader className="p-6 pb-2 border-b border-gray-100 bg-white sticky top-0 z-10">
                     <DialogTitle className="flex items-center gap-2">
-                      <HardHat className="h-5 w-5 text-eccos-purple" />
+                      {selectedRequest.tipo === "Pedagógico" 
+                        ? <Book className="h-5 w-5 text-blue-500" /> 
+                        : <ClipboardList className="h-5 w-5 text-green-500" />}
                       <span className="bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
-                        Solicitação de Infraestrutura - {selectedRequest.userName || selectedRequest.userEmail}
+                        {selectedRequest.tipo} - {selectedRequest.userName || selectedRequest.userEmail}
                       </span>
                     </DialogTitle>
                     <DialogDescription asChild>
@@ -510,11 +453,16 @@ const ComprasInfraestrutura = () => {
 
                   {/* Conteúdo rolável */}
                   <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                    {/* Conteúdo específico para infraestrutura */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm font-medium text-gray-500">Tipo</p>
-                        <p className="font-medium">{selectedRequest.tipo || "Não especificado"}</p>
+                        <Badge 
+                          className={`text-base ${selectedRequest.tipo === "Pedagógico" 
+                            ? "bg-blue-100 text-blue-800" 
+                            : "bg-green-100 text-green-800"}`}
+                        >
+                          {selectedRequest.tipo}
+                        </Badge>
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-500">Solicitante</p>
@@ -554,7 +502,7 @@ const ComprasInfraestrutura = () => {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <p className="text-sm font-medium text-gray-500">Localização/Detalhes</p>
+                      <p className="text-sm font-medium text-gray-500">Informações Adicionais</p>
                       <div className="bg-gray-50 p-4 rounded-xl">
                         <p className="whitespace-pre-wrap break-words">
                           {selectedRequest.additionalInfo || "Nenhuma informação adicional fornecida"}
@@ -571,7 +519,7 @@ const ComprasInfraestrutura = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="rounded-xl">
-                          {["pending", "analyzing", "approved", "rejected", "inProgress", "completed", "canceled"].map((status) => (
+                          {["pending", "analyzing", "approved", "rejected", "completed", "canceled"].map((status) => (
                             <DropdownMenuItem 
                               key={status} 
                               onSelect={() => handleStatusChange(status as RequestStatus)}
@@ -645,4 +593,4 @@ const ComprasInfraestrutura = () => {
   );
 };
 
-export default ComprasInfraestrutura;
+export default ComprasPedagogicoAdmin;

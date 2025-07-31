@@ -222,6 +222,12 @@ export const AppSidebar = () => {
       permission: "compras-infraestrutura" 
     },
     { 
+      icon: ShoppingCart, 
+      label: "Compras Pedagógico / Administrativo", 
+      href: "/compras-pedagogicoadmin", 
+      permission: "compras-pedagogicoadmin" 
+    },
+    { 
       icon: Wrench, 
       label: "Manutenção", 
       href: "/suporte-operacional", 

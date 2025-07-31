@@ -36,6 +36,7 @@ import SuportePlataforma from "@/pages/admin/SuportePlataforma";
 import Profile from "@/pages/Profile";
 import RolesManagement from "@/pages/admin/RolesManagement";
 import HomeRedirect from "@/components/HomeRedirect";
+import ComprasPedagogicoAdmin from "./pages/admin/ComprasPedagogicoAdmin";
 
 const queryClient = new QueryClient();
 
@@ -126,6 +127,14 @@ const router = createBrowserRouter(
           element: (
             <ProtectedRoute requiredPermission="compras-infraestrutura">
               <ComprasInfraestrutura />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "compras-pedagogicoadmin",
+          element: (
+            <ProtectedRoute requiredPermission="compras-pedagogicoadmin">
+              <ComprasPedagogicoAdmin />
             </ProtectedRoute>
           ),
         },
