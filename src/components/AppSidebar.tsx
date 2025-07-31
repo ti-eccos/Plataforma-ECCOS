@@ -216,6 +216,12 @@ export const AppSidebar = () => {
       permission: "compras-tecnologia" 
     },
     { 
+      icon: ShoppingCart, 
+      label: "Compras Infraestrutura", 
+      href: "/compras-infraestrutura", 
+      permission: "compras-infraestrutura" 
+    },
+    { 
       icon: Wrench, 
       label: "Manutenção", 
       href: "/suporte-operacional", 

@@ -108,7 +108,7 @@ const router = createBrowserRouter(
         {
           path: "compras-financeiro",
           element: (
-            <ProtectedRoute requiredPermission="financeiro">
+            <ProtectedRoute requiredPermission="compras-financeiro">
               <ComprasFinanceiro />
             </ProtectedRoute>
           ),
@@ -116,7 +116,7 @@ const router = createBrowserRouter(
         {
           path: "compras-tecnologia",
           element: (
-            <ProtectedRoute requiredPermission="tecnologia">
+            <ProtectedRoute requiredPermission="compras-tecnologia">
               <ComprasTecnologia />
             </ProtectedRoute>
           ),
@@ -124,8 +124,8 @@ const router = createBrowserRouter(
         {
           path: "compras-infraestrutura",
           element: (
-            <ProtectedRoute requiredPermission="suporte-operacional">
-              <ComprasTecnologia />
+            <ProtectedRoute requiredPermission="compras-infraestrutura">
+              <ComprasInfraestrutura />
             </ProtectedRoute>
           ),
         },
