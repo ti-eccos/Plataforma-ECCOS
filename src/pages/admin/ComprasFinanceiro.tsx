@@ -15,7 +15,8 @@ import {
   ChevronDown,
   Calendar,
   Save,
-  X
+  X,
+  AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
 import { 
@@ -23,7 +24,7 @@ import {
   getRequestById,
   deleteRequest
 } from "@/services/sharedService";
-import {  RequestStatus, RequestData} from '@/services/types'
+import { RequestStatus, RequestData } from '@/services/types';
 import { useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/components/AppLayout";
 import { 
@@ -73,6 +74,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Timestamp } from "firebase/firestore";
+import { useRouter } from "next/navigation";
 
 const getStatusBadge = (status: RequestStatus) => {
   switch (status) {
@@ -89,8 +91,9 @@ const getStatusBadge = (status: RequestStatus) => {
 };
 
 const ComprasFinanceiro = () => {
+  const router = useRouter();
   const queryClient = useQueryClient();
-  const { currentUser } = useAuth();
+  const { currentUser, userPermissions, loading: authLoading, reloadPermissions } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRequest, setSelectedRequest] = useState<RequestData | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -105,13 +108,38 @@ const ComprasFinanceiro = () => {
   });
   const [deliveryDate, setDeliveryDate] = useState<Date | null>(null);
   const [isEditingDeliveryDate, setIsEditingDeliveryDate] = useState(false);
+  const [permissionChecked, setPermissionChecked] = useState(false);
   
   const purchaseTypes = ["Compra Pedagógica", "Compra Administrativa", "Compra Infraestrutura"];
   const [selectedTypes, setSelectedTypes] = useState<string[]>(purchaseTypes);
 
+  // Verificação de permissões
+  useEffect(() => {
+    if (!authLoading && currentUser) {
+      const hasPermission = userPermissions['compras-financeiro'] || (currentUser as any).isSuperAdmin;
+      if (!hasPermission) {
+        router.push('/unauthorized');
+      } else {
+        setPermissionChecked(true);
+      }
+    }
+  }, [authLoading, currentUser, userPermissions, router]);
+
+  // Recarregar permissões se necessário
+  const handleReloadPermissions = async () => {
+    try {
+      await reloadPermissions();
+      toast.success("Permissões recarregadas com sucesso");
+    } catch (error) {
+      toast.error("Erro ao recarregar permissões");
+      console.error("Error reloading permissions:", error);
+    }
+  };
+
   const { data: allRequests = [], isLoading } = useQuery({
     queryKey: ['allRequests'],
     queryFn: () => getAllRequests(),
+    enabled: permissionChecked // Só faz a query se as permissões foram verificadas
   });
 
   useEffect(() => {
@@ -177,7 +205,6 @@ const ComprasFinanceiro = () => {
     try {
       const updateData: any = { status: newStatus };
       
-      // Adiciona data de entrega se status for 'waitingDelivery'
       if (newStatus === "waitingDelivery" && deliveryDate) {
         updateData.deliveryDate = Timestamp.fromDate(deliveryDate);
       }
@@ -204,7 +231,6 @@ const ComprasFinanceiro = () => {
     }
   };
 
-  // Função para salvar/atualizar a data de entrega
   const handleSaveDeliveryDate = async () => {
     if (!selectedRequest) return;
     
@@ -215,13 +241,11 @@ const ComprasFinanceiro = () => {
       if (deliveryDate) {
         updateData.deliveryDate = Timestamp.fromDate(deliveryDate);
       } else {
-        // Remove a data de entrega se deliveryDate for null
         updateData.deliveryDate = null;
       }
 
       await updateDoc(docRef, updateData);
       
-      // Atualiza localmente
       setSelectedRequest({ 
         ...selectedRequest, 
         deliveryDate: deliveryDate ? Timestamp.fromDate(deliveryDate) : null 
@@ -236,7 +260,6 @@ const ComprasFinanceiro = () => {
     }
   };
 
-  // Função para remover a data de entrega
   const handleRemoveDeliveryDate = async () => {
     if (!selectedRequest) return;
     
@@ -247,7 +270,6 @@ const ComprasFinanceiro = () => {
         deliveryDate: null
       });
       
-      // Atualiza localmente
       setSelectedRequest({ 
         ...selectedRequest, 
         deliveryDate: null 
@@ -304,6 +326,16 @@ const ComprasFinanceiro = () => {
   const approvedRequests = filteredRequests.filter(req => req.status === 'approved').length;
   const totalValue = filteredRequests.reduce((sum, req) => sum + ((req.quantity || 0) * (req.unitPrice || 0)), 0);
 
+  if (authLoading || !permissionChecked) {
+    return (
+      <AppLayout>
+        <div className="flex justify-center items-center h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-eccos-purple"></div>
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
       <div className="min-h-screen bg-white relative overflow-hidden">
@@ -315,10 +347,21 @@ const ComprasFinanceiro = () => {
 
         <div className="relative z-10 space-y-8 p-6 md:p-12">
           {/* Header */}
-          <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
-            <ShoppingCart className="text-eccos-purple" size={35} />
-            Solicitações de Compra
-          </h1>
+          <div className="flex justify-between items-center">
+            <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+              <ShoppingCart className="text-eccos-purple" size={35} />
+              Solicitações de Compra
+            </h1>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleReloadPermissions}
+              className="text-gray-500 hover:text-eccos-purple"
+              title="Recarregar permissões"
+            >
+              <AlertCircle className="h-4 w-4" />
+            </Button>
+          </div>
 
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
