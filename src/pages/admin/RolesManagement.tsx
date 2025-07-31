@@ -27,6 +27,9 @@ import {
   Settings,
   UserCheck
 } from "lucide-react";
+import { doc, setDoc, deleteDoc, collection, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { toast } from "@/components/ui/use-toast";
 
 interface Role {
   id: string;
@@ -106,6 +109,11 @@ const permissionLabels: { [key: string]: { label: string; icon: React.ReactNode;
     icon: <ShoppingCart className="h-4 w-4" />,
     category: "Tecnologia"
   },
+  "compras-infraestrutura": {
+    label: "Compras Infraestrutura",
+    icon: <ShoppingCart className="h-4 w-4" />,
+    category: "Operacional"
+  },
   "suporte-operacional": {
     label: "Suporte Operacional",
     icon: <Wrench className="h-4 w-4" />,
@@ -136,12 +144,13 @@ const permissionLabels: { [key: string]: { label: string; icon: React.ReactNode;
     icon: <FileText className="h-4 w-4" />,
     category: "Administração"
   },
-    "user-dropdown": {
+  "user-dropdown": {
     label: "Dropdown de Usuários",
     icon: <Users className="h-4 w-4" />,
     category: "Administração"
   },
 };
+
 const defaultPermissions = Object.keys(permissionLabels);
 
 const defaultInitialRoles: Role[] = [
@@ -217,7 +226,6 @@ const defaultInitialRoles: Role[] = [
   },
 ];
 
-// Componente Modal com z-index corrigido
 const RoleModal: React.FC<{
   role: Role | null;
   onClose: () => void;
@@ -227,7 +235,6 @@ const RoleModal: React.FC<{
 }> = ({ role, onClose, onSave, onTogglePermission, onChange }) => {
   if (!role) return null;
 
-  // Agrupar permissões por categoria
   const groupedPermissions = defaultPermissions.reduce((groups, permission) => {
     const category = permissionLabels[permission]?.category || 'Outros';
     if (!groups[category]) {
@@ -251,7 +258,6 @@ const RoleModal: React.FC<{
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
-        {/* Header */}
         <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -278,9 +284,7 @@ const RoleModal: React.FC<{
           </div>
         </div>
 
-        {/* Content */}
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
-          {/* Informações básicas */}
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -316,7 +320,6 @@ const RoleModal: React.FC<{
               />
             </div>
 
-            {/* Permissões por categoria */}
             <div className="space-y-6">
               <div className="flex items-center gap-2">
                 <Settings className="h-5 w-5 text-purple-600" />
@@ -371,7 +374,6 @@ const RoleModal: React.FC<{
           </div>
         </div>
 
-        {/* Footer */}
         <div className="border-t bg-gray-50 px-6 py-4">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className="text-sm text-gray-600">
@@ -410,10 +412,40 @@ const RolesManagement = () => {
 
   const fetchRoles = async () => {
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "roles"));
+      const rolesData: Role[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        rolesData.push(doc.data() as Role);
+      });
+
+      if (rolesData.length === 0) {
+        // Initialize with default roles if collection is empty
+        await Promise.all(
+          defaultInitialRoles.map(async (role) => {
+            await setDoc(doc(db, "roles", role.id), role);
+          })
+        );
+        setRoles(defaultInitialRoles);
+        toast({
+          title: "Roles inicializadas",
+          description: "As roles padrão foram criadas no banco de dados",
+        });
+      } else {
+        setRoles(rolesData);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar roles:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar as roles",
+        variant: "destructive",
+      });
       setRoles(defaultInitialRoles);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   useEffect(() => {
@@ -421,31 +453,88 @@ const RolesManagement = () => {
   }, []);
 
   const handleDelete = async (roleId: string) => {
-    if (roleId === "superadmin") return alert("Não é possível excluir o superadmin");
-    if (roleId === "admin") return alert("Não é possível excluir o role de administrador padrão");
+    if (["admin", "superadmin"].includes(roleId)) {
+      toast({
+        title: "Ação não permitida",
+        description: `Não é possível excluir a role "${roleId}"`,
+        variant: "destructive",
+      });
+      return;
+    }
     
-    if (window.confirm(`Tem certeza que deseja excluir a role "${roles.find(r => r.id === roleId)?.name}"?`)) {
-      setRoles(prev => prev.filter(role => role.id !== roleId));
+    const roleName = roles.find(r => r.id === roleId)?.name;
+    
+    if (window.confirm(`Tem certeza que deseja excluir a role "${roleName}"?`)) {
+      try {
+        await deleteDoc(doc(db, "roles", roleId));
+        setRoles(prev => prev.filter(role => role.id !== roleId));
+        toast({
+          title: "Role excluída",
+          description: `A role "${roleName}" foi removida com sucesso`,
+        });
+        console.log(`Role "${roleId}" excluída com sucesso do Firestore`);
+      } catch (error) {
+        console.error("Erro ao excluir role:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível excluir a role",
+          variant: "destructive",
+        });
+      }
     }
   };
 
   const handleSave = async () => {
     if (!editingRole) return;
-    if (!editingRole.id.trim()) return alert("ID é obrigatório");
-    if (!editingRole.name.trim()) return alert("Nome é obrigatório");
-
-    const isEditing = roles.some(role => role.id === editingRole.id);
-    
-    if (isEditing) {
-      setRoles(prev => prev.map(role => 
-        role.id === editingRole.id ? editingRole : role
-      ));
-    } else {
-      setRoles(prev => [...prev, editingRole]);
+    if (!editingRole.id.trim()) {
+      toast({
+        title: "Campo obrigatório",
+        description: "ID é obrigatório",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!editingRole.name.trim()) {
+      toast({
+        title: "Campo obrigatório",
+        description: "Nome é obrigatório",
+        variant: "destructive",
+      });
+      return;
     }
 
-    setEditingRole(null);
-    setIsModalOpen(false);
+    try {
+      await setDoc(doc(db, "roles", editingRole.id), editingRole);
+      
+      const isEditing = roles.some(role => role.id === editingRole.id);
+      
+      if (isEditing) {
+        setRoles(prev => prev.map(role => 
+          role.id === editingRole.id ? editingRole : role
+        ));
+        toast({
+          title: "Role atualizada",
+          description: `A role "${editingRole.name}" foi atualizada com sucesso`,
+        });
+      } else {
+        setRoles(prev => [...prev, editingRole]);
+        toast({
+          title: "Role criada",
+          description: `A role "${editingRole.name}" foi criada com sucesso`,
+        });
+      }
+
+      console.log(`Role "${editingRole.id}" salva com sucesso no Firestore`);
+      setEditingRole(null);
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Erro ao salvar role:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar a role",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleTogglePermission = (perm: string) => {
@@ -495,14 +584,12 @@ const RolesManagement = () => {
 
   const pageContent = (
     <div className="min-h-screen bg-gray-50 relative">
-      {/* Background decorations */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-purple-100 blur-3xl opacity-20"></div>
         <div className="absolute right-1/4 bottom-1/4 h-80 w-80 rounded-full bg-blue-100 blur-3xl opacity-20"></div>
       </div>
 
       <div className="relative space-y-8">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-3 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
@@ -610,7 +697,7 @@ const RolesManagement = () => {
                         variant="destructive"
                         size="sm"
                         onClick={() => handleDelete(role.id)}
-                        disabled={role.id === "admin"}
+                        disabled={["admin", "superadmin"].includes(role.id)}
                         className="flex-1 rounded-lg"
                       >
                         <Trash className="w-4 h-4 mr-1" /> 
@@ -624,7 +711,6 @@ const RolesManagement = () => {
           </div>
         )}
 
-        {/* Modal */}
         {isModalOpen && editingRole && (
           <RoleModal
             role={editingRole}

@@ -106,6 +106,11 @@ const permissionLabels: { [key: string]: { label: string; icon: React.ReactNode;
     icon: <ShoppingCart className="h-4 w-4" />,
     category: "Tecnologia"
   },
+  "compras-infraestrutura": {
+    label: "Compras Infraestrutura",
+    icon: <ShoppingCart className="h-4 w-4" />,
+    category: "Operacional"
+  },
   "suporte-operacional": {
     label: "Suporte Operacional",
     icon: <Wrench className="h-4 w-4" />,
