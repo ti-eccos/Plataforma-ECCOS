@@ -69,6 +69,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Timestamp } from "firebase/firestore";
@@ -103,6 +104,25 @@ const ComprasTecnologia = () => {
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
   
+  // Lista de todos os status disponíveis
+  const allStatuses: RequestStatus[] = [
+    "pending", 
+    "analyzing", 
+    "approved", 
+    "rejected", 
+    "waitingDelivery", 
+    "delivered", 
+    "completed", 
+    "canceled"
+  ];
+  
+  // Status ocultos por padrão
+  const hiddenStatuses = ["rejected", "completed", "canceled", "delivered"];
+  const initialStatuses = allStatuses.filter(status => !hiddenStatuses.includes(status));
+  
+  // Estado para os status selecionados
+  const [selectedStatuses, setSelectedStatuses] = useState<RequestStatus[]>(initialStatuses);
+
   // Filtrar apenas solicitações de tecnologia
   const { data: allRequests = [], isLoading } = useQuery({
     queryKey: ['allRequests'],
@@ -226,7 +246,7 @@ const ComprasTecnologia = () => {
         req.userName?.toLowerCase().includes(search) ||
         req.userEmail?.toLowerCase().includes(search) ||
         req.itemName?.toLowerCase().includes(search)
-      );
+      ) && selectedStatuses.includes(req.status); // Filtro por status adicionado
     });
 
   // Calcular estatísticas apenas para tecnologia
@@ -323,7 +343,7 @@ const ComprasTecnologia = () => {
                 </Card>
               </div>
 
-              {/* Filtros - sem dropdown de tipos */}
+              {/* Filtros - com dropdown de status */}
               <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg">
                 <CardContent className="p-6">
                   <div className="flex flex-col sm:flex-row gap-4">
@@ -336,6 +356,34 @@ const ComprasTecnologia = () => {
                         className="pl-10 h-12 rounded-xl border-gray-200 focus:border-eccos-purple"
                       />
                     </div>
+                    
+                    {/* Dropdown de status - ADICIONADO */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="flex items-center gap-2 h-12 rounded-xl border-gray-200 px-6">
+                          <Filter className="h-4 w-4" /> Status ({selectedStatuses.length})
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-background rounded-xl">
+                        {allStatuses.map((status) => (
+                          <DropdownMenuCheckboxItem
+                            key={status}
+                            checked={selectedStatuses.includes(status)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedStatuses([...selectedStatuses, status]);
+                              } else {
+                                setSelectedStatuses(selectedStatuses.filter(s => s !== status));
+                              }
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              {getStatusBadge(status)}
+                            </div>
+                          </DropdownMenuCheckboxItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </CardContent>
               </Card>

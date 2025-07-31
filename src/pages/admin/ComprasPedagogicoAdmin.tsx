@@ -13,7 +13,8 @@ import {
   CheckCircle,
   ChevronDown,
   Book,
-  ClipboardList
+  ClipboardList,
+  Filter
 } from "lucide-react";
 import { toast } from "sonner";
 import { 
@@ -67,21 +68,22 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
 const getStatusBadge = (status: RequestStatus) => {
   switch (status) {
     case "pending": return <Badge variant="outline" className="border-yellow-500 text-yellow-600">Pendente</Badge>;
     case "analyzing": return <Badge variant="outline" className="bg-yellow-500 text-white">Em Análise</Badge>;
     case "approved": return <Badge className="bg-green-500 text-white">Aprovado</Badge>;
     case "rejected": return <Badge variant="destructive">Reprovado</Badge>;
+    case "waitingDelivery": return <Badge className="bg-blue-500 text-white">Aguardando entrega</Badge>;
+    case "delivered": return <Badge className="bg-indigo-500 text-white">Recebido</Badge>;
     case "completed": return <Badge className="bg-slate-500 text-white">Concluído</Badge>;
     case "canceled": return <Badge className="bg-amber-500 text-white">Cancelado</Badge>;
     default: return <Badge variant="outline">Desconhecido</Badge>;
-  }
+    }
 };
-
 const ComprasPedagogicoAdmin = () => {
   const queryClient = useQueryClient();
   const { currentUser } = useAuth();
@@ -98,22 +100,38 @@ const ComprasPedagogicoAdmin = () => {
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
   
+  // Lista de todos os status disponíveis
+  const allStatuses: RequestStatus[] = [
+    "pending", 
+    "analyzing", 
+    "approved", 
+    "rejected", 
+    "waitingDelivery", 
+    "delivered", 
+    "completed", 
+    "canceled"
+  ];
+  
+  // Status ocultos por padrão
+  const hiddenStatuses = ["rejected", "completed", "canceled", "delivered"];
+  const initialStatuses = allStatuses.filter(status => !hiddenStatuses.includes(status));
+  
+  // Estado para os status selecionados
+  const [selectedStatuses, setSelectedStatuses] = useState<RequestStatus[]>(initialStatuses);
+
   // Filtrar apenas solicitações pedagógicas e administrativas
   const { data: allRequests = [], isLoading } = useQuery({
     queryKey: ['allRequests'],
     queryFn: () => getAllRequests(),
   });
-
   useEffect(() => {
     const checkUnreadMessages = () => {
       const newUnread: Record<string, number> = {};
-      
       // Considerar apenas solicitações pedagógicas e administrativas
       const pedAdminRequests = allRequests.filter(req => 
         req.type === 'purchase' && 
         (req.tipo === "Pedagógico" || req.tipo === "Administrativo")
       );
-      
       pedAdminRequests.forEach(req => {
         const messages = req.messages || [];
         const unreadCount = messages.filter(msg => 
@@ -123,18 +141,14 @@ const ComprasPedagogicoAdmin = () => {
           newUnread[req.id] = unreadCount;
         }
       });
-      
       setUnreadMessages(newUnread);
     };
-
     checkUnreadMessages();
   }, [allRequests, viewedRequests]);
-
   const handleOpenChat = async (request: RequestData) => {
     try {
       const fullRequest = await getRequestById(request.id, request.collectionName);
       setChatRequest(fullRequest);
-      
       setViewedRequests(prev => {
         const newSet = new Set(prev);
         (fullRequest.messages || []).forEach(msg => {
@@ -145,33 +159,26 @@ const ComprasPedagogicoAdmin = () => {
         localStorage.setItem('pedAdminViewedRequests', JSON.stringify(Array.from(newSet)));
         return newSet;
       });
-      
       setUnreadMessages(prev => {
         const newUnread = {...prev};
         delete newUnread[fullRequest.id];
         return newUnread;
       });
-      
       setIsChatOpen(true);
     } catch (error) {
       toast.error("Erro ao abrir chat");
       console.error("Error:", error);
     }
   };
-
   const handleStatusChange = async (newStatus: RequestStatus) => {
     if (!selectedRequest) return;
-    
     try {
       const updateData: any = { status: newStatus };
-
       if (newStatus === "approved") {
         updateData.financeiroVisible = true;
       }
-
       const docRef = doc(db, selectedRequest.collectionName, selectedRequest.id);
       await updateDoc(docRef, { status: newStatus });
-  
       await createNotification({
         title: 'Alteração de Status',
         message: `Status da sua solicitação de compra foi alterado para: ${newStatus}`,
@@ -181,7 +188,6 @@ const ComprasPedagogicoAdmin = () => {
         recipients: [selectedRequest.userEmail],
         isBatch: false
       });
-  
       toast.success("Status atualizado");
       queryClient.invalidateQueries({ queryKey: ['allRequests'] });
       setSelectedRequest({ ...selectedRequest, status: newStatus });
@@ -190,7 +196,6 @@ const ComprasPedagogicoAdmin = () => {
       console.error("Error:", error);
     }
   };
-
   const handleDeleteRequest = (request: RequestData) => {
     setRequestToDelete({
       id: request.id,
@@ -198,10 +203,8 @@ const ComprasPedagogicoAdmin = () => {
     });
     setIsDeleteDialogOpen(true);
   };
-
   const handleDeleteConfirm = async () => {
     if (!requestToDelete) return;
-
     try {
       await deleteRequest(requestToDelete.id, requestToDelete.collectionName);
       toast.success("Excluído com sucesso");
@@ -214,7 +217,6 @@ const ComprasPedagogicoAdmin = () => {
       console.error("Error:", error);
     }
   };
-
   // Filtrar apenas solicitações pedagógicas e administrativas
   const filteredRequests = allRequests
     .filter(req => req.type === 'purchase' && 
@@ -225,15 +227,13 @@ const ComprasPedagogicoAdmin = () => {
         req.userName?.toLowerCase().includes(search) ||
         req.userEmail?.toLowerCase().includes(search) ||
         req.itemName?.toLowerCase().includes(search)
-      );
+      ) && selectedStatuses.includes(req.status); // Filtro por status
     });
-
   // Calcular estatísticas
   const totalRequests = filteredRequests.length;
   const pendingRequests = filteredRequests.filter(req => req.status === 'pending').length;
   const analyzingRequests = filteredRequests.filter(req => req.status === 'analyzing').length;
   const totalValue = filteredRequests.reduce((sum, req) => sum + ((req.quantity || 0) * (req.unitPrice || 0)), 0);
-
   return (
     <AppLayout>
       <div className="min-h-screen bg-white relative overflow-hidden">
@@ -242,14 +242,12 @@ const ComprasPedagogicoAdmin = () => {
           <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-sidebar blur-3xl opacity-5"></div>
           <div className="absolute right-1/4 bottom-1/4 h-80 w-80 rounded-full bg-eccos-purple blur-3xl opacity-5"></div>
         </div>
-
         <div className="relative z-10 space-y-8 p-6 md:p-12">
           {/* Header */}
           <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
             <ShoppingCart className="text-eccos-purple" size={35} />
             Solicitações de Compra - Pedagógico / Administrativo
           </h1>
-
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-eccos-purple"></div>
@@ -271,7 +269,6 @@ const ComprasPedagogicoAdmin = () => {
                     </Badge>
                   </CardContent>
                 </Card>
-
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-gray-600">Pendentes</CardTitle>
@@ -286,7 +283,6 @@ const ComprasPedagogicoAdmin = () => {
                     </Badge>
                   </CardContent>
                 </Card>
-
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-gray-600">Em Análise</CardTitle>
@@ -301,7 +297,6 @@ const ComprasPedagogicoAdmin = () => {
                     </Badge>
                   </CardContent>
                 </Card>
-
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-gray-600">Valor Total</CardTitle>
@@ -321,7 +316,6 @@ const ComprasPedagogicoAdmin = () => {
                   </CardContent>
                 </Card>
               </div>
-
               {/* Filtros */}
               <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg">
                 <CardContent className="p-6">
@@ -335,10 +329,36 @@ const ComprasPedagogicoAdmin = () => {
                         className="pl-10 h-12 rounded-xl border-gray-200 focus:border-eccos-purple"
                       />
                     </div>
+                    {/* Dropdown de status */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="flex items-center gap-2 h-12 rounded-xl border-gray-200 px-6">
+                          <Filter className="h-4 w-4" /> Status ({selectedStatuses.length})
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-background rounded-xl">
+                        {allStatuses.map((status) => (
+                          <DropdownMenuCheckboxItem
+                            key={status}
+                            checked={selectedStatuses.includes(status)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedStatuses([...selectedStatuses, status]);
+                              } else {
+                                setSelectedStatuses(selectedStatuses.filter(s => s !== status));
+                              }
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              {getStatusBadge(status)}
+                            </div>
+                          </DropdownMenuCheckboxItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </CardContent>
               </Card>
-
               {/* Tabela */}
               {filteredRequests.length === 0 ? (
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg">
@@ -424,7 +444,6 @@ const ComprasPedagogicoAdmin = () => {
               )}
             </>
           )}
-
           {/* Dialog de detalhes */}
           <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
             <DialogContent className="max-w-3xl bg-white border border-gray-100 rounded-2xl overflow-hidden">
@@ -453,7 +472,6 @@ const ComprasPedagogicoAdmin = () => {
                       </div>
                     </DialogDescription>
                   </DialogHeader>
-
                   {/* Conteúdo rolável */}
                   <div className="flex-1 overflow-y-auto p-6 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -537,7 +555,6 @@ const ComprasPedagogicoAdmin = () => {
                       </DropdownMenu>
                     </div>
                   </div>
-
                   {/* Rodapé fixo */}
                   <DialogFooter className="p-6 border-t border-gray-100 gap-2 bg-white sticky bottom-0 z-10">
                     <Button
@@ -552,7 +569,6 @@ const ComprasPedagogicoAdmin = () => {
               )}
             </DialogContent>
           </Dialog>
-
           {/* Chat Admin */}
           <ChatAdmin 
             request={chatRequest} 
@@ -560,7 +576,6 @@ const ComprasPedagogicoAdmin = () => {
             onOpenChange={setIsChatOpen}
             onMessageSent={() => queryClient.invalidateQueries({ queryKey: ['allRequests'] })}
           />
-
           {/* Dialog de confirmação de exclusão */}
           <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
             <AlertDialogContent className="rounded-2xl">
@@ -582,7 +597,6 @@ const ComprasPedagogicoAdmin = () => {
             </AlertDialogContent>
           </AlertDialog>
         </div>
-
         {/* Footer */}
         <footer className="relative z-10 bg-gray-50 py-10 px-4 md:px-12">
           <div className="max-w-6xl mx-auto text-center">
@@ -595,5 +609,4 @@ const ComprasPedagogicoAdmin = () => {
     </AppLayout>
   );
 };
-
 export default ComprasPedagogicoAdmin;

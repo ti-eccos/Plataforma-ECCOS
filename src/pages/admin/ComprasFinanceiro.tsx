@@ -107,13 +107,11 @@ const ComprasFinanceiro = () => {
   });
   const [deliveryDate, setDeliveryDate] = useState<Date | null>(null);
   const [isEditingDeliveryDate, setIsEditingDeliveryDate] = useState(false);
-  
   const purchaseTypes = ["Tecnologia", "Infraestrutura", "Pedagógico", "Administrativo"];
   const [selectedTypes, setSelectedTypes] = useState<string[]>(purchaseTypes);
-
+  
   // Lista de todos os status disponíveis
   const allStatuses: RequestStatus[] = [
-    "pending", 
     "analyzing", 
     "approved", 
     "rejected", 
@@ -123,18 +121,15 @@ const ComprasFinanceiro = () => {
     "canceled"
   ];
   
-  // Estado para os status selecionados (inicialmente todos exceto os indesejados)
-  const [selectedStatuses, setSelectedStatuses] = useState<RequestStatus[]>([
-    "pending",
-    "analyzing",
-    "approved",
-    "waitingDelivery",
-    "delivered"
-  ]);
+  // Status ocultos por padrão (incluindo pending para Financeiro)
+  const hiddenStatuses = ["rejected", "completed", "canceled", "delivered"];
+  const initialStatuses = allStatuses.filter(status => !hiddenStatuses.includes(status));
+  
+  // Estado para os status selecionados
+  const [selectedStatuses, setSelectedStatuses] = useState<RequestStatus[]>(initialStatuses);
 
   // Verificar permissões
   const hasPermission = userPermissions['compras-financeiro'] || currentUser?.email === "suporte@colegioeccos.com.br";
-  
   if (!hasPermission) {
     return <Unauthorized />;
   }
@@ -147,7 +142,6 @@ const ComprasFinanceiro = () => {
   useEffect(() => {
     const checkUnreadMessages = () => {
       const newUnread: Record<string, number> = {};
-      
       allRequests.forEach(req => {
         const messages = req.messages || [];
         const unreadCount = messages.filter(msg => 
@@ -157,10 +151,8 @@ const ComprasFinanceiro = () => {
           newUnread[req.id] = unreadCount;
         }
       });
-      
       setUnreadMessages(newUnread);
     };
-
     checkUnreadMessages();
   }, [allRequests, viewedRequests]);
 
@@ -176,7 +168,6 @@ const ComprasFinanceiro = () => {
     try {
       const fullRequest = await getRequestById(request.id, request.collectionName);
       setChatRequest(fullRequest);
-      
       setViewedRequests(prev => {
         const newSet = new Set(prev);
         (fullRequest.messages || []).forEach(msg => {
@@ -187,13 +178,11 @@ const ComprasFinanceiro = () => {
         localStorage.setItem('financeViewedRequests', JSON.stringify(Array.from(newSet)));
         return newSet;
       });
-      
       setUnreadMessages(prev => {
         const newUnread = {...prev};
         delete newUnread[fullRequest.id];
         return newUnread;
       });
-      
       setIsChatOpen(true);
     } catch (error) {
       toast.error("Erro ao abrir chat");
@@ -203,17 +192,13 @@ const ComprasFinanceiro = () => {
 
   const handleStatusChange = async (newStatus: RequestStatus) => {
     if (!selectedRequest) return;
-    
     try {
       const updateData: any = { status: newStatus };
-      
       if (newStatus === "waitingDelivery" && deliveryDate) {
         updateData.deliveryDate = Timestamp.fromDate(deliveryDate);
       }
-
       const docRef = doc(db, selectedRequest.collectionName, selectedRequest.id);
       await updateDoc(docRef, updateData);
-  
       await createNotification({
         title: 'Alteração de Status',
         message: `Status da sua solicitação de compra foi alterado para: ${newStatus}`,
@@ -223,7 +208,6 @@ const ComprasFinanceiro = () => {
         recipients: [selectedRequest.userEmail],
         isBatch: false
       });
-  
       toast.success("Status atualizado");
       queryClient.invalidateQueries({ queryKey: ['allRequests'] });
       setSelectedRequest({ ...selectedRequest, status: newStatus, ...updateData });
@@ -235,24 +219,19 @@ const ComprasFinanceiro = () => {
 
   const handleSaveDeliveryDate = async () => {
     if (!selectedRequest) return;
-    
     try {
       const docRef = doc(db, selectedRequest.collectionName, selectedRequest.id);
       const updateData: any = {};
-      
       if (deliveryDate) {
         updateData.deliveryDate = Timestamp.fromDate(deliveryDate);
       } else {
         updateData.deliveryDate = null;
       }
-
       await updateDoc(docRef, updateData);
-      
       setSelectedRequest({ 
         ...selectedRequest, 
         deliveryDate: deliveryDate ? Timestamp.fromDate(deliveryDate) : null 
       });
-      
       toast.success("Data de entrega atualizada");
       setIsEditingDeliveryDate(false);
       queryClient.invalidateQueries({ queryKey: ['allRequests'] });
@@ -264,19 +243,15 @@ const ComprasFinanceiro = () => {
 
   const handleRemoveDeliveryDate = async () => {
     if (!selectedRequest) return;
-    
     try {
       const docRef = doc(db, selectedRequest.collectionName, selectedRequest.id);
-      
       await updateDoc(docRef, {
         deliveryDate: null
       });
-      
       setSelectedRequest({ 
         ...selectedRequest, 
         deliveryDate: null 
       });
-      
       setDeliveryDate(null);
       toast.success("Data de entrega removida");
       setIsEditingDeliveryDate(false);
@@ -297,7 +272,6 @@ const ComprasFinanceiro = () => {
 
   const handleDeleteConfirm = async () => {
     if (!requestToDelete) return;
-
     try {
       await deleteRequest(requestToDelete.id, requestToDelete.collectionName);
       toast.success("Excluído com sucesso");
@@ -312,10 +286,7 @@ const ComprasFinanceiro = () => {
   };
 
   const filteredRequests = allRequests
-    .filter(req => req.type === 'purchase' && 
-            (req.financeiroVisible || 
-            req.status === 'approved' || 
-            req.userEmail === currentUser?.email))
+    .filter(req => req.type === 'purchase') // Mantém apenas solicitações de compra
     .filter(req => {
       const search = searchTerm.toLowerCase();
       return (
@@ -323,12 +294,12 @@ const ComprasFinanceiro = () => {
         req.userEmail?.toLowerCase().includes(search) ||
         req.itemName?.toLowerCase().includes(search)) &&
         selectedTypes.includes(req.tipo) &&
-        selectedStatuses.includes(req.status)
+        selectedStatuses.includes(req.status) // Filtra pelos status selecionados
       )
     });
 
   const totalRequests = filteredRequests.length;
-  const pendingRequests = filteredRequests.filter(req => req.status === 'pending').length;
+  const analyzingRequests = filteredRequests.filter(req => req.status === 'analyzing').length;
   const approvedRequests = filteredRequests.filter(req => req.status === 'approved').length;
   const totalValue = filteredRequests.reduce((sum, req) => sum + ((req.quantity || 0) * (req.unitPrice || 0)), 0);
 
@@ -339,13 +310,11 @@ const ComprasFinanceiro = () => {
           <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-sidebar blur-3xl opacity-5"></div>
           <div className="absolute right-1/4 bottom-1/4 h-80 w-80 rounded-full bg-eccos-purple blur-3xl opacity-5"></div>
         </div>
-
         <div className="relative z-10 space-y-8 p-6 md:p-12">
           <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
             <ShoppingCart className="text-eccos-purple" size={35} />
             Solicitações de Compra
           </h1>
-
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-eccos-purple"></div>
@@ -366,14 +335,13 @@ const ComprasFinanceiro = () => {
                     </Badge>
                   </CardContent>
                 </Card>
-
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-gray-600">Pendentes</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold bg-gradient-to-r from-yellow-500 to-yellow-600 bg-clip-text text-transparent">
-                      {pendingRequests}
+                      {analyzingRequests}
                     </div>
                     <Badge variant="outline" className="mt-2 border-yellow-500 text-yellow-500">
                       <Clock className="h-3 w-3 mr-1" />
@@ -381,7 +349,6 @@ const ComprasFinanceiro = () => {
                     </Badge>
                   </CardContent>
                 </Card>
-
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-gray-600">Aprovadas</CardTitle>
@@ -396,7 +363,6 @@ const ComprasFinanceiro = () => {
                     </Badge>
                   </CardContent>
                 </Card>
-
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-gray-600">Valor Total</CardTitle>
@@ -416,7 +382,6 @@ const ComprasFinanceiro = () => {
                   </CardContent>
                 </Card>
               </div>
-
               <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg">
                 <CardContent className="p-6">
                   <div className="flex flex-col sm:flex-row gap-4">
@@ -429,7 +394,6 @@ const ComprasFinanceiro = () => {
                         className="pl-10 h-12 rounded-xl border-gray-200 focus:border-eccos-purple"
                       />
                     </div>
-
                     <div className="flex gap-2">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -455,7 +419,6 @@ const ComprasFinanceiro = () => {
                           ))}
                         </DropdownMenuContent>
                       </DropdownMenu>
-
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="outline" className="flex items-center gap-2 h-12 rounded-xl border-gray-200 px-6">
@@ -486,7 +449,6 @@ const ComprasFinanceiro = () => {
                   </div>
                 </CardContent>
               </Card>
-
               {filteredRequests.length === 0 ? (
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg">
                   <CardContent className="p-12">
@@ -569,7 +531,6 @@ const ComprasFinanceiro = () => {
               )}
             </>
           )}
-
           <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
             <DialogContent className="max-w-3xl bg-white border border-gray-100 rounded-2xl overflow-hidden">
               {selectedRequest && (
@@ -615,7 +576,6 @@ const ComprasFinanceiro = () => {
                       </div>
                     </DialogDescription>
                   </DialogHeader>
-
                   <div className="flex-1 overflow-y-auto p-6 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
@@ -721,7 +681,6 @@ const ComprasFinanceiro = () => {
                       )}
                     </div>
                   </div>
-
                   <DialogFooter className="p-6 border-t border-gray-100 gap-2 bg-white sticky bottom-0 z-10">
                     <Button
                       variant="destructive"
@@ -736,14 +695,12 @@ const ComprasFinanceiro = () => {
               )}
             </DialogContent>
           </Dialog>
-
           <ChatAdmin 
             request={chatRequest} 
             isOpen={isChatOpen} 
             onOpenChange={setIsChatOpen}
             onMessageSent={() => queryClient.invalidateQueries({ queryKey: ['allRequests'] })}
           />
-
           <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
             <AlertDialogContent className="rounded-2xl">
               <AlertDialogHeader>
@@ -764,7 +721,6 @@ const ComprasFinanceiro = () => {
             </AlertDialogContent>
           </AlertDialog>
         </div>
-
         <footer className="relative z-10 bg-gray-50 py-10 px-4 md:px-12">
           <div className="max-w-6xl mx-auto text-center">
             <p className="text-gray-500 text-sm">

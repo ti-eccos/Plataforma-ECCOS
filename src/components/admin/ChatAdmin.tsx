@@ -39,11 +39,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import TextareaAutosize from "react-textarea-autosize";
 
 interface ChatAdminProps {
   request: RequestData | null;
@@ -71,6 +71,9 @@ const ChatAdmin = ({
   const [hasNewMessage, setHasNewMessage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Estado para permissão de notificações
+  const [notificationPermission, setNotificationPermission] = useState(Notification.permission);
 
   const getParticipants = () => {
     if (!messages.length) return [];
@@ -99,6 +102,17 @@ const ChatAdmin = ({
           // Detecta novas mensagens apenas após o carregamento inicial
           if (!initialLoad && currentMessages.length > previousMessageCount) {
             setHasNewMessage(true);
+            
+            // Notificar apenas se o chat não estiver aberto
+            if (!isOpen && notificationPermission === "granted") {
+              const lastMessage = currentMessages[currentMessages.length - 1];
+              if (lastMessage && !lastMessage.isAdmin) {
+                showNotification(
+                  "Nova mensagem",
+                  `${lastMessage.userName}: ${lastMessage.message || "Arquivo enviado"}`
+                );
+              }
+            }
           }
           
           setMessages(currentMessages);
@@ -110,7 +124,32 @@ const ChatAdmin = ({
     );
 
     return () => unsubscribe();
-  }, [request, isOpen]);
+  }, [request, isOpen, notificationPermission]);
+
+  // Solicitar permissão para notificações quando o componente montar
+  useEffect(() => {
+    if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+      Notification.requestPermission().then(permission => {
+        setNotificationPermission(permission);
+      });
+    }
+  }, []);
+
+  // Função para mostrar notificação
+  const showNotification = (title: string, body: string) => {
+    if (notificationPermission === "granted") {
+      const notification = new Notification(title, {
+        body,
+        icon: "/favicon.ico",
+        requireInteraction: false
+      });
+
+      // Fechar a notificação após 5 segundos
+      setTimeout(() => {
+        notification.close();
+      }, 5000);
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -421,11 +460,13 @@ const ChatAdmin = ({
                     
                     {editingMessageId === msg.id ? (
                       <div className="space-y-2">
-                        <Textarea
+                        <TextareaAutosize
                           value={editingText}
                           onChange={(e) => setEditingText(e.target.value)}
-                          className="min-h-[60px] resize-none"
+                          className="min-h-[60px] resize-none w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                           placeholder="Edite sua mensagem..."
+                          minRows={2}
+                          maxRows={6}
                         />
                         <div className="flex gap-2 justify-end">
                           <Button
@@ -487,13 +528,14 @@ const ChatAdmin = ({
           
           <div className="flex gap-2">
             <div className="flex-1 space-y-2">
-              <Textarea 
+              <TextareaAutosize
                 placeholder="Digite sua mensagem..." 
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                className="resize-none"
                 disabled={isLoading}
-                rows={2}
+                minRows={1}
+                maxRows={3}
+                className="w-full min-h-[40px] resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
             <div className="flex flex-col gap-2">

@@ -65,6 +65,7 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
@@ -539,7 +540,7 @@ export default function UserSolicitacoes() {
     }
   };
 
-  // Status por categoria
+  // Status por categoria - ATUALIZADO
   const statusByCategory = useMemo(() => {
     const map: Record<RequestType, RequestStatus[]> = {
       reservation: [
@@ -643,7 +644,7 @@ export default function UserSolicitacoes() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            {/* Dropdown de Status */}
+            {/* Dropdown de Status - ATUALIZADO */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -658,15 +659,12 @@ export default function UserSolicitacoes() {
               <DropdownMenuContent align="end" className="bg-background max-h-80 overflow-y-auto">
                 {Object.entries(statusByCategory).map(([type, statuses]) => {
                   if (selectedCategories.includes(type as RequestType)) {
-                    const validStatuses = statuses.filter(
-                      (status) => status !== "canceled" && status !== "rejected"
-                    );
                     return (
                       <React.Fragment key={type}>
                         <div className="px-2 py-1 text-xs font-semibold text-gray-500">
                           {getReadableRequestType(type as RequestType)}
                         </div>
-                        {validStatuses.map((status) => (
+                        {statuses.map((status) => (
                           <DropdownMenuCheckboxItem
                             key={status}
                             checked={selectedStatuses.includes(status)}
