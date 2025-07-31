@@ -50,7 +50,7 @@ interface ChatUserProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onMessageSent: () => void;
-  onMessagesRead?: (requestId: string) => void; // Nova prop
+  onMessagesRead?: (requestId: string) => void;
 }
 
 const ChatUser = ({
@@ -58,7 +58,7 @@ const ChatUser = ({
   isOpen,
   onOpenChange,
   onMessageSent,
-  onMessagesRead, // Nova prop
+  onMessagesRead,
 }: ChatUserProps) => {
   const { currentUser } = useAuth();
   const [newMessage, setNewMessage] = useState("");
@@ -71,7 +71,6 @@ const ChatUser = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Carregar mensagens em tempo real
   useEffect(() => {
     if (!request || !isOpen) return;
     const unsubscribe = onSnapshot(
@@ -87,18 +86,15 @@ const ChatUser = ({
     return () => unsubscribe();
   }, [request, isOpen]);
 
-  // Scroll automático
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Marcar mensagens como lidas ao abrir o chat
   useEffect(() => {
     if (request && isOpen && currentUser) {
       const markAsRead = async () => {
         try {
           await markMessagesAsRead(request.id, request.collectionName, currentUser.uid, false);
-          // Notificar componente pai que as mensagens foram lidas
           if (onMessagesRead) {
             onMessagesRead(request.id);
           }
@@ -110,7 +106,17 @@ const ChatUser = ({
     }
   }, [request, isOpen, currentUser, onMessagesRead]);
 
-  // Selecionar arquivo
+  const getParticipants = () => {
+    if (!messages.length) return [];
+    const participants = new Set<string>();
+    messages.forEach(msg => {
+      if (msg.userName && !msg.isDeleted) {
+        participants.add(msg.userName);
+      }
+    });
+    return Array.from(participants);
+  };
+
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -122,7 +128,6 @@ const ChatUser = ({
     }
   };
 
-  // Remover arquivo selecionado
   const handleRemoveFile = () => {
     setSelectedFile(null);
     if (fileInputRef.current) {
@@ -130,7 +135,6 @@ const ChatUser = ({
     }
   };
 
-  // Enviar mensagem
   const handleSendMessage = async () => {
     if (!request || (!newMessage.trim() && !selectedFile)) return;
     try {
@@ -168,19 +172,16 @@ const ChatUser = ({
     }
   };
 
-  // Iniciar edição
   const startEditing = (message: MessageData) => {
     setEditingMessageId(message.id);
     setEditingText(message.message);
   };
 
-  // Cancelar edição
   const cancelEditing = () => {
     setEditingMessageId(null);
     setEditingText("");
   };
 
-  // Salvar edição
   const handleEditMessage = async (messageId: string) => {
     if (!request || !editingText.trim()) return;
     try {
@@ -194,7 +195,6 @@ const ChatUser = ({
     }
   };
 
-  // Apagar mensagem
   const handleDeleteMessage = async (messageId: string) => {
     if (!request) return;
     try {
@@ -206,12 +206,10 @@ const ChatUser = ({
     }
   };
 
-  // Verificar se usuário pode editar/apagar
   const canEditOrDelete = (message: MessageData) => {
     return currentUser && message.userId === currentUser.uid && !message.isDeleted;
   };
 
-  // Formatar tamanho do arquivo
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return "0 Bytes";
     const k = 1024;
@@ -220,7 +218,6 @@ const ChatUser = ({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
-  // Ícone do arquivo
   const getFileIcon = (fileType: string) => {
     if (fileType.startsWith("image/")) {
       return <Image className="h-4 w-4" />;
@@ -228,7 +225,6 @@ const ChatUser = ({
     return <FileText className="h-4 w-4" />;
   };
 
-  // Status da mensagem
   const renderMessageStatus = (msg: MessageData) => {
     if (!msg.isAdmin) {
       if (msg.read && msg.readBy && msg.readBy.length > 0) {
@@ -258,13 +254,17 @@ const ChatUser = ({
                 <DialogDescription>
                   {getReadableRequestType(request.type)} -{" "}
                   {format(new Date(request.createdAt.toMillis()), "dd/MM/yyyy", { locale: ptBR })}
+                  {getParticipants().length > 0 && (
+                    <span className="ml-2">
+                      | Participantes: {getParticipants().join(", ")}
+                    </span>
+                  )}
                 </DialogDescription>
               )}
             </div>
           </div>
         </DialogHeader>
         <div className="space-y-4">
-          {/* Conteúdo do chat */}
           {isLoading ? (
             <div className="flex justify-center items-center h-32">
               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
@@ -283,7 +283,6 @@ const ChatUser = ({
                         : "bg-muted mr-8"
                     }`}
                   >
-                    {/* Menu de opções */}
                     {canEditOrDelete(msg) && (
                       <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <DropdownMenu>
@@ -307,7 +306,6 @@ const ChatUser = ({
                       </div>
                     )}
 
-                    {/* Informações da mensagem */}
                     <div className="flex justify-between text-xs mb-1">
                       <span className="font-medium">{msg.userName}</span>
                       <div className="flex items-center gap-1">
@@ -318,7 +316,6 @@ const ChatUser = ({
                       </div>
                     </div>
 
-                    {/* Anexo */}
                     {msg.attachment && !msg.isDeleted && (
                       <div className="mb-2 p-2 bg-black/5 rounded border border-black/10">
                         <div className="flex items-center gap-2">
@@ -350,7 +347,6 @@ const ChatUser = ({
                       </div>
                     )}
 
-                    {/* Mensagem ou campo de edição */}
                     {editingMessageId === msg.id ? (
                       <div className="space-y-2">
                         <Textarea
@@ -380,7 +376,6 @@ const ChatUser = ({
             </div>
           )}
 
-          {/* Exibição do arquivo selecionado */}
           {selectedFile && (
             <div className="flex items-center gap-2 p-2 bg-muted rounded border">
               {getFileIcon(selectedFile.type)}
@@ -394,7 +389,6 @@ const ChatUser = ({
             </div>
           )}
 
-          {/* Barra de progresso */}
           {uploadProgress > 0 && uploadProgress < 100 && (
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div
@@ -404,7 +398,6 @@ const ChatUser = ({
             </div>
           )}
 
-          {/* Campo de envio */}
           <div className="flex gap-2">
             <div className="flex-1 space-y-2">
               <Textarea
@@ -447,7 +440,6 @@ const ChatUser = ({
   );
 };
 
-// Função auxiliar para tipo legível
 const getReadableRequestType = (type: string): string => {
   switch (type) {
     case "reservation":
