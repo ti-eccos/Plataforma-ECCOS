@@ -300,15 +300,12 @@ const NovaSuporte = () => {
                       <FormLabel className="text-gray-700">Identificação do Equipamento</FormLabel>
                       <FormControl>
                         <Input 
-                          placeholder="Ex: Notebook Dell Latitude 3420, Mouse bluetooth" 
+                          placeholder="Ex: Torneira da Cozinha, Notebook Cinza, etc." 
                           className="rounded-xl border-gray-200 focus:ring-eccos-purple"
                           {...field} 
                           autoComplete="off"
                         />
                       </FormControl>
-                      <FormDescription className="text-gray-500">
-                        Forneça modelo ou identificação completa
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
