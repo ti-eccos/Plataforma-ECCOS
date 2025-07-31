@@ -14,13 +14,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { auth } from "@/lib/firebase";
-
-const ROLE_OPTIONS = [
-  { value: "user", label: "Usuário Padrão" },
-  { value: "financeiro", label: "Financeiro" },
-  { value: "operacional", label: "Manutenção" },
-  { value: "admin", label: "Administrador" },
-];
+import { getAllRoles, Role } from "@/services/rolesService";
 
 interface RoleChangeDialogProps {
   open: boolean;
@@ -34,12 +28,38 @@ export const RoleChangeDialog = ({ open, onOpenChange, user, onSuccess }: RoleCh
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { refreshUser, reloadPermissions } = useAuth();
+  const [roles, setRoles] = useState<Role[]>([]); // Estado para armazenar as roles
+  const [loadingRoles, setLoadingRoles] = useState(false); // Estado de carregamento
 
   useEffect(() => {
     if (user) {
       setSelectedRole(user.role);
     }
   }, [user]);
+
+  // Buscar roles quando o dialog abrir
+  useEffect(() => {
+    const fetchRoles = async () => {
+      if (open) {
+        setLoadingRoles(true);
+        try {
+          const rolesList = await getAllRoles();
+          setRoles(rolesList);
+        } catch (error) {
+          console.error("Erro ao buscar roles:", error);
+          toast({
+            title: "Erro",
+            description: "Não foi possível carregar as funções disponíveis",
+            variant: "destructive",
+          });
+        } finally {
+          setLoadingRoles(false);
+        }
+      }
+    };
+
+    fetchRoles();
+  }, [open, toast]);
 
   const handleSave = async () => {
     if (!user || !selectedRole) return;
@@ -62,7 +82,7 @@ export const RoleChangeDialog = ({ open, onOpenChange, user, onSuccess }: RoleCh
       
       toast({
         title: "Sucesso",
-        description: `Função alterada para ${ROLE_OPTIONS.find(r => r.value === selectedRole)?.label}`,
+        description: `Função alterada para ${roles.find(r => r.id === selectedRole)?.name || selectedRole}`,
       });
     } catch (error) {
       console.error("Error changing role:", error);
@@ -94,17 +114,22 @@ export const RoleChangeDialog = ({ open, onOpenChange, user, onSuccess }: RoleCh
             <Select
               value={selectedRole}
               onValueChange={(value) => setSelectedRole(value as UserRole)}
-              disabled={isSubmitting}
+              disabled={isSubmitting || loadingRoles}
             >
               <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Selecione uma função" />
+                <SelectValue placeholder={loadingRoles ? "Carregando funções..." : "Selecione uma função"} />
               </SelectTrigger>
               <SelectContent>
-                {ROLE_OPTIONS.map((role) => (
-                  <SelectItem key={role.value} value={role.value}>
-                    {role.label}
-                  </SelectItem>
-                ))}
+                {loadingRoles ? (
+                  // Exibe apenas o placeholder no SelectTrigger enquanto carrega
+                  null
+                ) : (
+                  roles.map((role) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      {role.name}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -122,7 +147,7 @@ export const RoleChangeDialog = ({ open, onOpenChange, user, onSuccess }: RoleCh
           <Button
             type="button"
             onClick={handleSave}
-            disabled={isSubmitting || !selectedRole || selectedRole === user?.role}
+            disabled={isSubmitting || !selectedRole || selectedRole === user?.role || loadingRoles}
           >
             {isSubmitting ? "Salvando..." : "Confirmar Alteração"}
           </Button>
