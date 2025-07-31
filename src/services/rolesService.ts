@@ -1,6 +1,23 @@
 import { db } from "@/lib/firebase";
 import { collection, getDocs, doc, updateDoc, setDoc, getDoc } from "firebase/firestore";
 
+export interface Role {
+  id: string;
+  name: string;
+  description: string;
+  permissions: { [key: string]: boolean };
+}
+
+export async function getAllRoles(): Promise<Role[]> {
+  try {
+    const snapshot = await getDocs(collection(db, "roles"));
+    return snapshot.docs.map(doc => doc.data() as Role);
+  } catch (error) {
+    console.error("Erro ao buscar roles:", error);
+    return [];
+  }
+}
+
 export interface User {
   uid: string;
   email: string;
