@@ -68,23 +68,43 @@ const ChatUser = ({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
+  const [hasNewMessage, setHasNewMessage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!request || !isOpen) return;
+
+    let initialLoad = true;
+    let previousMessageCount = messages.length;
+
     const unsubscribe = onSnapshot(
       doc(db, request.collectionName, request.id),
       (doc) => {
         if (doc.exists()) {
           const data = doc.data();
-          setMessages(data.messages || []);
+          const currentMessages = data.messages || [];
+          
+          if (!initialLoad && currentMessages.length > previousMessageCount) {
+            setHasNewMessage(true);
+          }
+          
+          setMessages(currentMessages);
+          previousMessageCount = currentMessages.length;
           setIsLoading(false);
+          initialLoad = false;
         }
       }
     );
+
     return () => unsubscribe();
   }, [request, isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setHasNewMessage(false);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -244,7 +264,7 @@ const ChatUser = ({
             <div>
               <DialogTitle className="flex items-center gap-2">
                 Chat da Solicitação
-                {request?.hasUnreadMessages && (
+                {hasNewMessage && (
                   <Badge variant="destructive" className="text-xs">
                     Nova mensagem
                   </Badge>
