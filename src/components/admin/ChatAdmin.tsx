@@ -50,7 +50,7 @@ interface ChatAdminProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onMessageSent: () => void;
-  onMessagesRead?: (requestId: string) => void; // Nova prop
+  onMessagesRead?: (requestId: string) => void;
 }
 
 const ChatAdmin = ({ 
@@ -58,7 +58,7 @@ const ChatAdmin = ({
   isOpen, 
   onOpenChange, 
   onMessageSent,
-  onMessagesRead // Nova prop
+  onMessagesRead
 }: ChatAdminProps) => {
   const { currentUser } = useAuth();
   const [newMessage, setNewMessage] = useState("");
@@ -70,6 +70,17 @@ const ChatAdmin = ({
   const [editingText, setEditingText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const getParticipants = () => {
+    if (!messages.length) return [];
+    const participants = new Set<string>();
+    messages.forEach(msg => {
+      if (msg.userName && !msg.isDeleted) {
+        participants.add(msg.userName);
+      }
+    });
+    return Array.from(participants);
+  };
 
   useEffect(() => {
     if (!request || !isOpen) return;
@@ -103,7 +114,6 @@ const ChatAdmin = ({
             true
           );
           
-          // Notificar componente pai que as mensagens foram lidas
           if (onMessagesRead) {
             onMessagesRead(request.id);
           }
@@ -119,7 +129,6 @@ const ChatAdmin = ({
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Verificar tamanho do arquivo (máximo 10MB)
       if (file.size > 10 * 1024 * 1024) {
         toast.error("Arquivo muito grande. Máximo 10MB permitido.");
         return;
@@ -154,7 +163,7 @@ const ChatAdmin = ({
         true,
         request.collectionName,
         currentUser?.displayName || "Administrador",
-        currentUser.uid, // Passar o userId
+        currentUser.uid,
         attachment
       );
       
@@ -245,7 +254,6 @@ const ChatAdmin = ({
 
   const renderMessageStatus = (msg: MessageData) => {
     if (msg.isAdmin) {
-      // Mensagem do admin
       if (msg.read && msg.readBy && msg.readBy.length > 0) {
         return <CheckCheck className="h-4 w-4 text-blue-500" />;
       } else if (msg.delivered) {
@@ -271,10 +279,12 @@ const ChatAdmin = ({
               </DialogTitle>
               {request && (
                 <DialogDescription>
-                  {getReadableRequestType(request.type)} - {request.userName || request.userEmail} - {format(
-                    new Date(request.createdAt.toMillis()),
-                    "dd/MM/yyyy",
-                    { locale: ptBR }
+                  {getReadableRequestType(request.type)} - {request.userName || request.userEmail} - 
+                  {format(new Date(request.createdAt.toMillis()), "dd/MM/yyyy", { locale: ptBR })}
+                  {getParticipants().length > 0 && (
+                    <span className="ml-2">
+                      | Participantes: {getParticipants().join(", ")}
+                    </span>
                   )}
                 </DialogDescription>
               )}
@@ -301,7 +311,6 @@ const ChatAdmin = ({
                         : 'bg-muted mr-8'
                     }`}
                   >
-                    {/* Menu de opções para mensagens próprias */}
                     {canEditOrDelete(msg) && (
                       <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <DropdownMenu>
@@ -359,7 +368,6 @@ const ChatAdmin = ({
                       </div>
                     </div>
                     
-                    {/* Renderizar anexo apenas se a mensagem não foi apagada */}
                     {msg.attachment && !msg.isDeleted && (
                       <div className="mb-2 p-2 bg-white/10 rounded border border-white/20">
                         <div className="flex items-center gap-2">
@@ -392,7 +400,6 @@ const ChatAdmin = ({
                       </div>
                     )}
                     
-                    {/* Renderizar mensagem ou campo de edição */}
                     {editingMessageId === msg.id ? (
                       <div className="space-y-2">
                         <Textarea
