@@ -29,7 +29,6 @@ import {
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 
-// Componente do Modal de Detalhes do Usuário
 const UserDetailsDialog = ({ user, onRoleChange, onBlock }: { 
   user: User, 
   onRoleChange: (user: User) => void,
@@ -108,110 +107,106 @@ const UserDetailsDialog = ({ user, onRoleChange, onBlock }: {
   };
 
   return (
-  <DialogContent 
-    className="max-w-md max-h-screen rounded-lg sm:rounded-xl p-0 overflow-hidden"
-  >
-    <div className="flex flex-col h-[90vh] sm:h-[85vh]">
-      <DialogHeader className="shrink-0 sticky top-0 bg-white z-10 border-b">
-        <DialogTitle className="flex items-center gap-2 p-4">
-          <UserIcon className="h-5 w-5 text-eccos-purple" />
-          Detalhes do Usuário
-        </DialogTitle>
-        <DialogDescription className="px-4 pb-2">
-          Informações detalhadas sobre o usuário.
-        </DialogDescription>
-      </DialogHeader>
+    <DialogContent 
+      className="max-w-md max-h-screen rounded-lg sm:rounded-xl p-0 overflow-hidden"
+    >
+      <div className="flex flex-col h-[90vh] sm:h-[85vh]">
+        <DialogHeader className="shrink-0 sticky top-0 bg-white z-10 border-b">
+          <DialogTitle className="flex items-center gap-2 p-4">
+            <UserIcon className="h-5 w-5 text-eccos-purple" />
+            Detalhes do Usuário
+          </DialogTitle>
+          <DialogDescription className="px-4 pb-2">
+            Informações detalhadas sobre o usuário.
+          </DialogDescription>
+        </DialogHeader>
 
-    {/* Conteúdo com scroll */}
-    <div className="flex-1 overflow-y-auto p-6 space-y-6">
-      {/* Informações básicas */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <UserIcon className="h-4 w-4 text-gray-500" />
-          <div>
-            <p className="text-sm font-medium text-gray-700">Nome</p>
-            <p className="text-sm text-gray-900">{user.displayName}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <Mail className="h-4 w-4 text-gray-500" />
-          <div>
-            <p className="text-sm font-medium text-gray-700">Email</p>
-            <p className="text-sm text-gray-900">{user.email}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <Shield className="h-4 w-4 text-gray-500" />
-          <div>
-            <p className="text-sm font-medium text-gray-700">Função</p>
-            <div className="mt-1">
-              {getRoleBadge(user)}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <UserIcon className="h-4 w-4 text-gray-500" />
+              <div>
+                <p className="text-sm font-medium text-gray-700">Nome</p>
+                <p className="text-sm text-gray-900">{user.displayName}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Mail className="h-4 w-4 text-gray-500" />
+              <div>
+                <p className="text-sm font-medium text-gray-700">Email</p>
+                <p className="text-sm text-gray-900">{user.email}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Shield className="h-4 w-4 text-gray-500" />
+              <div>
+                <p className="text-sm font-medium text-gray-700">Função</p>
+                <div className="mt-1">
+                  {getRoleBadge(user)}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Calendar className="h-4 w-4 text-gray-500" />
+              <div>
+                <p className="text-sm font-medium text-gray-700">Último Acesso</p>
+                <p className="text-sm text-gray-900">{getLastActive(user.lastActive)}</p>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <Calendar className="h-4 w-4 text-gray-500" />
-          <div>
-            <p className="text-sm font-medium text-gray-700">Último Acesso</p>
-            <p className="text-sm text-gray-900">{getLastActive(user.lastActive)}</p>
-          </div>
+
+          {user.blocked && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Lock className="h-4 w-4 text-red-600" />
+                <span className="text-sm font-medium text-red-800">Usuário Bloqueado</span>
+              </div>
+              <p className="text-xs text-red-600 mt-1">Este usuário não pode acessar o sistema</p>
+            </div>
+          )}
+
+          {user.role !== "superadmin" && (
+            <div className="space-y-3 pt-4 border-t">
+              <p className="text-sm font-medium text-gray-700">Ações</p>
+              <div className="flex flex-col gap-2">
+                {canEditRole(user) && (
+                  <Button
+                    variant="outline"
+                    onClick={() => onRoleChange(user)}
+                    className="justify-start h-9"
+                  >
+                    <Edit className="mr-2 h-4 w-4" />
+                    Alterar Função
+                  </Button>
+                )}
+                {canBlock(user) && (
+                  <Button
+                    variant="outline"
+                    onClick={() => onBlock(user)}
+                    className={cn(
+                      "justify-start h-9",
+                      user.blocked ? "text-green-600 hover:bg-green-50 hover:text-green-700 hover:border-green-300" : "text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+                    )}
+                  >
+                    {user.blocked ? (
+                      <>
+                        <Unlock className="mr-2 h-4 w-4" />
+                        Desbloquear Usuário
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="mr-2 h-4 w-4" />
+                        Bloquear Usuário
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Status */}
-      {user.blocked && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-          <div className="flex items-center gap-2">
-            <Lock className="h-4 w-4 text-red-600" />
-            <span className="text-sm font-medium text-red-800">Usuário Bloqueado</span>
-          </div>
-          <p className="text-xs text-red-600 mt-1">Este usuário não pode acessar o sistema</p>
-        </div>
-      )}
-
-      {/* Ações */}
-      {user.role !== "superadmin" && (
-        <div className="space-y-3 pt-4 border-t">
-          <p className="text-sm font-medium text-gray-700">Ações</p>
-          <div className="flex flex-col gap-2">
-            {canEditRole(user) && (
-              <Button
-                variant="outline"
-                onClick={() => onRoleChange(user)}
-                className="justify-start h-9"
-              >
-                <Edit className="mr-2 h-4 w-4" />
-                Alterar Função
-              </Button>
-            )}
-            {canBlock(user) && (
-              <Button
-                variant="outline"
-                onClick={() => onBlock(user)}
-                className={cn(
-                  "justify-start h-9",
-                  user.blocked ? "text-green-600 hover:bg-green-50 hover:text-green-700 hover:border-green-300" : "text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
-                )}
-              >
-                {user.blocked ? (
-                  <>
-                    <Unlock className="mr-2 h-4 w-4" />
-                    Desbloquear Usuário
-                  </>
-                ) : (
-                  <>
-                    <Lock className="mr-2 h-4 w-4" />
-                    Bloquear Usuário
-                  </>
-                )}
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  </div>
-</DialogContent>
+    </DialogContent>
   );
 };
 
@@ -228,9 +223,13 @@ const Usuarios = () => {
     queryFn: getAllUsers,
   });
 
-  const handleRoleChangeClick = (user: User) => {
+  const handleRoleChangeClick = async (user: User) => {
     setSelectedUser(user);
     setRoleDialogOpen(true);
+    // Forçar atualização das permissões
+    await refetch();
+    // Disparar evento para atualizar a sidebar
+    window.dispatchEvent(new CustomEvent('userRoleChanged'));
   };
 
   const handleBlockClick = (user: User) => {
@@ -260,7 +259,6 @@ const Usuarios = () => {
     setFilteredUsers(sortedUsers);
   }, [users, searchTerm]);
 
-  // Animação de entrada (fade-up)
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -319,7 +317,6 @@ const Usuarios = () => {
     }
   };
 
-  // Calcular estatísticas de usuários
   const activeUsers = users.filter(user => !user.blocked).length;
   const blockedUsers = users.filter(user => user.blocked).length;
   const adminUsers = users.filter(user => ["admin", "superadmin"].includes(user.role)).length;
@@ -328,12 +325,10 @@ const Usuarios = () => {
   return (
     <AppLayout>
       <div className="min-h-screen bg-white overflow-hidden relative">
-        {/* Fundos decorativos */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-sidebar blur-3xl opacity-5"></div>
           <div className="absolute right-1/4 bottom-1/4 h-80 w-80 rounded-full bg-eccos-purple blur-3xl opacity-5"></div>
         </div>
-        {/* Conteúdo principal */}
         <div className="relative z-10 space-y-8 p-4 sm:p-6 md:p-12 fade-up">
           <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
             <Users className="text-eccos-purple" size={28} />
@@ -342,7 +337,6 @@ const Usuarios = () => {
           </h1>
           <div className="space-y-6 sm:space-y-8 fade-up">
             <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-3">
-              {/* Card Usuários Ativos */}
               <Card
                 className="bg-white border border-gray-100 rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 relative group overflow-hidden"
               >
@@ -359,7 +353,6 @@ const Usuarios = () => {
                   </Badge>
                 </div>
               </Card>
-              {/* Card Usuários Bloqueados */}
               <Card
                 className="bg-white border border-gray-100 rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 relative group overflow-hidden"
               >
@@ -376,7 +369,6 @@ const Usuarios = () => {
                   </Badge>
                 </div>
               </Card>
-              {/* Card Administradores */}
               <Card
                 className="bg-white border border-gray-100 rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 relative group overflow-hidden"
               >
@@ -488,7 +480,6 @@ const Usuarios = () => {
               </div>
             </div>
           </div>
-          {/* Rodapé */}
           <footer className="relative z-10 bg-gray-50 py-6 sm:py-10 px-4 md:px-12 mt-8 sm:mt-12 fade-up rounded-lg">
             <div className="max-w-6xl mx-auto">
               <div className="text-center">
@@ -504,7 +495,10 @@ const Usuarios = () => {
         open={roleDialogOpen}
         onOpenChange={setRoleDialogOpen}
         user={selectedUser}
-        onSuccess={refetch}
+        onSuccess={() => {
+          refetch();
+          window.dispatchEvent(new CustomEvent('userRoleChanged'));
+        }}
       />
       <BlockUserDialog
         open={blockDialogOpen}
