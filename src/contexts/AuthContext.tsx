@@ -223,6 +223,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [handleUserDocument, loadUserPermissions, toast]);
 
+  useEffect(() => {
+  const handleUserRoleChanged = async () => {
+    await refreshUser();
+    await reloadPermissions();
+  };
+
+  window.addEventListener("userRoleChanged", handleUserRoleChanged);
+  return () => {
+    window.removeEventListener("userRoleChanged", handleUserRoleChanged);
+  };
+}, [refreshUser, reloadPermissions]);
+
   const signInWithGoogle = useCallback(async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
