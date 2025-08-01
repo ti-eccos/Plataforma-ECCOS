@@ -39,11 +39,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import TextareaAutosize from "react-textarea-autosize";
 
 interface ChatAdminProps {
   request: RequestData | null;
@@ -69,11 +69,44 @@ const ChatAdmin = ({
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
   const [hasNewMessage, setHasNewMessage] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState(Notification.permission);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
-  // Estado para permissão de notificações
-  const [notificationPermission, setNotificationPermission] = useState(Notification.permission);
+
+  // Função para mostrar notificação
+  const showNotification = (title: string, body: string) => {
+    if (notificationPermission === "granted") {
+      // Não mostrar notificação se a janela está em foco
+      if (document.visibilityState === 'visible') {
+        return;
+      }
+
+      try {
+        const notification = new Notification(title, {
+          body,
+          icon: "/favicon.ico",
+          requireInteraction: false
+        });
+
+        // Fechar a notificação após 5 segundos
+        setTimeout(() => {
+          notification.close();
+        }, 5000);
+      } catch (error) {
+        console.error("Erro ao mostrar notificação:", error);
+      }
+    }
+  };
+
+  // Solicitar permissão para notificações
+  useEffect(() => {
+    if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+      Notification.requestPermission().then(permission => {
+        setNotificationPermission(permission);
+        console.log("Permissão de notificação:", permission);
+      });
+    }
+  }, []);
 
   const getParticipants = () => {
     if (!messages.length) return [];
@@ -104,9 +137,11 @@ const ChatAdmin = ({
             setHasNewMessage(true);
             
             // Notificar apenas se o chat não estiver aberto
-            if (!isOpen && notificationPermission === "granted") {
+            if (!isOpen) {
               const lastMessage = currentMessages[currentMessages.length - 1];
-              if (lastMessage && !lastMessage.isAdmin) {
+              
+              // Notificar apenas se a mensagem não for do usuário atual
+              if (lastMessage && lastMessage.userId !== currentUser?.uid) {
                 showNotification(
                   "Nova mensagem",
                   `${lastMessage.userName}: ${lastMessage.message || "Arquivo enviado"}`
@@ -124,32 +159,7 @@ const ChatAdmin = ({
     );
 
     return () => unsubscribe();
-  }, [request, isOpen, notificationPermission]);
-
-  // Solicitar permissão para notificações quando o componente montar
-  useEffect(() => {
-    if (Notification.permission !== "granted" && Notification.permission !== "denied") {
-      Notification.requestPermission().then(permission => {
-        setNotificationPermission(permission);
-      });
-    }
-  }, []);
-
-  // Função para mostrar notificação
-  const showNotification = (title: string, body: string) => {
-    if (notificationPermission === "granted") {
-      const notification = new Notification(title, {
-        body,
-        icon: "/favicon.ico",
-        requireInteraction: false
-      });
-
-      // Fechar a notificação após 5 segundos
-      setTimeout(() => {
-        notification.close();
-      }, 5000);
-    }
-  };
+  }, [request, isOpen, currentUser]);
 
   useEffect(() => {
     if (isOpen) {
@@ -321,22 +331,6 @@ const ChatAdmin = ({
     return null;
   };
 
-  // Handler para tecla Enter no campo de nova mensagem
-  const handleNewMessageKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
-
-  // Handler para tecla Enter no campo de edição
-  const handleEditKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>, messageId: string) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleEditMessage(messageId);
-    }
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
@@ -476,14 +470,11 @@ const ChatAdmin = ({
                     
                     {editingMessageId === msg.id ? (
                       <div className="space-y-2">
-                        <TextareaAutosize
+                        <Textarea
                           value={editingText}
                           onChange={(e) => setEditingText(e.target.value)}
-                          onKeyDown={(e) => handleEditKeyDown(e, msg.id)}
-                          className="min-h-[60px] resize-none w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="min-h-[60px] resize-none"
                           placeholder="Edite sua mensagem..."
-                          minRows={2}
-                          maxRows={6}
                         />
                         <div className="flex gap-2 justify-end">
                           <Button
@@ -543,22 +534,18 @@ const ChatAdmin = ({
             </div>
           )}
           
-          {/* Área de entrada de mensagens reorganizada */}
-          <div className="flex gap-2 items-end pl-3">
-            <div className="flex-1">
-              <TextareaAutosize
+          <div className="flex gap-2">
+            <div className="flex-1 space-y-2">
+              <Textarea 
                 placeholder="Digite sua mensagem..." 
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                onKeyDown={handleNewMessageKeyDown}
+                className="resize-none"
                 disabled={isLoading}
-                minRows={1}
-                maxRows={3}
-                className="w-full min-h-[40px] resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                rows={2}
               />
             </div>
-            
-            <div className="flex gap-2 mb-1.5 mr-2">
+            <div className="flex flex-col gap-2">
               <input
                 ref={fileInputRef}
                 type="file"
