@@ -475,45 +475,45 @@ const ChatUser = ({
             </div>
           )}
 
-          <div className="flex gap-2">
-            <div className="flex-1 space-y-2 pl-4">
-              <TextareaAutosize
-                placeholder="Digite sua mensagem..."
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyDown={handleNewMessageKeyDown}
-                disabled={isLoading}
-                minRows={1}
-                maxRows={3}
-                className="w-full min-h-[40px] resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                onChange={handleFileSelect}
-                className="hidden"
-                accept="*/*"
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isLoading}
-                className="flex-shrink-0"
-              >
-                <Paperclip className="h-4 w-4" />
-              </Button>
-              <Button
-                onClick={handleSendMessage}
-                className="flex-shrink-0"
-                disabled={isLoading || (!newMessage.trim() && !selectedFile)}
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+          <div className="flex gap-2 items-end">
+  <div className="flex-1 pl-3">
+    <TextareaAutosize
+      placeholder="Digite sua mensagem..."
+      value={newMessage}
+      onChange={(e) => setNewMessage(e.target.value)}
+      onKeyDown={handleNewMessageKeyDown}
+      disabled={isLoading}
+      minRows={1}
+      maxRows={3}
+      className="w-full min-h-[40px] resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+    />
+  </div>
+  <div className="flex gap-2 mb-1.5 mr-2">
+    <input
+      ref={fileInputRef}
+      type="file"
+      onChange={handleFileSelect}
+      className="hidden"
+      accept="*/*"
+    />
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => fileInputRef.current?.click()}
+      disabled={isLoading}
+      className="flex-shrink-0"
+    >
+      <Paperclip className="h-4 w-4" />
+    </Button>
+    <Button
+      onClick={handleSendMessage}
+      className="flex-shrink-0"
+      disabled={isLoading || (!newMessage.trim() && !selectedFile)}
+    >
+      <Send className="h-4 w-4" />
+    </Button>
+  </div>
+</div>
         </div>
       </DialogContent>
     </Dialog>
