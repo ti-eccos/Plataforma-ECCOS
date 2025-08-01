@@ -74,9 +74,6 @@ const ChatAdmin = ({
   
   // Estado para permissão de notificações
   const [notificationPermission, setNotificationPermission] = useState(Notification.permission);
-  
-  // Referência para o som de notificação
-  const notificationSoundRef = useRef<HTMLAudioElement>(null);
 
   const getParticipants = () => {
     if (!messages.length) return [];
@@ -105,17 +102,16 @@ const ChatAdmin = ({
           if (!initialLoad && currentMessages.length > previousMessageCount) {
             setHasNewMessage(true);
             
-            const lastMessage = currentMessages[currentMessages.length - 1];
-            // Verificar se a última mensagem não é do usuário atual
-            if (lastMessage && currentUser && lastMessage.userId !== currentUser.uid) {
-              // Notificar mesmo se o chat estiver aberto (para som e título)
-              showNotification(
-                "Nova mensagem",
-                `${lastMessage.userName}: ${lastMessage.message || "Arquivo enviado"}`
-              );
-              
-              // Atualizar título da aba
-              setDocumentTitle(true);
+            // Notificar apenas se o chat não estiver aberto
+            if (!isOpen && notificationPermission === "granted") {
+              const lastMessage = currentMessages[currentMessages.length - 1];
+              // Verificar se a última mensagem não é do usuário atual
+              if (lastMessage && currentUser && lastMessage.userId !== currentUser.uid) {
+                showNotification(
+                  "Nova mensagem",
+                  `${lastMessage.userName}: ${lastMessage.message || "Arquivo enviado"}`
+                );
+              }
             }
           }
           
@@ -128,7 +124,7 @@ const ChatAdmin = ({
     );
 
     return () => unsubscribe();
-  }, [request, isOpen, notificationPermission, messages.length]);
+  }, [request, isOpen, notificationPermission, messages.length]); // Adicionado messages.length
 
   // Solicitar permissão para notificações quando o componente montar
   useEffect(() => {
@@ -137,48 +133,32 @@ const ChatAdmin = ({
         setNotificationPermission(permission);
       });
     }
-    
-    // Carregar som de notificação
-    notificationSoundRef.current = new Audio("/notification-sound.mp3");
   }, []);
 
   // Função para mostrar notificação
-  const showNotification = (title: string, body: string) => {
-    // Tocar som de notificação
-    if (notificationSoundRef.current) {
-      notificationSoundRef.current.play().catch(e => console.error("Falha ao tocar som de notificação:", e));
-    }
-    
-    // Notificação do sistema apenas se o chat não estiver aberto
-    if (!isOpen && notificationPermission === "granted") {
-      const notification = new Notification(title, {
-        body,
-        icon: "/favicon.ico",
-        requireInteraction: false
-      });
+ const showNotification = (title: string, body: string) => {
+  if (notificationPermission === "granted") {
+    const notification = new Notification(title, {
+      body,
+      icon: "/favicon.ico",
+      requireInteraction: false
+    });
 
-      // Fechar a notificação após 5 segundos
-      setTimeout(() => {
-        notification.close();
-      }, 5000);
-    }
-  };
-  
-  // Atualizar título da aba quando houver novas mensagens
-  const setDocumentTitle = (hasNew: boolean) => {
-    const originalTitle = document.title.replace(/^\(\d+\) /, "");
-    if (hasNew) {
-      document.title = `(1) ${originalTitle}`;
-    } else {
-      document.title = originalTitle;
-    }
-  };
+    // Toca som de notificação
+    const audio = new Audio("/sounds/Notification.mp3");
+    audio.play().catch((err) => {
+      console.warn("Erro ao reproduzir som de notificação:", err);
+    });
+
+    setTimeout(() => {
+      notification.close();
+    }, 5000);
+  }
+};
 
   useEffect(() => {
     if (isOpen) {
       setHasNewMessage(false);
-      // Restaurar título quando o chat é aberto
-      setDocumentTitle(false);
     }
   }, [isOpen]);
 
@@ -568,6 +548,7 @@ const ChatAdmin = ({
             </div>
           )}
           
+          {/* Área de entrada de mensagens reorganizada */}
           <div className="flex gap-2 items-end pl-3">
             <div className="flex-1">
               <TextareaAutosize
