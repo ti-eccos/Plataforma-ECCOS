@@ -32,8 +32,9 @@ import {
   TableCell, 
   TableHead, 
   TableHeader, 
-  TableRow 
+  TableRow
 } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -109,6 +110,8 @@ const ComprasFinanceiro = () => {
   const [isEditingDeliveryDate, setIsEditingDeliveryDate] = useState(false);
   const purchaseTypes = ["Tecnologia", "Infraestrutura", "Pedagógico", "Administrativo"];
   const [selectedTypes, setSelectedTypes] = useState<string[]>(purchaseTypes);
+  const [rejectionReason, setRejectionReason] = useState(''); // Novo estado para justificativa
+  const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false); // Estado para controle do diálogo
   
   // Lista de todos os status disponíveis
   const allStatuses: RequestStatus[] = [
@@ -192,6 +195,13 @@ const ComprasFinanceiro = () => {
 
   const handleStatusChange = async (newStatus: RequestStatus) => {
     if (!selectedRequest) return;
+    
+    // Se for rejeição, abrir diálogo para justificativa
+    if (newStatus === "rejected") {
+      setIsRejectionDialogOpen(true);
+      return;
+    }
+
     try {
       const updateData: any = { status: newStatus };
       if (newStatus === "waitingDelivery" && deliveryDate) {
@@ -213,6 +223,41 @@ const ComprasFinanceiro = () => {
       setSelectedRequest({ ...selectedRequest, status: newStatus, ...updateData });
     } catch (error) {
       toast.error("Erro ao atualizar");
+      console.error("Error:", error);
+    }
+  };
+
+  // Função para confirmar rejeição com justificativa
+  const confirmRejection = async () => {
+    if (!selectedRequest) return;
+    try {
+      const docRef = doc(db, selectedRequest.collectionName, selectedRequest.id);
+      await updateDoc(docRef, { 
+        status: "rejected",
+        rejectionReason: rejectionReason 
+      });
+      
+      await createNotification({
+        title: 'Solicitação Reprovada',
+        message: `Sua solicitação de compra foi reprovada. Motivo: ${rejectionReason}`,
+        link: 'minhas-solicitacoes',
+        createdAt: new Date(),
+        readBy: [],
+        recipients: [selectedRequest.userEmail],
+        isBatch: false
+      });
+      
+      toast.success("Solicitação reprovada com justificativa");
+      setIsRejectionDialogOpen(false);
+      setRejectionReason('');
+      queryClient.invalidateQueries({ queryKey: ['allRequests'] });
+      setSelectedRequest({ 
+        ...selectedRequest, 
+        status: "rejected",
+        rejectionReason 
+      });
+    } catch (error) {
+      toast.error("Erro ao reprovar solicitação");
       console.error("Error:", error);
     }
   };
@@ -679,6 +724,16 @@ const ComprasFinanceiro = () => {
                           Nenhuma data de entrega definida
                         </div>
                       )}
+                      {selectedRequest.status === "rejected" && selectedRequest.rejectionReason && (
+                        <div className="space-y-2 mt-4">
+                          <p className="text-sm font-medium text-gray-500">Motivo da Rejeição</p>
+                          <div className="bg-gray-50 p-4 rounded-xl border border-red-100">
+                            <p className="whitespace-pre-wrap break-words text-red-700">
+                              {selectedRequest.rejectionReason}
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <DialogFooter className="p-6 border-t border-gray-100 gap-2 bg-white sticky bottom-0 z-10">
@@ -701,6 +756,35 @@ const ComprasFinanceiro = () => {
             onOpenChange={setIsChatOpen}
             onMessageSent={() => queryClient.invalidateQueries({ queryKey: ['allRequests'] })}
           />
+          {/* Diálogo de justificativa para rejeição */}
+          <Dialog open={isRejectionDialogOpen} onOpenChange={setIsRejectionDialogOpen}>
+            <DialogContent className="rounded-2xl">
+              <DialogHeader>
+                <DialogTitle>Justificativa de Rejeição</DialogTitle>
+                <DialogDescription>
+                  Por favor, informe o motivo da rejeição desta solicitação.
+                </DialogDescription>
+              </DialogHeader>
+              <Textarea
+                placeholder="Digite o motivo da rejeição..."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                className="min-h-[120px] px-4"
+              />
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsRejectionDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={confirmRejection} 
+                  disabled={!rejectionReason.trim()}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  Confirmar Rejeição
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
             <AlertDialogContent className="rounded-2xl">
               <AlertDialogHeader>
