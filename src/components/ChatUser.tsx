@@ -44,6 +44,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import TextareaAutosize from "react-textarea-autosize";
 
 interface ChatUserProps {
   request: RequestData | null;
@@ -69,44 +70,11 @@ const ChatUser = ({
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
   const [hasNewMessage, setHasNewMessage] = useState(false);
-  const [notificationPermission, setNotificationPermission] = useState(Notification.permission);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // Função para mostrar notificação
-  const showNotification = (title: string, body: string) => {
-    if (notificationPermission === "granted") {
-      // Não mostrar notificação se a janela está em foco
-      if (document.visibilityState === 'visible') {
-        return;
-      }
-
-      try {
-        const notification = new Notification(title, {
-          body,
-          icon: "/favicon.ico",
-          requireInteraction: false
-        });
-
-        // Fechar a notificação após 5 segundos
-        setTimeout(() => {
-          notification.close();
-        }, 5000);
-      } catch (error) {
-        console.error("Erro ao mostrar notificação:", error);
-      }
-    }
-  };
-
-  // Solicitar permissão para notificações
-  useEffect(() => {
-    if (Notification.permission !== "granted" && Notification.permission !== "denied") {
-      Notification.requestPermission().then(permission => {
-        setNotificationPermission(permission);
-        console.log("Permissão de notificação:", permission);
-      });
-    }
-  }, []);
+  
+  // Estado para permissão de notificações
+  const [notificationPermission, setNotificationPermission] = useState(Notification.permission);
 
   useEffect(() => {
     if (!request || !isOpen) return;
@@ -125,11 +93,9 @@ const ChatUser = ({
             setHasNewMessage(true);
             
             // Notificar apenas se o chat não estiver aberto
-            if (!isOpen) {
+            if (!isOpen && notificationPermission === "granted") {
               const lastMessage = currentMessages[currentMessages.length - 1];
-              
-              // Notificar apenas se a mensagem não for do usuário atual
-              if (lastMessage && lastMessage.userId !== currentUser?.uid) {
+              if (lastMessage && !lastMessage.isAdmin) {
                 showNotification(
                   "Nova mensagem",
                   `${lastMessage.userName}: ${lastMessage.message || "Arquivo enviado"}`
@@ -147,7 +113,32 @@ const ChatUser = ({
     );
 
     return () => unsubscribe();
-  }, [request, isOpen, currentUser]);
+  }, [request, isOpen, notificationPermission]);
+
+  // Solicitar permissão para notificações quando o componente montar
+  useEffect(() => {
+    if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+      Notification.requestPermission().then(permission => {
+        setNotificationPermission(permission);
+      });
+    }
+  }, []);
+
+  // Função para mostrar notificação
+  const showNotification = (title: string, body: string) => {
+    if (notificationPermission === "granted") {
+      const notification = new Notification(title, {
+        body,
+        icon: "/favicon.ico",
+        requireInteraction: false
+      });
+
+      // Fechar a notificação após 5 segundos
+      setTimeout(() => {
+        notification.close();
+      }, 5000);
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -305,6 +296,22 @@ const ChatUser = ({
     return null;
   };
 
+  // Handler para tecla Enter no campo de nova mensagem
+  const handleNewMessageKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  // Handler para tecla Enter no campo de edição
+  const handleEditKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>, messageId: string) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleEditMessage(messageId);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
@@ -421,6 +428,7 @@ const ChatUser = ({
                         <Textarea
                           value={editingText}
                           onChange={(e) => setEditingText(e.target.value)}
+                          onKeyDown={(e) => handleEditKeyDown(e, msg.id)}
                           className="min-h-[60px] resize-none"
                           placeholder="Edite sua mensagem..."
                         />
@@ -467,42 +475,45 @@ const ChatUser = ({
             </div>
           )}
 
-          <div className="flex gap-2">
-            <div className="flex-1 space-y-2">
-              <Textarea
-                placeholder="Digite sua mensagem..."
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                disabled={isLoading}
-                rows={2}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                onChange={handleFileSelect}
-                className="hidden"
-                accept="*/*"
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isLoading}
-                className="flex-shrink-0"
-              >
-                <Paperclip className="h-4 w-4" />
-              </Button>
-              <Button
-                onClick={handleSendMessage}
-                className="flex-shrink-0"
-                disabled={isLoading || (!newMessage.trim() && !selectedFile)}
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+          <div className="flex gap-2 items-end">
+  <div className="flex-1 pl-3">
+    <TextareaAutosize
+      placeholder="Digite sua mensagem..."
+      value={newMessage}
+      onChange={(e) => setNewMessage(e.target.value)}
+      onKeyDown={handleNewMessageKeyDown}
+      disabled={isLoading}
+      minRows={1}
+      maxRows={3}
+      className="w-full min-h-[40px] resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+    />
+  </div>
+  <div className="flex gap-2 mb-1.5 mr-2">
+    <input
+      ref={fileInputRef}
+      type="file"
+      onChange={handleFileSelect}
+      className="hidden"
+      accept="*/*"
+    />
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => fileInputRef.current?.click()}
+      disabled={isLoading}
+      className="flex-shrink-0"
+    >
+      <Paperclip className="h-4 w-4" />
+    </Button>
+    <Button
+      onClick={handleSendMessage}
+      className="flex-shrink-0"
+      disabled={isLoading || (!newMessage.trim() && !selectedFile)}
+    >
+      <Send className="h-4 w-4" />
+    </Button>
+  </div>
+</div>
         </div>
       </DialogContent>
     </Dialog>

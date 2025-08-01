@@ -13,7 +13,8 @@ export const addPurchaseRequest = async (data: Omit<RequestData, 'id' | 'collect
       createdAt: Timestamp.now(),
       hidden: false,
       unreadMessages: 0,
-      hasUnreadMessages: false
+      hasUnreadMessages: false,
+      rejectionReason: '' // Novo campo adicionado
     });
 
     return docRef.id;
