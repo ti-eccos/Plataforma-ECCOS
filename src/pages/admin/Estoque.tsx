@@ -15,7 +15,7 @@ import {
   ListPlus,
   Copy,
 } from 'lucide-react';
-// Componentes UI
+
 import {
   Table,
   TableBody,
@@ -28,7 +28,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-// Componentes modularizados
+
 import Filtros from '@/components/Estoque/Filtros';
 import TabelaItens from '@/components/Estoque/TabelaItens';
 import DetalhesModal from '@/components/Estoque/DetalhesModal';
@@ -36,7 +36,7 @@ import CadastroEdicaoModal from '@/components/Estoque/CadastroEdicaoModal';
 import ConfirmacaoExclusaoModal from '@/components/Estoque/ConfirmacaoExclusaoModal';
 import AlertaDuplicidadeModal from '@/components/Estoque/AlertaDuplicidadeModal';
 import CadastroMultiploModal from '@/components/Estoque/CadastroMultiploModal';
-// Firebase e Tipos
+
 import { db } from '@/lib/firebase';
 import {
   doc,
@@ -48,7 +48,6 @@ import {
 } from 'firebase/firestore';
 import AppLayout from '@/components/AppLayout';
 
-// Tipos
 interface ItemEstoque {
   id?: string;
   nome: string;
@@ -60,11 +59,13 @@ interface ItemEstoque {
   localizacao: string;
   estado: 'Ótimo' | 'Bom' | 'Razoável' | 'Ruim' | 'Péssimo';
   responsavel?: string;
+  dataRecebimento?: string;
+  notaFiscal?: string;
+  numeroPedido?: string;
 }
 
 type EstadoEstoque = 'Ótimo' | 'Bom' | 'Razoável' | 'Ruim' | 'Péssimo';
 
-// Localizações por unidade
 const locationsByUnit = {
   'Berçário e Educação Infantil': [
     'Recepção',
@@ -131,23 +132,19 @@ const locationsByUnit = {
 const Estoque = () => {
   const queryClient = useQueryClient();
 
-  // Estados do modal
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
-  // Estados de dados
   const [selectedItem, setSelectedItem] = useState<ItemEstoque | null>(null);
   const [selectedItemDetails, setSelectedItemDetails] = useState<ItemEstoque | null>(null);
   const [editingItem, setEditingItem] = useState<ItemEstoque | null>(null);
 
-  // Filtros
   const [filtroCategoria, setFiltroCategoria] = useState('');
   const [filtroLocalizacao, setFiltroLocalizacao] = useState('');
   const [filtroNomeDescricao, setFiltroNomeDescricao] = useState('');
 
-  // Formulário normal
   const [formState, setFormState] = useState<Omit<ItemEstoque, 'id'>>({
     nome: '',
     quantidade: NaN,
@@ -158,13 +155,14 @@ const Estoque = () => {
     localizacao: '',
     estado: 'Bom',
     responsavel: '',
+    dataRecebimento: '',
+    notaFiscal: '',
+    numeroPedido: '',
   });
 
-  // Controle de duplicidade
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
   const [duplicateItem, setDuplicateItem] = useState<ItemEstoque | null>(null);
 
-  // Formulário múltiplo
   const [bulkFormState, setBulkFormState] = useState({
     nomeBase: '',
     quantidadeItens: 1,
@@ -175,7 +173,6 @@ const Estoque = () => {
     descricao: '',
   });
 
-  // Animação fade-up
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -191,7 +188,6 @@ const Estoque = () => {
     return () => observer.disconnect();
   }, []);
 
-  // Queries e Mutations
   const { data: itens = [], isLoading } = useQuery({
     queryKey: ['estoque'],
     queryFn: async () => {
@@ -263,7 +259,6 @@ const Estoque = () => {
     },
   });
 
-  // Funções de manipulação
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const itemName = formState.nome.trim();
@@ -280,7 +275,6 @@ const Estoque = () => {
       return;
     }
 
-    // Validação condicional
     if (!formState.responsavel) {
       if (!formState.unidade) {
         toast.error('Selecione uma unidade');
@@ -314,6 +308,9 @@ const Estoque = () => {
         unidade: formState.unidade,
         localizacao: formState.localizacao,
       }),
+      ...(formState.dataRecebimento && { dataRecebimento: formState.dataRecebimento }),
+      ...(formState.notaFiscal && { notaFiscal: formState.notaFiscal }),
+      ...(formState.numeroPedido && { numeroPedido: formState.numeroPedido }),
     };
 
     if (editingItem) {
@@ -359,6 +356,9 @@ const Estoque = () => {
       localizacao,
       estado,
       descricao,
+      dataRecebimento: '',
+      notaFiscal: '',
+      numeroPedido: '',
     }));
 
     addMultipleMutation.mutate(itemsToAdd);
@@ -385,6 +385,9 @@ const Estoque = () => {
       localizacao: '',
       estado: 'Bom',
       responsavel: '',
+      dataRecebimento: '',
+      notaFiscal: '',
+      numeroPedido: '',
     });
     setEditingItem(null);
   };
@@ -417,6 +420,9 @@ const Estoque = () => {
         unidade: formState.unidade,
         localizacao: formState.localizacao,
       }),
+      ...(formState.dataRecebimento && { dataRecebimento: formState.dataRecebimento }),
+      ...(formState.notaFiscal && { notaFiscal: formState.notaFiscal }),
+      ...(formState.numeroPedido && { numeroPedido: formState.numeroPedido }),
     };
     addMutation.mutate(itemData);
     setIsDialogOpen(false);
@@ -437,13 +443,11 @@ const Estoque = () => {
   return (
     <AppLayout>
       <div className="min-h-screen bg-white overflow-hidden relative">
-        {/* Fundos decorativos */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-sidebar blur-3xl opacity-5"></div>
           <div className="absolute right-1/4 bottom-1/4 h-80 w-80 rounded-full bg-eccos-purple blur-3xl opacity-5"></div>
         </div>
 
-        {/* Conteúdo principal */}
         <div className="relative z-10 space-y-8 p-6 md:p-12 fade-up">
           <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
@@ -468,7 +472,6 @@ const Estoque = () => {
             </div>
           </div>
 
-          {/* Filtros */}
           <div className="bg-white border border-gray-100 rounded-2xl shadow-lg p-6 fade-up">
             <h2 className="text-lg font-semibold mb-4 text-gray-700">Filtros</h2>
             <Filtros
@@ -481,7 +484,6 @@ const Estoque = () => {
             />
           </div>
 
-          {/* Tabela de Itens */}
           <div className="bg-white border border-gray-100 rounded-2xl shadow-lg overflow-hidden fade-up">
             <TabelaItens
               itensFiltrados={itensFiltrados}
@@ -490,7 +492,6 @@ const Estoque = () => {
             />
           </div>
 
-          {/* Modal Detalhes */}
           <DetalhesModal
             isOpen={isDetailModalOpen}
             onClose={() => setIsDetailModalOpen(false)}
@@ -503,7 +504,6 @@ const Estoque = () => {
             onEdit={() => handleEdit(selectedItemDetails!)}
           />
 
-          {/* Modal Cadastro/Edição */}
           <CadastroEdicaoModal
             isOpen={isDialogOpen}
             onClose={() => setIsDialogOpen(false)}
@@ -514,7 +514,6 @@ const Estoque = () => {
             locationsByUnit={locationsByUnit}
           />
 
-          {/* Modal Cadastro Múltiplo */}
           <CadastroMultiploModal
             isOpen={isBulkModalOpen}
             onClose={() => setIsBulkModalOpen(false)}
@@ -524,7 +523,6 @@ const Estoque = () => {
             locationsByUnit={locationsByUnit}
           />
 
-          {/* Confirmação de Exclusão */}
           <ConfirmacaoExclusaoModal
             isOpen={isDeleteDialogOpen}
             onClose={() => setIsDeleteDialogOpen(false)}
@@ -539,7 +537,6 @@ const Estoque = () => {
             }}
           />
 
-          {/* Alerta de Duplicidade */}
           <AlertaDuplicidadeModal
             isOpen={showDuplicateDialog}
             onClose={() => setShowDuplicateDialog(false)}
@@ -549,7 +546,6 @@ const Estoque = () => {
           />
         </div>
 
-        {/* Rodapé */}
         <footer className="relative z-10 bg-gray-50 py-10 px-4 md:px-12 fade-up">
           <div className="max-w-6xl mx-auto">
             <div className="text-center">
