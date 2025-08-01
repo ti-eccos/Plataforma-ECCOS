@@ -15,7 +15,6 @@ import {
   ListPlus,
   Copy,
 } from 'lucide-react';
-
 // Componentes UI
 import {
   Table,
@@ -29,7 +28,6 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-
 // Componentes modularizados
 import Filtros from '@/components/Estoque/Filtros';
 import TabelaItens from '@/components/Estoque/TabelaItens';
@@ -37,7 +35,7 @@ import DetalhesModal from '@/components/Estoque/DetalhesModal';
 import CadastroEdicaoModal from '@/components/Estoque/CadastroEdicaoModal';
 import ConfirmacaoExclusaoModal from '@/components/Estoque/ConfirmacaoExclusaoModal';
 import AlertaDuplicidadeModal from '@/components/Estoque/AlertaDuplicidadeModal';
-
+import CadastroMultiploModal from '@/components/Estoque/CadastroMultiploModal';
 // Firebase e Tipos
 import { db } from '@/lib/firebase';
 import {
@@ -48,7 +46,6 @@ import {
   updateDoc,
   deleteDoc,
 } from 'firebase/firestore';
-
 import AppLayout from '@/components/AppLayout';
 
 // Tipos
@@ -62,6 +59,7 @@ interface ItemEstoque {
   unidade: string;
   localizacao: string;
   estado: 'Ótimo' | 'Bom' | 'Razoável' | 'Ruim' | 'Péssimo';
+  responsavel?: string;
 }
 
 type EstadoEstoque = 'Ótimo' | 'Bom' | 'Razoável' | 'Ruim' | 'Péssimo';
@@ -141,9 +139,7 @@ const Estoque = () => {
 
   // Estados de dados
   const [selectedItem, setSelectedItem] = useState<ItemEstoque | null>(null);
-  const [selectedItemDetails, setSelectedItemDetails] = useState<ItemEstoque | null>(
-    null
-  );
+  const [selectedItemDetails, setSelectedItemDetails] = useState<ItemEstoque | null>(null);
   const [editingItem, setEditingItem] = useState<ItemEstoque | null>(null);
 
   // Filtros
@@ -156,11 +152,12 @@ const Estoque = () => {
     nome: '',
     quantidade: NaN,
     valorUnitario: undefined,
-    descricao: undefined,
+    descricao: '',
     categoria: '',
     unidade: '',
     localizacao: '',
     estado: 'Bom',
+    responsavel: '',
   });
 
   // Controle de duplicidade
@@ -175,6 +172,7 @@ const Estoque = () => {
     unidade: '',
     localizacao: '',
     estado: 'Bom' as EstadoEstoque,
+    descricao: '',
   });
 
   // Animação fade-up
@@ -189,9 +187,7 @@ const Estoque = () => {
       },
       { threshold: 0.1 }
     );
-
     document.querySelectorAll('.fade-up').forEach((el) => observer.observe(el));
-
     return () => observer.disconnect();
   }, []);
 
@@ -236,7 +232,7 @@ const Estoque = () => {
 
   const addMultipleMutation = useMutation({
     mutationFn: async (novosItens: Omit<ItemEstoque, 'id'>[]) => {
-      const promises = novosItens.map(item => addDoc(collection(db, 'estoque'), item));
+      const promises = novosItens.map((item) => addDoc(collection(db, 'estoque'), item));
       await Promise.all(promises);
     },
     onSuccess: () => {
@@ -283,13 +279,20 @@ const Estoque = () => {
       toast.error('Selecione uma categoria');
       return;
     }
-    if (!formState.unidade) {
-      toast.error('Selecione uma unidade');
-      return;
-    }
-    if (!formState.localizacao) {
-      toast.error('Selecione uma localização');
-      return;
+
+    // Validação condicional
+    if (!formState.responsavel) {
+      if (!formState.unidade) {
+        toast.error('Selecione uma unidade');
+        return;
+      }
+      if (!formState.localizacao) {
+        toast.error('Selecione uma localização');
+        return;
+      }
+    } else {
+      formState.unidade = '';
+      formState.localizacao = '';
     }
 
     const existingItem = itens.find((item) => item.nome === itemName);
@@ -303,13 +306,14 @@ const Estoque = () => {
       nome: itemName,
       quantidade: formState.quantidade,
       categoria: formState.categoria,
-      unidade: formState.unidade,
-      localizacao: formState.localizacao,
       estado: formState.estado,
-      ...(formState.valorUnitario !== undefined && {
-        valorUnitario: formState.valorUnitario,
-      }),
+      ...(formState.valorUnitario !== undefined && { valorUnitario: formState.valorUnitario }),
       ...(formState.descricao && { descricao: formState.descricao }),
+      ...(formState.responsavel && { responsavel: formState.responsavel }),
+      ...(!formState.responsavel && {
+        unidade: formState.unidade,
+        localizacao: formState.localizacao,
+      }),
     };
 
     if (editingItem) {
@@ -331,8 +335,9 @@ const Estoque = () => {
       unidade,
       localizacao,
       estado,
+      descricao,
     } = bulkFormState;
-
+    
     if (!nomeBase.trim()) {
       toast.error('Nome base é obrigatório');
       return;
@@ -353,6 +358,7 @@ const Estoque = () => {
       unidade,
       localizacao,
       estado,
+      descricao,
     }));
 
     addMultipleMutation.mutate(itemsToAdd);
@@ -364,6 +370,7 @@ const Estoque = () => {
       unidade: '',
       localizacao: '',
       estado: 'Bom',
+      descricao: '',
     });
   };
 
@@ -372,11 +379,12 @@ const Estoque = () => {
       nome: '',
       quantidade: NaN,
       valorUnitario: undefined,
-      descricao: undefined,
+      descricao: '',
       categoria: '',
       unidade: '',
       localizacao: '',
       estado: 'Bom',
+      responsavel: '',
     });
     setEditingItem(null);
   };
@@ -401,13 +409,14 @@ const Estoque = () => {
       nome: formState.nome,
       quantidade: formState.quantidade,
       categoria: formState.categoria,
-      unidade: formState.unidade,
-      localizacao: formState.localizacao,
       estado: formState.estado,
-      ...(formState.valorUnitario !== undefined && {
-        valorUnitario: formState.valorUnitario,
-      }),
+      ...(formState.valorUnitario !== undefined && { valorUnitario: formState.valorUnitario }),
       ...(formState.descricao && { descricao: formState.descricao }),
+      ...(formState.responsavel && { responsavel: formState.responsavel }),
+      ...(!formState.responsavel && {
+        unidade: formState.unidade,
+        localizacao: formState.localizacao,
+      }),
     };
     addMutation.mutate(itemData);
     setIsDialogOpen(false);
@@ -442,12 +451,19 @@ const Estoque = () => {
               Controle de Estoque
             </h1>
             <div className="flex gap-2">
-              <Button 
+              <Button
                 onClick={() => setIsDialogOpen(true)}
                 className="bg-eccos-purple hover:bg-sidebar text-white transition-all duration-300"
               >
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Novo Item
+              </Button>
+              <Button
+                onClick={() => setIsBulkModalOpen(true)}
+                className="bg-green-600 hover:bg-green-700 text-white transition-all duration-300"
+              >
+                <ListPlus className="mr-2 h-4 w-4" />
+                Múltiplos Itens
               </Button>
             </div>
           </div>
@@ -495,6 +511,16 @@ const Estoque = () => {
             editingItem={editingItem}
             handleSubmit={handleSubmit}
             handleChange={handleChange}
+            locationsByUnit={locationsByUnit}
+          />
+
+          {/* Modal Cadastro Múltiplo */}
+          <CadastroMultiploModal
+            isOpen={isBulkModalOpen}
+            onClose={() => setIsBulkModalOpen(false)}
+            bulkFormState={bulkFormState}
+            handleBulkChange={(field, value) => setBulkFormState(prev => ({ ...prev, [field]: value }))}
+            handleBulkSubmit={handleBulkSubmit}
             locationsByUnit={locationsByUnit}
           />
 
