@@ -295,21 +295,25 @@ const NoticeBoard: React.FC<NoticeBoardProps> = ({ className = '' }) => {
           ))}
         </div>
       ) : (
-        <Card className="bg-gray-50 border border-gray-200 rounded-2xl">
+        <Card className="bg-gradient-to-br from-eccos-purple/5 to-sidebar/5 border border-gray-200 rounded-2xl">
           <CardContent className="p-8 text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-200 text-gray-500 mb-4">
-              <AlertCircle className="w-6 h-6" />
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-eccos-purple to-sidebar text-white mb-4">
+              <User className="w-8 h-8" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">Nenhum aviso ativo</h3>
-            <p className="text-gray-600 mb-4">
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">Seja bem-vindo(a)!</h3>
+            <p className="text-gray-600 mb-6 text-lg">
               {canEditNoticeBoard 
-                ? "Adicione avisos importantes para que os usuários fiquem informados." 
-                : "Não há avisos no momento. Por favor, verifique mais tarde."}
+                ? "Adicione avisos importantes para compartilhar informações com a equipe." 
+                : "Estamos felizes em tê-lo(a) aqui. Fique atento(a) para futuros avisos!"}
             </p>
             {canEditNoticeBoard && (
-              <Button onClick={() => setShowAddForm(true)} className="bg-eccos-purple hover:bg-sidebar text-white">
-                <Plus className="w-4 h-4 mr-1" />
-                Adicionar Primeiro Aviso
+              <Button 
+                onClick={() => setShowAddForm(true)} 
+                className="bg-gradient-to-br from-eccos-purple to-sidebar hover:from-eccos-purple/90 hover:to-sidebar/90 text-white"
+                size="lg"
+              >
+                <Plus className="w-5 h-5 mr-1" />
+                Criar Primeiro Aviso
               </Button>
             )}
           </CardContent>

@@ -31,7 +31,8 @@ import { Wrench } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Timestamp } from 'firebase/firestore';
 import { RequestData, MessageData, RequestStatus } from '@/services/types';
-import { getAllRequests, addMessageToRequest, uploadFile } from '@/services/sharedService'
+import UserDropdown from '@/components/UserDropdown';
+import { User } from '@/services/userService';
 
 const locationsByUnit = {
   'Berçário e Educação Infantil': [
@@ -70,9 +71,11 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const NovaSuporte = () => {
-  const { currentUser: user } = useAuth();
+  const { currentUser, isSuperAdmin, userPermissions } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedUnit, setSelectedUnit] = useState("");
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const canSeeUserDropdown = isSuperAdmin || userPermissions['usuarios'];
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -89,6 +92,8 @@ const NovaSuporte = () => {
   const onSubmit = async (values: FormValues) => {
     try {
       setIsSubmitting(true);
+      const user = selectedUser || currentUser;
+      
       await addSupportRequest({
         ...values,
         userName: user?.displayName || "Usuário não identificado",
@@ -99,9 +104,11 @@ const NovaSuporte = () => {
         createdAt: Timestamp.now(),
         hidden: false
       });
+      
       toast.success('Solicitação enviada com sucesso!');
       form.reset();
       setSelectedUnit("");
+      setSelectedUser(null);
       await sendAdminNotification('Suporte', user?.displayName || 'Usuário não identificado');
     } catch (error) {
       toast.error('Erro ao enviar solicitação');
@@ -134,6 +141,14 @@ const NovaSuporte = () => {
           <p className="text-gray-600 mt-1">
             Preencha todos os campos obrigatórios (*) para registrar sua solicitação
           </p>
+
+          {canSeeUserDropdown && (
+            <UserDropdown 
+              onSelectUser={setSelectedUser} 
+              selectedUser={selectedUser}
+              onClearSelection={() => setSelectedUser(null)}
+            />
+          )}
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -171,7 +186,7 @@ const NovaSuporte = () => {
                   )}
                 />
 
-                                {/* Localização */}
+                {/* Localização */}
                 <FormField
                   control={form.control}
                   name="location"
@@ -232,8 +247,6 @@ const NovaSuporte = () => {
                     </FormItem>
                   )}
                 />
-
-
 
                 {/* Categoria */}
                 <FormField
@@ -336,7 +349,10 @@ const NovaSuporte = () => {
                 <Button 
                   type="button" 
                   variant="outline"
-                  onClick={() => form.reset()}
+                  onClick={() => {
+                    form.reset();
+                    setSelectedUser(null);
+                  }}
                   className="rounded-xl border-gray-200 hover:bg-gray-50 text-gray-700"
                 >
                   Limpar Formulário
@@ -344,8 +360,9 @@ const NovaSuporte = () => {
                 <Button 
                   type="submit" 
                   className="rounded-xl bg-eccos-purple hover:bg-sidebar text-white px-8 py-6 text-lg font-semibold transition-all"
+                  disabled={isSubmitting}
                 >
-                  Enviar Solicitação
+                  {isSubmitting ? 'Enviando...' : 'Enviar Solicitação'}
                 </Button>
               </div>
             </form>

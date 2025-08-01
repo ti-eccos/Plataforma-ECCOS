@@ -7,91 +7,73 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getNotifications, Notification, markAsRead, markAllAsRead, deleteNotification } from "@/services/notificationService";
+import { 
+  getNotifications, 
+  Notification, 
+  markAsRead, 
+  markAllAsRead,
+  setupNotificationsListener
+} from "@/services/notificationService";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export const NotificationBell = () => {
   const { currentUser } = useAuth();
   const [open, setOpen] = React.useState(false);
   const queryClient = useQueryClient();
   const [isMarkingAll, setIsMarkingAll] = React.useState(false);
+  const [notifications, setNotifications] = React.useState<Notification[]>([]);
 
-  const { data: allNotifications = [], isLoading, refetch } = useQuery<Notification[]>({
-    queryKey: ['notifications', currentUser?.email],
-    queryFn: () => getNotifications(currentUser?.email || ''),
-    enabled: !!currentUser,
-  });
-
-  // Ordena as notificações por data de criação (mais recente primeiro) e limita a 5
-  const notifications = React.useMemo(() => {
-    return [...allNotifications]
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-      .slice(0, 5);
-  }, [allNotifications]);
-
-  // Efeito para apagar notificações excedentes (acima de 5)
+  // Usando listener em tempo real
   useEffect(() => {
-    const deleteExcessNotifications = async () => {
-      if (allNotifications.length > 5) {
-        const toDelete = allNotifications.slice(5);
+    if (!currentUser?.email) return;
 
-        try {
-          const deletePromises = toDelete.map(notification => 
-            deleteNotification(notification.id)
-          );
-          await Promise.all(deletePromises);
-          queryClient.invalidateQueries({ queryKey: ['notifications', currentUser?.email] });
-        } catch (error) {
-          console.error("Erro ao apagar notificações excedentes:", error);
-        }
+    const unsubscribe = setupNotificationsListener(
+      currentUser.email,
+      (fetchedNotifications) => {
+        setNotifications(fetchedNotifications);
       }
-    };
+    );
 
-    if (allNotifications.length > 0) {
-      deleteExcessNotifications();
-    }
-  }, [allNotifications, currentUser?.email, queryClient]);
+    return () => unsubscribe();
+  }, [currentUser?.email]);
 
   const unreadCount = notifications.filter(notification => 
     !notification.readBy?.includes(currentUser?.email || '')
   ).length;
 
   const handleNotificationClick = async (notification: Notification) => {
-    if (!notification.readBy?.includes(currentUser?.email || '')) {
-      await markAsRead(notification.id, currentUser?.email || '');
-      await refetch();
+    if (!currentUser?.email) return;
+    
+    try {
+      if (!notification.readBy?.includes(currentUser.email)) {
+        await markAsRead(notification.id, currentUser.email);
+queryClient.invalidateQueries({ queryKey: ['notifications'] });      }
+    } catch (error) {
+      toast.error("Erro ao marcar notificação como lida");
+      console.error("Error:", error);
     }
   };
 
   const handleMarkAllAsRead = async () => {
-    if (unreadCount === 0 || !currentUser?.email) return;
+    if (!currentUser?.email || unreadCount === 0) return;
     
     setIsMarkingAll(true);
     try {
       await markAllAsRead(notifications, currentUser.email);
-      await refetch();
-      await queryClient.invalidateQueries({ queryKey: ['notifications'] });
+queryClient.invalidateQueries({ queryKey: ['notifications'] });
       toast.success(`${unreadCount} notificações marcadas como lidas`);
     } catch (error) {
       toast.error("Erro ao marcar notificações como lidas");
-      console.error("Erro:", error);
+      console.error("Error:", error);
     } finally {
       setIsMarkingAll(false);
     }
   };
 
-  if (!currentUser) {
-    return null;
-  }
-
-  if (isLoading) {
-    return <Skeleton className="h-12 w-12 rounded-full" />;
-  }
-
-  // Função para traduzir o status no texto da notificação
   const translateStatusInMessage = (message: string) => {
     const statusMap: Record<string, string> = {
       "pending": "pendente",
@@ -104,140 +86,151 @@ export const NotificationBell = () => {
       "canceled": "cancelado"
     };
 
-    // Encontra e substitui todos os status na mensagem
-    let translatedMessage = message;
-    Object.entries(statusMap).forEach(([englishStatus, portugueseStatus]) => {
-      const regex = new RegExp(englishStatus, "gi");
-      translatedMessage = translatedMessage.replace(regex, portugueseStatus);
-    });
-
-    return translatedMessage;
+    return message.replace(
+      new RegExp(Object.keys(statusMap).join("|"), "gi"),
+      matched => statusMap[matched.toLowerCase()] || matched
+    );
   };
+
+  if (!currentUser) return null;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      {unreadCount > 0 && (
-        <div className="absolute top-0 right-0 -translate-x-1/4 -translate-y-1/4 bg-red-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center font-semibold shadow-lg animate-pulse z-20">
-          {unreadCount > 99 ? '99+' : unreadCount}
-        </div>
-      )}
-      <PopoverTrigger asChild>
-        <Button 
-          variant="default" 
-          size="icon"
-          className="relative rounded-full w-12 h-12 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-sidebar to-eccos-purple hover:from-eccos-purple hover:to-sidebar group overflow-hidden"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          {unreadCount > 0 ? (
-            <BellRing className="h-6 w-6 text-white relative z-10" />
-          ) : (
-            <Bell className="h-6 w-6 text-white relative z-10" />
-          )}
-        </Button>
-      </PopoverTrigger>
+      <div className="relative">
+        {unreadCount > 0 && (
+          <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-semibold shadow-lg animate-pulse z-10">
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </div>
+        )}
+        <PopoverTrigger asChild>
+          <Button 
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "relative rounded-full w-10 h-10 hover:bg-gray-100 transition-colors",
+              unreadCount > 0 && "text-primary"
+            )}
+          >
+            {unreadCount > 0 ? (
+              <BellRing className="h-8 w-8" />
+            ) : (
+              <Bell className="h-8 w-8" />
+            )}
+          </Button>
+        </PopoverTrigger>
+      </div>
       
-      <PopoverContent className="w-96 p-0 border border-gray-100 shadow-2xl rounded-2xl bg-white" align="end">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-2xl">
-          <div className="absolute left-1/4 top-1/4 h-32 w-32 rounded-full bg-sidebar blur-3xl opacity-5"></div>
-          <div className="absolute right-1/4 bottom-1/4 h-24 w-24 rounded-full bg-eccos-purple blur-3xl opacity-5"></div>
-        </div>
-
-        <div className="relative z-10 p-6">
-          <div className="flex items-center justify-between border-b border-gray-100 pb-4 mb-2">
-            <h4 className="font-bold text-xl flex items-center gap-3 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
-              <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-eccos-purple/10 text-eccos-purple">
-                <Bell className="h-4 w-4" />
-              </div>
+      <PopoverContent 
+        className="w-[350px] p-0 rounded-lg shadow-xl border border-gray-200"
+        align="end"
+        sideOffset={10}
+      >
+        <div className="bg-white rounded-lg overflow-hidden">
+          <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+            <h4 className="font-semibold text-lg flex items-center gap-2">
+              <Bell className="h-5 w-5 text-primary" />
               Notificações
             </h4>
             {unreadCount > 0 && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleMarkAllAsRead}
-                disabled={isMarkingAll}
-                className="border-eccos-purple text-eccos-purple hover:bg-eccos-purple hover:text-white transition-all duration-200 rounded-lg"
-              >
-                {isMarkingAll ? (
-                  <div className="flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-3 w-3 border-2 border-current border-t-transparent"></div>
-                    Marcando...
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <CheckCheck className="h-4 w-4" />
-                    Marcar todas
-                  </div>
-                )}
-              </Button>
+             <Button 
+  variant="ghost"
+  size="sm"
+  onClick={handleMarkAllAsRead}
+  disabled={isMarkingAll || unreadCount === 0}
+  className="text-primary hover:bg-primary/10"
+>
+  {isMarkingAll ? (
+    <span className="flex items-center gap-2">
+      <span className="animate-spin rounded-full h-3 w-3 border-2 border-primary border-t-transparent" />
+      Processando...
+    </span>
+  ) : (
+    <span className="flex items-center gap-2">
+      <CheckCheck className="h-4 w-4" />
+      Marcar todas como lida
+    </span>
+  )}
+</Button>
             )}
           </div>
 
-          <div className="max-h-[400px] overflow-y-auto space-y-3">
+          <div className="max-h-[400px] overflow-y-auto">
             {notifications.length > 0 ? (
               notifications.map((notification) => {
-                const isUnread = !notification.readBy?.includes(currentUser?.email || '');
-                
-                // Traduz o status na mensagem
+                const isUnread = !notification.readBy?.includes(currentUser.email || '');
                 const translatedMessage = translateStatusInMessage(notification.message);
                 
                 return (
                   <div
                     key={notification.id}
                     onClick={() => handleNotificationClick(notification)}
-                    className={`p-4 rounded-xl cursor-pointer transition-all duration-300 border relative group ${
-                      isUnread 
-                        ? 'bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 hover:border-eccos-purple shadow-sm hover:shadow-md' 
-                        : 'bg-gray-50 border-gray-100 hover:bg-gray-100 opacity-75'
-                    }`}
-                  >
-                    {isUnread && (
-                      <div className="absolute top-3 left-3 w-3 h-3 bg-gradient-to-r from-sidebar to-eccos-purple rounded-full animate-pulse shadow-lg"></div>
+                    className={cn(
+                      "p-4 border-b border-gray-100 cursor-pointer transition-colors",
+                      isUnread ? "bg-blue-50 hover:bg-blue-100" : "hover:bg-gray-50"
                     )}
-                    
-                    <div className="flex flex-col gap-2">
-                      <div className="flex justify-between items-center">
-                        <div className="absolute top-3 right-3">
-                          {notification.title === 'Alteração de Status' ? (
-                            <Badge className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white shadow-sm">
-                              <RefreshCw className="h-3 w-3 mr-1" />
-                            </Badge>
-                          ) : notification.recipients.length === 0 ? (
-                            <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-sm">
-                              <Globe className="h-3 w-3 mr-1" />
-                            </Badge>
-                          ) : (
-                            <Badge className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-sm">
-                              <User className="h-3 w-3 mr-1" />
-                            </Badge>
-                          )}
-                        </div>
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0">
+                        {notification.title === 'Alteração de Status' ? (
+                          <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                            <RefreshCw className="h-3 w-3 mr-1" />
+                            Status
+                          </Badge>
+                        ) : notification.recipients.length === 0 ? (
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                            <Globe className="h-3 w-3 mr-1" />
+                            Global
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="bg-green-100 text-green-800">
+                            <User className="h-3 w-3 mr-1" />
+                            Individual
+                          </Badge>
+                        )}
                       </div>
                       
-                      <p className="text-sm text-black leading-relaxed mt-4">
-                        {translatedMessage}
-                      </p>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-gray-900">{notification.title}</h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {translatedMessage}
+                        </p>
+                        {notification.link && (
+                          <a
+                            href={notification.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-2 inline-block text-sm text-primary hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            Ver detalhes
+                          </a>
+                        )}
+                        <p className="text-xs text-gray-500 mt-2">
+                          {new Date(notification.createdAt).toLocaleString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </p>
+                      </div>
                       
-                      {notification.link && (
-                        <a
-                          href={notification.link}
-                          className="mt-2 inline-flex items-center text-sm text-eccos-blue hover:text-sidebar font-medium transition-colors underline decoration-2 underline-offset-2"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          Ver detalhes
-                        </a>
+                      {isUnread && (
+                        <div className="w-2 h-2 rounded-full bg-primary ml-2" />
                       )}
                     </div>
                   </div>
                 );
               })
             ) : (
-              <div className="text-center py-12">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 text-gray-400 mb-4">
-                  <Bell className="h-8 w-8" />
+              <div className="p-6 text-center">
+                <div className="mx-auto w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                  <Bell className="h-5 w-5 text-gray-400" />
                 </div>
-                <p className="text-gray-500 font-medium text-lg">Nenhuma notificação</p>
-                <p className="text-gray-400 text-sm mt-1">As notificações aparecerão aqui quando chegarem</p>
+                <p className="text-gray-500 font-medium">Nenhuma notificação</p>
+                <p className="text-gray-400 text-sm mt-1">
+                  As notificações aparecerão aqui quando chegarem
+                </p>
               </div>
             )}
           </div>

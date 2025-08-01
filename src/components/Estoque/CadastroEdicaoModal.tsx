@@ -129,6 +129,39 @@ const CadastroEdicaoModal: React.FC<CadastroEdicaoModalProps> = ({
                   </select>
                 </div>
 
+                {/* Data de Recebimento */}
+                <div className="space-y-2">
+                  <Label>Data de Recebimento</Label>
+                  <Input
+                    type="date"
+                    value={formState.dataRecebimento || ''}
+                    onChange={(e) => handleChange('dataRecebimento', e.target.value)}
+                    className="focus:ring-2 focus:ring-eccos-purple focus:border-eccos-purple outline-none transition-all"
+                  />
+                </div>
+
+                {/* Nota Fiscal */}
+                <div className="space-y-2">
+                  <Label>Nota Fiscal</Label>
+                  <Input
+                    placeholder="Número da nota fiscal"
+                    value={formState.notaFiscal || ''}
+                    onChange={(e) => handleChange('notaFiscal', e.target.value)}
+                    className="focus:ring-2 focus:ring-eccos-purple focus:border-eccos-purple outline-none transition-all"
+                  />
+                </div>
+
+                {/* Número do Pedido */}
+                <div className="space-y-2">
+                  <Label>Número do Pedido</Label>
+                  <Input
+                    placeholder="Número do pedido"
+                    value={formState.numeroPedido || ''}
+                    onChange={(e) => handleChange('numeroPedido', e.target.value)}
+                    className="focus:ring-2 focus:ring-eccos-purple focus:border-eccos-purple outline-none transition-all"
+                  />
+                </div>
+
                 <div className="col-span-1 sm:col-span-2 space-y-2">
                   <Label>Descrição</Label>
                   <Textarea
