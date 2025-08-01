@@ -43,6 +43,9 @@ const DetalhesModal: React.FC<DetalhesModalProps> = ({
     Péssimo: 'bg-red-500 text-white',
   };
 
+  // Verifica se o item tem responsável
+  const hasResponsavel = !!selectedItemDetails.responsavel;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl w-full bg-white border border-gray-100 rounded-2xl overflow-hidden">
@@ -63,20 +66,27 @@ const DetalhesModal: React.FC<DetalhesModalProps> = ({
           </DialogHeader>
 
           {/* Conteúdo Rolável */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="flex-1 overflow-y-auto p-6 pb-20 space-y-6"> 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Nome */}
               <div className="space-y-1">
                 <Label className="text-xs font-medium">Nome:</Label>
                 <p className="font-medium text-sm">{selectedItemDetails.nome}</p>
               </div>
+
+              {/* Quantidade */}
               <div className="space-y-1">
                 <Label className="text-xs font-medium">Quantidade:</Label>
                 <p className="text-sm">{selectedItemDetails.quantidade}</p>
               </div>
+
+              {/* Categoria */}
               <div className="space-y-1">
                 <Label className="text-xs font-medium">Categoria:</Label>
                 <p className="text-sm">{selectedItemDetails.categoria}</p>
               </div>
+
+              {/* Valor Unitário */}
               <div className="space-y-1">
                 <Label className="text-xs font-medium">Valor Unitário:</Label>
                 <p className="text-sm">
@@ -86,6 +96,8 @@ const DetalhesModal: React.FC<DetalhesModalProps> = ({
                   }) || 'Não informado'}
                 </p>
               </div>
+
+              {/* Valor Total */}
               <div className="space-y-1">
                 <Label className="text-xs font-medium">Valor Total:</Label>
                 <p className="text-sm">
@@ -97,14 +109,32 @@ const DetalhesModal: React.FC<DetalhesModalProps> = ({
                   })}
                 </p>
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs font-medium">Unidade:</Label>
-                <p className="text-sm">{selectedItemDetails.unidade}</p>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs font-medium">Localização:</Label>
-                <p className="text-sm">{selectedItemDetails.localizacao}</p>
-              </div>
+
+              {/* Responsável (exibido se existir) */}
+              {hasResponsavel ? (
+                <div className="col-span-1 sm:col-span-2 space-y-1">
+                  <Label className="text-xs font-medium">Responsável:</Label>
+                  <p className="text-sm font-medium text-gray-800">
+                    {selectedItemDetails.responsavel}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Unidade */}
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium">Unidade:</Label>
+                    <p className="text-sm">{selectedItemDetails.unidade || 'Não informada'}</p>
+                  </div>
+
+                  {/* Localização */}
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium">Localização:</Label>
+                    <p className="text-sm">{selectedItemDetails.localizacao || 'Não informada'}</p>
+                  </div>
+                </>
+              )}
+
+              {/* Estado */}
               <div className="space-y-1">
                 <Label className="text-xs font-medium">Estado:</Label>
                 <p
@@ -116,6 +146,8 @@ const DetalhesModal: React.FC<DetalhesModalProps> = ({
                   {selectedItemDetails.estado}
                 </p>
               </div>
+
+              {/* Descrição */}
               <div className="col-span-1 sm:col-span-2 space-y-1">
                 <Label className="text-xs font-medium">Descrição:</Label>
                 <p className="text-sm whitespace-pre-wrap break-words">
