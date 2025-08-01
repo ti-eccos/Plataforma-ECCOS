@@ -52,12 +52,12 @@ const permissionLabels: { [key: string]: { label: string; icon: React.ReactNode;
   equipamentos: {
     label: "Equipamentos",
     icon: <Laptop className="h-4 w-4" />,
-    category: "Recursos"
+    category: "Tecnologia"
   },
   disponibilidade: {
     label: "Disponibilidade",
     icon: <Calendar className="h-4 w-4" />,
-    category: "Recursos"
+    category: "Tecnologia"
   },
   estoque: {
     label: "Estoque",
@@ -97,42 +97,42 @@ const permissionLabels: { [key: string]: { label: string; icon: React.ReactNode;
   notificacoes: {
     label: "Notificações",
     icon: <Bell className="h-4 w-4" />,
-    category: "Geral"
+    category: "Administração"
   },
   "compras-financeiro": {
     label: "Compras Financeiro",
     icon: <ShoppingCart className="h-4 w-4" />,
-    category: "Financeiro"
+    category: "Compras"
   },
   "compras-tecnologia": {
     label: "Compras Tecnologia",
     icon: <ShoppingCart className="h-4 w-4" />,
-    category: "Tecnologia"
+    category: "Compras"
   },
   "compras-infraestrutura": {
     label: "Compras Infraestrutura",
     icon: <ShoppingCart className="h-4 w-4" />,
-    category: "Operacional"
+    category: "Compras"
   },
   "compras-pedagogicoadmin": {
     label: "Compras Pedagógico / Administrativo",
     icon: <ShoppingCart className="h-4 w-4" />,
-    category: "Apoio"
+    category: "Compras"
   },
   "suporte-operacional": {
     label: "Suporte Operacional",
     icon: <Wrench className="h-4 w-4" />,
-    category: "Operacional"
+    category: "Manutenção"
   },
   "calendario-reservas": {
     label: "Calendário de Reservas",
     icon: <Calendar className="h-4 w-4" />,
-    category: "Recursos"
+    category: "Tecnologia"
   },
   "suporte-plataforma": {
     label: "Suporte da Plataforma",
     icon: <Bug className="h-4 w-4" />,
-    category: "Técnico"
+    category: "Tecnologia"
   },
   "roles-management": {
     label: "Gerenciar Roles",
@@ -147,11 +147,6 @@ const permissionLabels: { [key: string]: { label: string; icon: React.ReactNode;
   "notice-board-edit": {
     label: "Editar Quadro de Avisos",
     icon: <FileText className="h-4 w-4" />,
-    category: "Administração"
-  },
-  "user-dropdown": {
-    label: "Dropdown de Usuários",
-    icon: <Users className="h-4 w-4" />,
     category: "Administração"
   },
 };
@@ -259,7 +254,7 @@ const RoleModal: React.FC<{
     'Financeiro': 'bg-yellow-50 border-yellow-200 text-yellow-800',
     'Operacional': 'bg-orange-50 border-orange-200 text-orange-800',
     'Técnico': 'bg-gray-50 border-gray-200 text-gray-800',
-    'Outros': 'bg-slate-50 border-slate-200 text-slate-800'
+    'Manutenção': 'bg-slate-50 border-slate-200 text-slate-800'
   };
 
   return (
