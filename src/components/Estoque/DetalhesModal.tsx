@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button';
 
 import { Trash2, Copy, Edit, ClipboardList } from 'lucide-react';
 
-// Ajuste o caminho conforme a estrutura da sua aplicação
 import { ItemEstoque } from '@/components/Estoque/types';
 
 interface DetalhesModalProps {
@@ -107,6 +106,30 @@ const DetalhesModal: React.FC<DetalhesModalProps> = ({
                     style: 'currency',
                     currency: 'BRL',
                   })}
+                </p>
+              </div>
+
+              {/* Data de Recebimento */}
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">Data de Recebimento:</Label>
+                <p className="text-sm">
+                  {selectedItemDetails.dataRecebimento || 'Não informada'}
+                </p>
+              </div>
+
+              {/* Nota Fiscal */}
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">Nota Fiscal:</Label>
+                <p className="text-sm">
+                  {selectedItemDetails.notaFiscal || 'Não informada'}
+                </p>
+              </div>
+
+              {/* Número do Pedido */}
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">Número do Pedido:</Label>
+                <p className="text-sm">
+                  {selectedItemDetails.numeroPedido || 'Não informado'}
                 </p>
               </div>
 

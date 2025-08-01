@@ -589,13 +589,17 @@ export default function UserSolicitacoes() {
       setStockItemData({
         nome: selectedRequest.itemName || "Item sem nome",
         quantidade: selectedRequest.quantity || 1,
-        valorUnitario: selectedRequest.unitPrice || 0, // VALOR UNITÁRIO
+        valorUnitario: selectedRequest.unitPrice || 0,
         descricao: selectedRequest.justification || `Compra aprovada em ${new Date().toLocaleDateString()}`,
-        categoria: "TI", // Categoria padrão
-        unidade: "Fundamental", // Unidade padrão
-        localizacao: "TI", // Localização padrão
-        estado: "Bom", // Estado padrão
-        responsavel: '', // NOVO CAMPO
+        categoria: "TI",
+        unidade: "Fundamental",
+        localizacao: "TI",
+        estado: "Bom",
+        responsavel: '',
+        // Add these with empty string as default
+        dataRecebimento: '',
+        notaFiscal: '',
+        numeroPedido: '',
       });
       
       // Resetar para local ao abrir
@@ -1187,6 +1191,39 @@ export default function UserSolicitacoes() {
                       min="0"
                       value={stockItemData?.valorUnitario || 0}
                       onChange={(e) => setStockItemData(prev => ({ ...prev!, valorUnitario: Number(e.target.value) }))}
+                      className="focus:ring-2 focus:ring-eccos-purple focus:border-eccos-purple outline-none transition-all"
+                    />
+                  </div>
+
+                  {/* Data de Recebimento */}
+                  <div className="space-y-2">
+                    <Label>Data de Recebimento</Label>
+                    <Input
+                      type="date"
+                      value={stockItemData?.dataRecebimento || ''}
+                      onChange={(e) => setStockItemData(prev => ({ ...prev!, dataRecebimento: e.target.value }))}
+                      className="focus:ring-2 focus:ring-eccos-purple focus:border-eccos-purple outline-none transition-all"
+                    />
+                  </div>
+
+                  {/* Nota Fiscal */}
+                  <div className="space-y-2">
+                    <Label>Nota Fiscal</Label>
+                    <Input
+                      placeholder="Número da nota fiscal"
+                      value={stockItemData?.notaFiscal || ''}
+                      onChange={(e) => setStockItemData(prev => ({ ...prev!, notaFiscal: e.target.value }))}
+                      className="focus:ring-2 focus:ring-eccos-purple focus:border-eccos-purple outline-none transition-all"
+                    />
+                  </div>
+
+                  {/* Número do Pedido */}
+                  <div className="space-y-2">
+                    <Label>Número do Pedido</Label>
+                    <Input
+                      placeholder="Número do pedido"
+                      value={stockItemData?.numeroPedido || ''}
+                      onChange={(e) => setStockItemData(prev => ({ ...prev!, numeroPedido: e.target.value }))}
                       className="focus:ring-2 focus:ring-eccos-purple focus:border-eccos-purple outline-none transition-all"
                     />
                   </div>

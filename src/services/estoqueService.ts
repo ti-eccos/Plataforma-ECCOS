@@ -12,6 +12,10 @@ export interface ItemEstoque {
   estado: 'Ótimo' | 'Bom' | 'Razoável' | 'Ruim' | 'Péssimo';
   responsavel?: string;
   createdAt?: Date;
+  // Add these new properties
+  dataRecebimento?: string;
+  notaFiscal?: string;
+  numeroPedido?: string;
 }
 
 export const addItemEstoque = async (item: ItemEstoque) => {
