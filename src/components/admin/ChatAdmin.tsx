@@ -543,8 +543,9 @@ const ChatAdmin = ({
             </div>
           )}
           
-          <div className="flex gap-2">
-            <div className="flex-1 space-y-2 pl-4">
+          {/* Área de entrada de mensagens reorganizada */}
+          <div className="flex gap-2 items-end pl-3">
+            <div className="flex-1">
               <TextareaAutosize
                 placeholder="Digite sua mensagem..." 
                 value={newMessage}
@@ -556,7 +557,8 @@ const ChatAdmin = ({
                 className="w-full min-h-[40px] resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
-            <div className="flex flex-col gap-2">
+            
+            <div className="flex gap-2 mb-1.5 mr-2">
               <input
                 ref={fileInputRef}
                 type="file"
