@@ -129,7 +129,7 @@ const permissionLabels: { [key: string]: { label: string; icon: React.ReactNode;
   "suporte-plataforma": {
     label: "Suporte da Plataforma",
     icon: <Bug className="h-4 w-4" />,
-    category: "Manutenção"
+    category: "Administração"
   },
   "roles-management": {
     label: "Gerenciar Roles",
