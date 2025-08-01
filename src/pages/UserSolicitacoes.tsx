@@ -21,6 +21,7 @@ import {
   FileText,
   Truck,
   PackageCheck,
+  Package
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -75,6 +76,9 @@ import ChatUser from "@/components/ChatUser";
 import { Input } from "@/components/ui/input";
 import { createNotification } from "@/services/notificationService";
 import { cn } from "@/lib/utils";
+import { addItemEstoque, ItemEstoque } from "@/services/estoqueService";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 // Ícones por tipo
 const getRequestTypeIcon = (type: RequestType) => {
@@ -258,6 +262,78 @@ export default function UserSolicitacoes() {
   const [chatRequest, setChatRequest] = useState<RequestData | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
 
+  // Estados de estoque
+  const [isStockModalOpen, setIsStockModalOpen] = useState(false);
+  const [stockItemData, setStockItemData] = useState<ItemEstoque | null>(null);
+  const [isSubmittingStock, setIsSubmittingStock] = useState(false);
+
+  // Novo estado para controlar o tipo de destino
+  const [destinationType, setDestinationType] = useState<'local' | 'responsible'>('local');
+
+  // Localizações por unidade
+  const locationsByUnit = {
+    'Berçário e Educação Infantil': [
+      'Recepção',
+      'Sala de reuniões',
+      'Cozinha',
+      'Pátio',
+      'Sala de música',
+      'Sala de science',
+      'Berçário 2',
+      'Berçário 3',
+      'Refeitório',
+      'Sala de movimento',
+      'Pátio integral',
+      'Infantil 1',
+      'Infantil 2',
+    ],
+    Fundamental: [
+      'Recepção',
+      'Secretaria',
+      'Sala de atendimento',
+      'Sala de atendimento (Laranja)',
+      'Sala de auxiliar de coordenação fundamental 1',
+      'Sala de oficinas',
+      'Sala de música',
+      'Sala de science',
+      'Integral',
+      '4º Ano',
+      'Patio (Cantina)',
+      'Refeitório',
+      'Biblioteca (Inferior)',
+      '3º Ano',
+      '2º Ano',
+      '1º Ano',
+      'Sala dos professores',
+      'Sala de Linguas',
+      'Coordenação de linguas/Fundamental 2',
+      'Sala de artes',
+      'Coordenação Fundamental 1 / Coordenação de matemática',
+      '8º ano',
+      '7º Ano',
+      'Apoio pedagógico',
+      'Orientação educacional',
+      'TI',
+      'Sala de oficinas (Piso superior)',
+      '5º Ano',
+      '6º Ano',
+      'Biblioteca (Superior)',
+      'Sala de convivência',
+      '9º Ano',
+    ],
+    Anexo: [
+      'Sala de manutenção',
+      'Sala de reuniões',
+      'Refeitório',
+      'Cozinha',
+      'Nutrição',
+      'Controladoria',
+      'Financeiro',
+      'Operacional',
+      'Mantenedoria',
+    ],
+  };
+
   // Carregamento de dados
   const { data: requests = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["userRequests", currentUser?.email],
@@ -425,8 +501,8 @@ export default function UserSolicitacoes() {
         return newSet;
       });
       setUnreadMessages((prev) => {
-        const newUnread = { ...prev };
-        delete newUnread[request.id];
+        const newUnread = {...prev};
+        delete newUnread[fullRequest.id];
         return newUnread;
       });
       setIsChatOpen(true);
@@ -492,7 +568,7 @@ export default function UserSolicitacoes() {
     );
   };
 
-  // Marcar como entregue
+  // Marcar como entregue (ATUALIZADO)
   const handleMarkAsDelivered = async () => {
     if (!selectedRequest) return;
     try {
@@ -508,6 +584,23 @@ export default function UserSolicitacoes() {
         isBatch: false,
       });
       toast.success("Status atualizado para Recebido");
+      
+      // Preparar dados para o estoque (AGORA INCLUI responsavel)
+      setStockItemData({
+        nome: selectedRequest.itemName || "Item sem nome",
+        quantidade: selectedRequest.quantity || 1,
+        valorUnitario: selectedRequest.unitPrice || 0, // VALOR UNITÁRIO
+        descricao: selectedRequest.justification || `Compra aprovada em ${new Date().toLocaleDateString()}`,
+        categoria: "TI", // Categoria padrão
+        unidade: "Fundamental", // Unidade padrão
+        localizacao: "TI", // Localização padrão
+        estado: "Bom", // Estado padrão
+        responsavel: '', // NOVO CAMPO
+      });
+      
+      // Resetar para local ao abrir
+      setDestinationType('local');
+      setIsStockModalOpen(true);
       setIsDetailsOpen(false);
       refetch();
     } catch (error) {
@@ -537,6 +630,23 @@ export default function UserSolicitacoes() {
     } catch (error) {
       toast.error("Erro ao atualizar status");
       console.error("Error:", error);
+    }
+  };
+
+  // Adicionar item ao estoque
+  const handleAddToStock = async () => {
+    if (!stockItemData) return;
+    setIsSubmittingStock(true);
+    
+    try {
+      await addItemEstoque(stockItemData);
+      toast.success("Item adicionado ao estoque com sucesso!");
+      setIsStockModalOpen(false);
+    } catch (error) {
+      toast.error("Erro ao adicionar item ao estoque");
+      console.error(error);
+    } finally {
+      setIsSubmittingStock(false);
     }
   };
 
@@ -607,7 +717,7 @@ export default function UserSolicitacoes() {
               }}
               className="flex items-center gap-2 border-gray-200 hover:bg-gray-50 text-gray-600"
             >
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className="h-4 w-4 mr-1" />
               Limpar Filtros
             </Button>
             {/* Dropdown de Categoria */}
@@ -1017,6 +1127,223 @@ export default function UserSolicitacoes() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        
+        {/* Modal de Estoque ATUALIZADO */}
+        <Dialog open={isStockModalOpen} onOpenChange={setIsStockModalOpen}>
+          <DialogContent className="max-w-2xl w-full bg-white border border-gray-100 rounded-2xl overflow-hidden">
+            <div className="flex flex-col h-[80vh] max-h-[80vh]">
+              {/* Cabeçalho Fixo */}
+              <DialogHeader className="p-6 pb-2 border-b border-gray-100 bg-white sticky top-0 z-10 shadow-sm">
+                <DialogTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5 text-purple-500" />
+                  <span className="bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+                    Adicionar ao Estoque
+                  </span>
+                </DialogTitle>
+                <DialogDescription asChild>
+                  <div className="text-sm text-gray-500 mt-2">
+                    Campos marcados com <span className="text-destructive">*</span> são obrigatórios
+                  </div>
+                </DialogDescription>
+              </DialogHeader>
+
+              {/* Conteúdo Rolável */}
+              <div className="flex-1 overflow-y-auto p-6 pb-16">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Nome */}
+                  <div className="space-y-2">
+                    <Label>
+                      Nome do Item <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      placeholder="Ex: Computador"
+                      value={stockItemData?.nome || ''}
+                      onChange={(e) => setStockItemData(prev => ({ ...prev!, nome: e.target.value }))}
+                      className="focus:ring-2 focus:ring-eccos-purple focus:border-eccos-purple outline-none transition-all"
+                    />
+                  </div>
+
+                  {/* Quantidade */}
+                  <div className="space-y-2">
+                    <Label>
+                      Quantidade <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={stockItemData?.quantidade || 0}
+                      onChange={(e) => setStockItemData(prev => ({ ...prev!, quantidade: Number(e.target.value) }))}
+                      className="focus:ring-2 focus:ring-eccos-purple focus:border-eccos-purple outline-none transition-all"
+                    />
+                  </div>
+
+                  {/* VALOR UNITÁRIO (MANTIDO) */}
+                  <div className="space-y-2">
+                    <Label>Valor Unitário (R$)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={stockItemData?.valorUnitario || 0}
+                      onChange={(e) => setStockItemData(prev => ({ ...prev!, valorUnitario: Number(e.target.value) }))}
+                      className="focus:ring-2 focus:ring-eccos-purple focus:border-eccos-purple outline-none transition-all"
+                    />
+                  </div>
+
+                  {/* Estado */}
+                  <div className="space-y-2">
+                    <Label>
+                      Estado <span className="text-destructive">*</span>
+                    </Label>
+                    <select
+                      value={stockItemData?.estado || 'Bom'}
+                      onChange={(e) => setStockItemData(prev => ({ ...prev!, estado: e.target.value as any }))}
+                      className="w-full h-10 rounded-md border px-3 focus:ring-2 focus:ring-eccos-purple focus:border-eccos-purple outline-none transition-all"
+                    >
+                      <option value="Ótimo">Ótimo</option>
+                      <option value="Bom">Bom</option>
+                      <option value="Razoável">Razoável</option>
+                      <option value="Ruim">Ruim</option>
+                      <option value="Péssimo">Péssimo</option>
+                    </select>
+                  </div>
+
+                  {/* Categoria */}
+                  <div className="space-y-2">
+                    <Label>
+                      Categoria <span className="text-destructive">*</span>
+                    </Label>
+                    <select
+                      value={stockItemData?.categoria || ''}
+                      onChange={(e) => setStockItemData(prev => ({ ...prev!, categoria: e.target.value }))}
+                      className="w-full h-10 rounded-md border px-3 focus:ring-2 focus:ring-eccos-purple focus:border-eccos-purple outline-none transition-all"
+                    >
+                      <option value="">Selecione uma categoria</option>
+                      <option value="TI">TI</option>
+                      <option value="Administrativo">Administrativo</option>
+                      <option value="Limpeza">Limpeza</option>
+                      <option value="Manutenção">Manutenção</option>
+                    </select>
+                  </div>
+
+                  <div className="col-span-1 sm:col-span-2 space-y-2">
+                    <Label>Descrição</Label>
+                    <Textarea
+                      placeholder="Descreva o item (opcional)"
+                      value={stockItemData?.descricao || ''}
+                      onChange={(e) => setStockItemData(prev => ({ ...prev!, descricao: e.target.value }))}
+                      className="w-full h-20 focus:ring-2 focus:ring-eccos-purple focus:border-eccos-purple outline-none transition-all"
+                    />
+                  </div>
+
+                  {/* NOVO: Toggle entre Local e Responsável */}
+                  <div className="col-span-1 sm:col-span-2 space-y-4">
+                    <div className="flex gap-2 mb-2">
+                      <Button
+                        type="button"
+                        variant={destinationType === 'local' ? 'default' : 'outline'}
+                        onClick={() => setDestinationType('local')}
+                        className="flex-1"
+                      >
+                        Local
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={destinationType === 'responsible' ? 'default' : 'outline'}
+                        onClick={() => setDestinationType('responsible')}
+                        className="flex-1"
+                      >
+                        Responsável
+                      </Button>
+                    </div>
+
+                    {/* Campo condicional */}
+                    {destinationType === 'responsible' ? (
+                      // Campo: Nome do Responsável
+                      <div className="space-y-2">
+                        <Label>
+                          Nome do Responsável <span className="text-destructive">*</span>
+                        </Label>
+                        <Input
+                          placeholder="Ex: João Silva"
+                          value={stockItemData?.responsavel || ''}
+                          onChange={(e) => setStockItemData(prev => ({ ...prev!, responsavel: e.target.value }))}
+                          className="focus:ring-2 focus:ring-eccos-purple focus:border-eccos-purple outline-none transition-all"
+                        />
+                      </div>
+                    ) : (
+                      // Campos: Unidade e Localização
+                      <>
+                        <div className="space-y-2">
+                          <Label>
+                            Unidade <span className="text-destructive">*</span>
+                          </Label>
+                          <select
+                            value={stockItemData?.unidade || ''}
+                            onChange={(e) => setStockItemData(prev => ({ ...prev!, unidade: e.target.value }))}
+                            className="w-full h-10 rounded-md border px-3 focus:ring-2 focus:ring-eccos-purple focus:border-eccos-purple outline-none transition-all"
+                          >
+                            <option value="">Selecione uma unidade</option>
+                            {Object.keys(locationsByUnit).map((unidade) => (
+                              <option key={unidade} value={unidade}>
+                                {unidade}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>
+                            Localização <span className="text-destructive">*</span>
+                          </Label>
+                          <select
+                            value={stockItemData?.localizacao || ''}
+                            onChange={(e) => setStockItemData(prev => ({ ...prev!, localizacao: e.target.value }))}
+                            disabled={!stockItemData?.unidade}
+                            className={`w-full h-10 rounded-md border px-3 focus:ring-2 focus:ring-eccos-purple focus:border-eccos-purple outline-none transition-all ${
+                              !stockItemData?.unidade
+                                ? 'bg-gray-50 text-gray-400 cursor-not-allowed'
+                                : ''
+                            }`}
+                          >
+                            <option value="">Selecione uma localização</option>
+                            {stockItemData?.unidade &&
+                              locationsByUnit[stockItemData.unidade]?.map((local) => (
+                                <option key={local} value={local}>
+                                  {local}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Rodapé Fixo */}
+              <DialogFooter className="p-6 border-t border-gray-100 bg-white sticky bottom-0 z-10">
+                <div className="flex flex-col-reverse sm:flex-row gap-2 justify-end w-full">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsStockModalOpen(false)}
+                    className="w-full sm:w-auto"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button 
+                    onClick={handleAddToStock}
+                    disabled={isSubmittingStock}
+                    className="w-full sm:w-auto bg-eccos-purple hover:bg-sidebar text-white"
+                  >
+                    {isSubmittingStock ? "Adicionando..." : "Adicionar ao Estoque"}
+                  </Button>
+                </div>
+              </DialogFooter>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

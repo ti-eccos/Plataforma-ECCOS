@@ -9,5 +9,5 @@ export interface ItemEstoque {
   unidade: string;
   localizacao: string;
   estado: 'Ótimo' | 'Bom' | 'Razoável' | 'Ruim' | 'Péssimo';
-  responsavel?: string; // Novo campo
+  responsavel?: string;
 }
