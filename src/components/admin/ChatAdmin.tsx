@@ -99,14 +99,14 @@ const ChatAdmin = ({
           const data = doc.data();
           const currentMessages = data.messages || [];
           
-          // Detecta novas mensagens apenas após o carregamento inicial
           if (!initialLoad && currentMessages.length > previousMessageCount) {
             setHasNewMessage(true);
             
             // Notificar apenas se o chat não estiver aberto
             if (!isOpen && notificationPermission === "granted") {
               const lastMessage = currentMessages[currentMessages.length - 1];
-              if (lastMessage && !lastMessage.isAdmin) {
+              // Verificar se a última mensagem não é do usuário atual
+              if (lastMessage && currentUser && lastMessage.userId !== currentUser.uid) {
                 showNotification(
                   "Nova mensagem",
                   `${lastMessage.userName}: ${lastMessage.message || "Arquivo enviado"}`
@@ -124,7 +124,7 @@ const ChatAdmin = ({
     );
 
     return () => unsubscribe();
-  }, [request, isOpen, notificationPermission]);
+  }, [request, isOpen, notificationPermission, messages.length]); // Adicionado messages.length
 
   // Solicitar permissão para notificações quando o componente montar
   useEffect(() => {
