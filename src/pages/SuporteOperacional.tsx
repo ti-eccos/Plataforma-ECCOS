@@ -267,6 +267,10 @@ const SuporteOperacional = () => {
     }
   };
 
+  const isCriticalPriority = (priority?: string) => {
+  return priority?.toLowerCase() === 'critical';
+};
+
   const filteredRequests = allRequests
     .filter(req => req.type === 'support')
     .filter(req => {
@@ -438,43 +442,92 @@ const SuporteOperacional = () => {
                         </TableHeader>
                         <TableBody>
                           {filteredRequests.map((request) => (
-                            <TableRow key={request.id} className="border-gray-100 hover:bg-gray-50/50 transition-colors">
-                              <TableCell className="font-medium">{request.userName}</TableCell>
-                              <TableCell className="hidden md:table-cell">{request.tipo}</TableCell>
-                              <TableCell>{getStatusBadge(request.status)}</TableCell>
-                              <TableCell className="hidden lg:table-cell">
-                                {getPriorityLevelBadge(request.priority)}
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex gap-2">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-9 w-9 rounded-xl hover:bg-eccos-purple/10 hover:text-eccos-purple"
-                                    onClick={() => {
-                                      setSelectedRequest(request);
-                                      setIsDetailsOpen(true);
-                                    }}
-                                  >
-                                    <Eye className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-9 w-9 rounded-xl hover:bg-blue-50 hover:text-blue-600 relative"
-                                    onClick={() => handleOpenChat(request)}
-                                  >
-                                    <MessageSquare className="h-4 w-4" />
-                                    {unreadMessages[request.id] > 0 && (
-                                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                                        {unreadMessages[request.id]}
-                                      </span>
-                                    )}
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
+  <TableRow 
+    key={request.id} 
+    className={cn(
+      "group border-gray-100 transition-all",
+      isCriticalPriority(request.priority) 
+        ? "bg-red-600 hover:bg-red-700 text-white border-l-4 border-l-red-800 shadow-md"
+        : "hover:bg-gray-50/50"
+    )}
+  >
+    <TableCell className={cn(
+      "font-medium",
+      isCriticalPriority(request.priority) && "text-white font-bold"
+    )}>
+      {request.userName}
+    </TableCell>
+    
+    <TableCell className={cn(
+      "hidden md:table-cell",
+      isCriticalPriority(request.priority) && "text-white font-bold"
+    )}>
+      {request.tipo}
+    </TableCell>
+    
+    <TableCell>
+      {isCriticalPriority(request.priority) ? (
+        <div className="scale-110 transform">
+          {getStatusBadge(request.status)}
+        </div>
+      ) : (
+        getStatusBadge(request.status)
+      )}
+    </TableCell>
+    
+    <TableCell className={cn(
+      "hidden lg:table-cell",
+      isCriticalPriority(request.priority) && "text-white font-bold"
+    )}>
+      {getPriorityLevelBadge(request.priority)}
+    </TableCell>
+    
+    <TableCell>
+      <div className="flex gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            "h-9 w-9 rounded-xl",
+            isCriticalPriority(request.priority)
+              ? "text-white hover:bg-red-800 hover:text-white"
+              : "hover:bg-eccos-purple/10 hover:text-eccos-purple"
+          )}
+          onClick={() => {
+            setSelectedRequest(request);
+            setIsDetailsOpen(true);
+          }}
+        >
+          <Eye className="h-4 w-4" />
+        </Button>
+        
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            "h-9 w-9 rounded-xl relative",
+            isCriticalPriority(request.priority)
+              ? "text-white hover:bg-red-800 hover:text-white"
+              : "hover:bg-blue-50 hover:text-blue-600"
+          )}
+          onClick={() => handleOpenChat(request)}
+        >
+          <MessageSquare className="h-4 w-4" />
+          {unreadMessages[request.id] > 0 && (
+            <span className={cn(
+              "absolute -top-1 -right-1 text-xs rounded-full h-5 w-5 flex items-center justify-center",
+              isCriticalPriority(request.priority)
+                ? "bg-white text-red-600"
+                : "bg-red-500 text-white"
+            )}>
+              {unreadMessages[request.id]}
+            </span>
+          )}
+        </Button>
+      </div>
+    </TableCell>
+  </TableRow>
+))}
                         </TableBody>
                       </Table>
                     </div>
