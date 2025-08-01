@@ -101,12 +101,12 @@ const getStatusBadge = (status: RequestStatus) => {
         </Badge>
       );
     case "analyzing":
-    return (
-      <Badge className="bg-amber-50 text-amber-600 border-amber-100">
-        <Clock className="h-4 w-4 mr-1 hidden sm:inline-block" />
-        Em Análise
-      </Badge>
-    );
+      return (
+        <Badge className="bg-amber-50 text-amber-600 border-amber-100">
+          <Clock className="h-4 w-4 mr-1 hidden sm:inline-block" />
+          Em Análise
+        </Badge>
+      );
     case "approved":
       return (
         <Badge className="bg-green-50 text-green-600 border-green-100">
@@ -934,6 +934,18 @@ export default function UserSolicitacoes() {
                         </div>
                       )}
                     </div>
+
+                    {/* Motivo da Rejeição - ADICIONADO AQUI */}
+                    {selectedRequest.status === "rejected" && selectedRequest.rejectionReason && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-gray-500">Motivo da Rejeição</p>
+                        <div className="bg-red-50 p-4 rounded-xl border border-red-100">
+                          <p className="text-red-700 whitespace-pre-wrap break-words">
+                            {selectedRequest.rejectionReason}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 

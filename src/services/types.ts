@@ -43,4 +43,5 @@ export interface RequestData {
   unreadMessages?: number;
   hasUnreadMessages?: boolean;
   [key: string]: any;
+  rejectionReason?: string;
 }

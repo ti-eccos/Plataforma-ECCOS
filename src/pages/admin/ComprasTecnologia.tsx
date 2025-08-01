@@ -35,6 +35,7 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea"; // Corrigido import do Textarea
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -103,6 +104,10 @@ const ComprasTecnologia = () => {
     const saved = typeof window !== 'undefined' ? localStorage.getItem('techViewedRequests') : null;
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
+  
+  // Novos estados para rejeição
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
   
   // Lista de todos os status disponíveis
   const allStatuses: RequestStatus[] = [
@@ -184,6 +189,12 @@ const ComprasTecnologia = () => {
   const handleStatusChange = async (newStatus: RequestStatus) => {
     if (!selectedRequest) return;
     
+    // Se for rejeição, abrir diálogo para justificativa
+    if (newStatus === "rejected") {
+      setIsRejectionDialogOpen(true);
+      return;
+    }
+
     try {
       const updateData: any = { status: newStatus };
 
@@ -192,7 +203,7 @@ const ComprasTecnologia = () => {
       }
 
       const docRef = doc(db, selectedRequest.collectionName, selectedRequest.id);
-      await updateDoc(docRef, { status: newStatus });
+      await updateDoc(docRef, updateData);
   
       await createNotification({
         title: 'Alteração de Status',
@@ -206,9 +217,44 @@ const ComprasTecnologia = () => {
   
       toast.success("Status atualizado");
       queryClient.invalidateQueries({ queryKey: ['allRequests'] });
-      setSelectedRequest({ ...selectedRequest, status: newStatus });
+      setSelectedRequest({ ...selectedRequest, status: newStatus, ...updateData });
     } catch (error) {
       toast.error("Erro ao atualizar");
+      console.error("Error:", error);
+    }
+  };
+  
+  // Função para confirmar rejeição com justificativa
+  const confirmRejection = async () => {
+    if (!selectedRequest) return;
+    try {
+      const docRef = doc(db, selectedRequest.collectionName, selectedRequest.id);
+      await updateDoc(docRef, { 
+        status: "rejected",
+        rejectionReason: rejectionReason 
+      });
+      
+      await createNotification({
+        title: 'Solicitação Reprovada',
+        message: `Sua solicitação de compra foi reprovada. Motivo: ${rejectionReason}`,
+        link: 'minhas-solicitacoes',
+        createdAt: new Date(),
+        readBy: [],
+        recipients: [selectedRequest.userEmail],
+        isBatch: false
+      });
+      
+      toast.success("Solicitação reprovada com justificativa");
+      setIsRejectionDialogOpen(false);
+      setRejectionReason('');
+      queryClient.invalidateQueries({ queryKey: ['allRequests'] });
+      setSelectedRequest({ 
+        ...selectedRequest, 
+        status: "rejected",
+        rejectionReason 
+      });
+    } catch (error) {
+      toast.error("Erro ao reprovar solicitação");
       console.error("Error:", error);
     }
   };
@@ -357,7 +403,7 @@ const ComprasTecnologia = () => {
                       />
                     </div>
                     
-                    {/* Dropdown de status - ADICIONADO */}
+                    {/* Dropdown de status */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="flex items-center gap-2 h-12 rounded-xl border-gray-200 px-6">
@@ -486,7 +532,28 @@ const ComprasTecnologia = () => {
                             { locale: ptBR }
                           )}
                         </div>
-                        <div>{getStatusBadge(selectedRequest.status)}</div>
+                        <div className="flex items-center gap-2">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button className="cursor-pointer">
+                                {getStatusBadge(selectedRequest.status)}
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="rounded-xl" align="end">
+                              {allStatuses.map((status) => (
+                                <DropdownMenuItem 
+                                  key={status} 
+                                  onSelect={() => handleStatusChange(status as RequestStatus)}
+                                  className="cursor-pointer px-4 py-2 hover:bg-gray-100"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    {getStatusBadge(status as RequestStatus)}
+                                  </div>
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
                     </DialogDescription>
                   </DialogHeader>
@@ -544,30 +611,16 @@ const ComprasTecnologia = () => {
                         </p>
                       </div>
                     </div>
-                    {/* Controle de status */}
-                    <div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" className="flex items-center gap-2">
-                            Alterar Status
-                            <ChevronDown className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="rounded-xl">
-                          {["pending", "analyzing", "approved", "rejected", "canceled"].map((status) => (
-                            <DropdownMenuItem 
-                              key={status} 
-                              onSelect={() => handleStatusChange(status as RequestStatus)}
-                              className="cursor-pointer px-4 py-2 hover:bg-gray-100"
-                            >
-                              <div className="flex items-center gap-2">
-                                {getStatusBadge(status as RequestStatus)}
-                              </div>
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+                    {selectedRequest.status === "rejected" && selectedRequest.rejectionReason && (
+                      <div className="space-y-2 mt-4">
+                        <p className="text-sm font-medium text-gray-500">Motivo da Rejeição</p>
+                        <div className="bg-red-50 p-4 rounded-xl border border-red-100">
+                          <p className="text-red-700 whitespace-pre-wrap break-words">
+                            {selectedRequest.rejectionReason}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Rodapé fixo */}
@@ -613,6 +666,38 @@ const ComprasTecnologia = () => {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+          
+          {/* Diálogo de justificativa para rejeição */}
+          <Dialog open={isRejectionDialogOpen} onOpenChange={setIsRejectionDialogOpen}>
+            <DialogContent className="rounded-2xl">
+              <DialogHeader>
+                <DialogTitle>Justificativa de Rejeição</DialogTitle>
+                <DialogDescription>
+                  Por favor, informe o motivo da rejeição desta solicitação.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="px-4">
+                <Textarea
+                  placeholder="Digite o motivo da rejeição..."
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  className="min-h-[120px] w-full"
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsRejectionDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={confirmRejection} 
+                  disabled={!rejectionReason.trim()}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  Confirmar Rejeição
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
 
         {/* Footer */}
