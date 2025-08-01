@@ -202,101 +202,138 @@ export const AppSidebar = () => {
     },
   ];
 
+  // Organize admin items by category
   const adminMenuItems = [
-    { 
-      icon: ShoppingCart, 
-      label: "Compras Financeiro", 
-      href: "/compras-financeiro", 
-      permission: "compras-financeiro" 
+    {
+      category: "Compras",
+      icon: ShoppingCart,
+      items: [
+        { 
+          icon: ShoppingCart, 
+          label: "Financeiro", 
+          href: "/compras-financeiro", 
+          permission: "compras-financeiro" 
+        },
+        { 
+          icon: ShoppingCart, 
+          label: "Tecnologia", 
+          href: "/compras-tecnologia", 
+          permission: "compras-tecnologia" 
+        },
+        { 
+          icon: ShoppingCart, 
+          label: "Infraestrutura", 
+          href: "/compras-infraestrutura", 
+          permission: "compras-infraestrutura" 
+        },
+        { 
+          icon: ShoppingCart, 
+          label: "Pedagógico/Admin", 
+          href: "/compras-pedagogicoadmin", 
+          permission: "compras-pedagogicoadmin" 
+        }
+      ]
     },
-    { 
-      icon: ShoppingCart, 
-      label: "Compras Tecnologia", 
-      href: "/compras-tecnologia", 
-      permission: "compras-tecnologia" 
+    {
+      category: "Recursos",
+      icon: Warehouse,
+      items: [
+        { 
+          icon: Warehouse, 
+          label: "Estoque", 
+          href: "/estoque", 
+          permission: "estoque" 
+        },
+        { 
+          icon: Laptop, 
+          label: "Equipamentos", 
+          href: "/equipamentos", 
+          permission: "equipamentos" 
+        }
+      ]
     },
-    { 
-      icon: ShoppingCart, 
-      label: "Compras Infraestrutura", 
-      href: "/compras-infraestrutura", 
-      permission: "compras-infraestrutura" 
+    {
+      category: "Manutenção",
+      icon: Wrench,
+      items: [
+        { 
+          icon: Wrench, 
+          label: "Operacional", 
+          href: "/suporte-operacional", 
+          permission: "suporte-operacional" 
+        },
+        { 
+          icon: Bug, 
+          label: "Plataforma", 
+          href: "/suporte-plataforma", 
+          permission: "suporte-plataforma" 
+        }
+      ]
     },
-    { 
-      icon: ShoppingCart, 
-      label: "Compras Pedagógico / Administrativo", 
-      href: "/compras-pedagogicoadmin", 
-      permission: "compras-pedagogicoadmin" 
+    {
+      category: "Agendamentos",
+      icon: CalendarIcon,
+      items: [
+        { 
+          icon: CalendarCheck, 
+          label: "Reservas", 
+          href: "/solicitacoes", 
+          permission: "solicitacoes" 
+        },
+        { 
+          icon: CalendarIcon, 
+          label: "Calendário", 
+          href: "/calendario", 
+          permission: "calendario-reservas" 
+        },
+        { 
+          icon: CalendarCheck2, 
+          label: "Disponibilidade", 
+          href: "/disponibilidade", 
+          permission: "disponibilidade" 
+        }
+      ]
     },
-    { 
-      icon: Wrench, 
-      label: "Manutenção", 
-      href: "/suporte-operacional", 
-      permission: "suporte-operacional" 
-    },
-    { 
-      icon: CalendarCheck, 
-      label: "Reservas", 
-      href: "/solicitacoes", 
-      permission: "solicitacoes" 
-    },
-    { 
-      icon: CalendarIcon, 
-      label: "Calendário", 
-      href: "/calendario", 
-      permission: "calendario-reservas" 
-    },
-    { 
-      icon: CalendarCheck2, 
-      label: "Disponibilidade", 
-      href: "/disponibilidade", 
-      permission: "disponibilidade" 
-    },
-    { 
-      icon: Laptop, 
-      label: "Equipamentos", 
-      href: "/equipamentos", 
-      permission: "equipamentos" 
-    },
-    { 
-      icon: Users, 
-      label: "Usuários", 
-      href: "/usuarios", 
-      permission: "usuarios" 
-    },
-    { 
-      icon: Warehouse, 
-      label: "Estoque", 
-      href: "/estoque", 
-      permission: "estoque" 
-    },
-    { 
-      icon: Bell, 
-      label: "Notificações", 
-      href: "/notificacoes", 
-      permission: "notificacoes" 
-    },
-    { 
-      icon: Bug, 
-      label: "Suporte Plataforma", 
-      href: "/suporte-plataforma", 
-      permission: "suporte-plataforma" 
-    },
+    {
+      category: "Usuários",
+      icon: Users,
+      items: [
+        { 
+          icon: Users, 
+          label: "Cadastro", 
+          href: "/usuarios", 
+          permission: "usuarios" 
+        },
+        { 
+          icon: Bell, 
+          label: "Notificações", 
+          href: "/notificacoes", 
+          permission: "notificacoes" 
+        }
+      ]
+    }
   ];
 
   if (isSuperAdmin) {
     adminMenuItems.push({
-      icon: Shield,
-      label: "Permissões",
-      href: "/roles",
-      permission: "roles-management"
+      category: "Configurações",
+      icon: Settings,
+      items: [{
+        icon: Shield,
+        label: "Permissões",
+        href: "/roles",
+        permission: "roles-management"
+      }]
     });
   }
 
   const filteredAdminItems = useMemo(() => {
-    return adminMenuItems.filter(item => 
-      isSuperAdmin || 
-      (item.permission && userPermissions[item.permission])
-    );
+    return adminMenuItems.map(category => ({
+      ...category,
+      items: category.items.filter(item => 
+        isSuperAdmin || 
+        (item.permission && userPermissions[item.permission])
+  )})).filter(category => category.items.length > 0);
   }, [adminMenuItems, isSuperAdmin, userPermissions]);
 
   return (
@@ -376,21 +413,30 @@ export const AppSidebar = () => {
                       expanded ? "opacity-100" : "opacity-0"
                     )}
                   >
-                    Administração
                   </span>
                 </div>
               </div>
             </div>
 
-            {filteredAdminItems.map((item, index) => (
-              <SidebarItem
-                key={`admin-${index}`}
-                icon={item.icon}
-                label={item.label}
-                href={item.href}
-                active={location.pathname === item.href}
+            {filteredAdminItems.map((category, index) => (
+              <SidebarSubMenu 
+                key={`category-${index}`} 
+                label={category.category} 
+                icon={category.icon} 
                 expanded={expanded}
-              />
+              >
+                {category.items.map((item, itemIndex) => (
+                  <SubMenuItem
+                    key={`admin-${itemIndex}`}
+                    href={item.href}
+                    active={location.pathname === item.href}
+                    expanded={expanded}
+                    icon={item.icon}
+                  >
+                    {item.label}
+                  </SubMenuItem>
+                ))}
+              </SidebarSubMenu>
             ))}
           </>
         )}

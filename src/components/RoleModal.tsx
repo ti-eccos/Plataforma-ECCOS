@@ -49,12 +49,12 @@ const permissionLabels: { [key: string]: { label: string; icon: React.ReactNode;
   equipamentos: {
     label: "Equipamentos",
     icon: <Laptop className="h-4 w-4" />,
-    category: "Recursos"
+    category: "Tecnologia"
   },
   disponibilidade: {
     label: "Disponibilidade",
     icon: <Calendar className="h-4 w-4" />,
-    category: "Recursos"
+    category: "Tecnologia"
   },
   estoque: {
     label: "Estoque",
@@ -109,27 +109,27 @@ const permissionLabels: { [key: string]: { label: string; icon: React.ReactNode;
   "compras-infraestrutura": {
     label: "Compras Infraestrutura",
     icon: <ShoppingCart className="h-4 w-4" />,
-    category: "Operacional"
+    category: "Compras"
   },
   "compras-pedagogicoadmin": {
     label: "Compras Pedagogico / Administrativo",
     icon: <ShoppingCart className="h-4 w-4" />,
-    category: "Apoio"
+    category: "Compras"
   },
   "suporte-operacional": {
     label: "Suporte Operacional",
     icon: <Wrench className="h-4 w-4" />,
-    category: "Operacional"
+    category: "Compras"
   },
   "calendario-reservas": {
     label: "Calendário de Reservas",
     icon: <Calendar className="h-4 w-4" />,
-    category: "Recursos"
+    category: "Tecnologia"
   },
   "suporte-plataforma": {
     label: "Suporte da Plataforma",
     icon: <Bug className="h-4 w-4" />,
-    category: "Técnico"
+    category: "Manutenção"
   },
   "roles-management": {
     label: "Gerenciar Roles",
