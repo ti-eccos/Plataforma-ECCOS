@@ -75,6 +75,9 @@ const ChatUser = ({
   
   // Estado para permissão de notificações
   const [notificationPermission, setNotificationPermission] = useState(Notification.permission);
+  
+  // Referência para o som de notificação
+  const notificationSoundRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
     if (!request || !isOpen) return;
@@ -92,16 +95,17 @@ const ChatUser = ({
           if (!initialLoad && currentMessages.length > previousMessageCount) {
             setHasNewMessage(true);
             
-            // Notificar apenas se o chat não estiver aberto
-            if (!isOpen && notificationPermission === "granted") {
-              const lastMessage = currentMessages[currentMessages.length - 1];
-              // Verificar se a última mensagem não é do usuário atual
-              if (lastMessage && currentUser && lastMessage.userId !== currentUser.uid) {
-                showNotification(
-                  "Nova mensagem",
-                  `${lastMessage.userName}: ${lastMessage.message || "Arquivo enviado"}`
-                );
-              }
+            const lastMessage = currentMessages[currentMessages.length - 1];
+            // Verificar se a última mensagem não é do usuário atual
+            if (lastMessage && currentUser && lastMessage.userId !== currentUser.uid) {
+              // Notificar mesmo se o chat estiver aberto (para som e título)
+              showNotification(
+                "Nova mensagem",
+                `${lastMessage.userName}: ${lastMessage.message || "Arquivo enviado"}`
+              );
+              
+              // Atualizar título da aba
+              setDocumentTitle(true);
             }
           }
           
@@ -114,7 +118,7 @@ const ChatUser = ({
     );
 
     return () => unsubscribe();
-  }, [request, isOpen, notificationPermission, messages.length]); // Adicionado messages.length
+  }, [request, isOpen, notificationPermission, messages.length]);
 
   // Solicitar permissão para notificações quando o componente montar
   useEffect(() => {
@@ -123,11 +127,20 @@ const ChatUser = ({
         setNotificationPermission(permission);
       });
     }
+    
+    // Carregar som de notificação
+    notificationSoundRef.current = new Audio("/notification-sound.mp3");
   }, []);
 
   // Função para mostrar notificação
   const showNotification = (title: string, body: string) => {
-    if (notificationPermission === "granted") {
+    // Tocar som de notificação
+    if (notificationSoundRef.current) {
+      notificationSoundRef.current.play().catch(e => console.error("Falha ao tocar som de notificação:", e));
+    }
+    
+    // Notificação do sistema apenas se o chat não estiver aberto
+    if (!isOpen && notificationPermission === "granted") {
       const notification = new Notification(title, {
         body,
         icon: "/favicon.ico",
@@ -140,10 +153,22 @@ const ChatUser = ({
       }, 5000);
     }
   };
+  
+  // Atualizar título da aba quando houver novas mensagens
+  const setDocumentTitle = (hasNew: boolean) => {
+    const originalTitle = document.title.replace(/^\(\d+\) /, "");
+    if (hasNew) {
+      document.title = `(1) ${originalTitle}`;
+    } else {
+      document.title = originalTitle;
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
       setHasNewMessage(false);
+      // Restaurar título quando o chat é aberto
+      setDocumentTitle(false);
     }
   }, [isOpen]);
 
