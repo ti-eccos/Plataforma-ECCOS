@@ -296,6 +296,22 @@ const ChatUser = ({
     return null;
   };
 
+  // Handler para tecla Enter no campo de nova mensagem
+  const handleNewMessageKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  // Handler para tecla Enter no campo de edição
+  const handleEditKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>, messageId: string) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleEditMessage(messageId);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
@@ -412,6 +428,7 @@ const ChatUser = ({
                         <Textarea
                           value={editingText}
                           onChange={(e) => setEditingText(e.target.value)}
+                          onKeyDown={(e) => handleEditKeyDown(e, msg.id)}
                           className="min-h-[60px] resize-none"
                           placeholder="Edite sua mensagem..."
                         />
@@ -459,11 +476,12 @@ const ChatUser = ({
           )}
 
           <div className="flex gap-2">
-            <div className="flex-1 space-y-2">
+            <div className="flex-1 space-y-2 pl-4">
               <TextareaAutosize
                 placeholder="Digite sua mensagem..."
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
+                onKeyDown={handleNewMessageKeyDown}
                 disabled={isLoading}
                 minRows={1}
                 maxRows={3}
