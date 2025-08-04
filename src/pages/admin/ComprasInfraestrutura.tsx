@@ -10,13 +10,9 @@ import {
   Eye,
   DollarSign,
   Clock,
-  CheckCircle,
-  ChevronDown,
-  Calendar,
-  Save,
-  X,
   HardHat,
-  Filter
+  Filter,
+  Download
 } from "lucide-react";
 import { toast } from "sonner";
 import { 
@@ -27,6 +23,7 @@ import {
 import { RequestStatus, RequestData } from '@/services/types'
 import { useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/components/AppLayout";
+import ExportDataDialog from "@/components/ExportDataDialog";
 import { 
   Table, 
   TableBody, 
@@ -36,7 +33,7 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea"; // Corrigido import do Textarea
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -75,6 +72,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Timestamp } from "firebase/firestore";
+
 const getStatusBadge = (status: RequestStatus) => {
   switch (status) {
     case "pending": return <Badge variant="outline" className="border-yellow-500 text-yellow-600">Pendente</Badge>;
@@ -86,8 +84,9 @@ const getStatusBadge = (status: RequestStatus) => {
     case "completed": return <Badge className="bg-slate-500 text-white">Concluído</Badge>;
     case "canceled": return <Badge className="bg-amber-500 text-white">Cancelado</Badge>;
     default: return <Badge variant="outline">Desconhecido</Badge>;
-    }
+  }
 };
+
 const ComprasInfraestrutura = () => {
   const queryClient = useQueryClient();
   const { currentUser } = useAuth();
@@ -106,11 +105,9 @@ const ComprasInfraestrutura = () => {
   const [executionDate, setExecutionDate] = useState<Date | null>(null);
   const [isEditingExecutionDate, setIsEditingExecutionDate] = useState(false);
   
-  // Novos estados para rejeição
   const [rejectionReason, setRejectionReason] = useState('');
   const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
   
-  // Lista de todos os status disponíveis
   const allStatuses: RequestStatus[] = [
     "pending", 
     "analyzing", 
@@ -122,22 +119,19 @@ const ComprasInfraestrutura = () => {
     "canceled"
   ];
   
-  // Status ocultos por padrão
   const hiddenStatuses = ["rejected", "completed", "canceled", "delivered"];
   const initialStatuses = allStatuses.filter(status => !hiddenStatuses.includes(status));
   
-  // Estado para os status selecionados
   const [selectedStatuses, setSelectedStatuses] = useState<RequestStatus[]>(initialStatuses);
 
-  // Filtrar apenas solicitações de infraestrutura
   const { data: allRequests = [], isLoading } = useQuery({
     queryKey: ['allRequests'],
     queryFn: () => getAllRequests(),
   });
+
   useEffect(() => {
     const checkUnreadMessages = () => {
       const newUnread: Record<string, number> = {};
-      // Considerar apenas solicitações de infraestrutura
       const infraRequests = allRequests.filter(req => req.type === 'purchase' && req.tipo === "Infraestrutura");
       infraRequests.forEach(req => {
         const messages = req.messages || [];
@@ -152,6 +146,7 @@ const ComprasInfraestrutura = () => {
     };
     checkUnreadMessages();
   }, [allRequests, viewedRequests]);
+
   useEffect(() => {
     if (selectedRequest && selectedRequest.executionDate) {
       setExecutionDate(selectedRequest.executionDate.toDate());
@@ -159,6 +154,7 @@ const ComprasInfraestrutura = () => {
       setExecutionDate(null);
     }
   }, [selectedRequest]);
+
   const handleOpenChat = async (request: RequestData) => {
     try {
       const fullRequest = await getRequestById(request.id, request.collectionName);
@@ -184,10 +180,10 @@ const ComprasInfraestrutura = () => {
       console.error("Error:", error);
     }
   };
+
   const handleStatusChange = async (newStatus: RequestStatus) => {
     if (!selectedRequest) return;
     
-    // Se for rejeição, abrir diálogo para justificativa
     if (newStatus === "rejected") {
       setIsRejectionDialogOpen(true);
       return;
@@ -197,7 +193,7 @@ const ComprasInfraestrutura = () => {
       const updateData: any = { status: newStatus };
       if (newStatus === "approved") {
         updateData.financeiroVisible = true;
-        }
+      }
       const docRef = doc(db, selectedRequest.collectionName, selectedRequest.id);
       await updateDoc(docRef, updateData);
       await createNotification({
@@ -218,7 +214,6 @@ const ComprasInfraestrutura = () => {
     }
   };
   
-  // Função para confirmar rejeição com justificativa
   const confirmRejection = async () => {
     if (!selectedRequest) return;
     try {
@@ -253,7 +248,6 @@ const ComprasInfraestrutura = () => {
     }
   };
 
-  // Função para salvar/atualizar a data de execução
   const handleSaveExecutionDate = async () => {
     if (!selectedRequest) return;
     try {
@@ -262,11 +256,9 @@ const ComprasInfraestrutura = () => {
       if (executionDate) {
         updateData.executionDate = Timestamp.fromDate(executionDate);
       } else {
-        // Remove a data de execução se executionDate for null
         updateData.executionDate = null;
       }
       await updateDoc(docRef, updateData);
-      // Atualiza localmente
       setSelectedRequest({ 
         ...selectedRequest, 
         executionDate: executionDate ? Timestamp.fromDate(executionDate) : null 
@@ -279,7 +271,7 @@ const ComprasInfraestrutura = () => {
       console.error("Error:", error);
     }
   };
-  // Função para remover a data de execução
+
   const handleRemoveExecutionDate = async () => {
     if (!selectedRequest) return;
     try {
@@ -287,7 +279,6 @@ const ComprasInfraestrutura = () => {
       await updateDoc(docRef, {
         executionDate: null
       });
-      // Atualiza localmente
       setSelectedRequest({ 
         ...selectedRequest, 
         executionDate: null 
@@ -301,6 +292,7 @@ const ComprasInfraestrutura = () => {
       console.error("Error:", error);
     }
   };
+
   const handleDeleteRequest = (request: RequestData) => {
     setRequestToDelete({
       id: request.id,
@@ -308,6 +300,7 @@ const ComprasInfraestrutura = () => {
     });
     setIsDeleteDialogOpen(true);
   };
+
   const handleDeleteConfirm = async () => {
     if (!requestToDelete) return;
     try {
@@ -322,7 +315,7 @@ const ComprasInfraestrutura = () => {
       console.error("Error:", error);
     }
   };
-  // Filtrar apenas solicitações de infraestrutura
+
   const filteredRequests = allRequests
     .filter(req => req.type === 'purchase' && req.tipo === "Infraestrutura")
     .filter(req => {
@@ -331,34 +324,48 @@ const ComprasInfraestrutura = () => {
         req.userName?.toLowerCase().includes(search) ||
         req.userEmail?.toLowerCase().includes(search) ||
         req.itemName?.toLowerCase().includes(search)
-      ) && selectedStatuses.includes(req.status); // Filtro por status
+      ) && selectedStatuses.includes(req.status);
     });
-  // Calcular estatísticas apenas para infraestrutura
+
   const totalRequests = filteredRequests.length;
   const pendingRequests = filteredRequests.filter(req => req.status === 'pending').length;
   const analyzingRequests = filteredRequests.filter(req => req.status === 'analyzing').length;
   const totalValue = filteredRequests.reduce((sum, req) => sum + ((req.quantity || 0) * (req.unitPrice || 0)), 0);
+
+  const exportColumns = [
+    { id: "userName", label: "Solicitante", defaultSelected: true },
+    { id: "userEmail", label: "Email", defaultSelected: true },
+    { id: "tipo", label: "Tipo", defaultSelected: true },
+    { id: "itemName", label: "Item", defaultSelected: true },
+    { id: "quantity", label: "Quantidade", defaultSelected: true },
+    { id: "unitPrice", label: "Valor Unitário", defaultSelected: true },
+    { id: "totalValue", label: "Valor Total", defaultSelected: true },
+    { id: "status", label: "Status", defaultSelected: true },
+    { id: "justification", label: "Justificativa", defaultSelected: true },
+    { id: "createdAt", label: "Data de Criação", defaultSelected: true },
+    { id: "executionDate", label: "Data de Execução", defaultSelected: true },
+    { id: "additionalInfo", label: "Informações Adicionais", defaultSelected: true },
+    { id: "rejectionReason", label: "Motivo da Rejeição", defaultSelected: true },
+  ];
+
   return (
     <AppLayout>
       <div className="min-h-screen bg-white relative overflow-hidden">
-        {/* Background decorativo */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-sidebar blur-3xl opacity-5"></div>
           <div className="absolute right-1/4 bottom-1/4 h-80 w-80 rounded-full bg-eccos-purple blur-3xl opacity-5"></div>
         </div>
         <div className="relative z-10 space-y-8 p-6 md:p-12">
-          {/* Header */}
           <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
-                <ShoppingCart className="text-eccos-purple" size={35} />
-                Solicitações de Compra - Infraestrutura
-            </h1>
+            <ShoppingCart className="text-eccos-purple" size={35} />
+            Solicitações de Compra - Infraestrutura
+          </h1>
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-eccos-purple"></div>
             </div>
           ) : (
             <>
-              {/* Cards de estatísticas */}
               <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
                   <CardHeader className="pb-2">
@@ -420,7 +427,7 @@ const ComprasInfraestrutura = () => {
                   </CardContent>
                 </Card>
               </div>
-              {/* Filtros */}
+              
               <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg">
                 <CardContent className="p-6">
                   <div className="flex flex-col sm:flex-row gap-4">
@@ -433,7 +440,6 @@ const ComprasInfraestrutura = () => {
                         className="pl-10 h-12 rounded-xl border-gray-200 focus:border-eccos-purple"
                       />
                     </div>
-                    {/* Dropdown de status */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="flex items-center gap-2 h-12 rounded-xl border-gray-200 px-6">
@@ -460,19 +466,43 @@ const ComprasInfraestrutura = () => {
                         ))}
                       </DropdownMenuContent>
                     </DropdownMenu>
+                    
+                    <ExportDataDialog
+                      data={filteredRequests.map(request => ({
+                        ...request,
+                        createdAt: request.createdAt.toDate().toLocaleString('pt-BR'),
+                        executionDate: request.executionDate 
+                          ? request.executionDate.toDate().toLocaleString('pt-BR') 
+                          : 'Não definida',
+                        unitPrice: new Intl.NumberFormat('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL'
+                        }).format(request.unitPrice || 0),
+                        totalValue: new Intl.NumberFormat('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL'
+                        }).format((request.quantity || 0) * (request.unitPrice || 0))
+                      }))}
+                      columns={exportColumns}
+                      filename={`compras-infraestrutura-${new Date().toISOString().slice(0,10)}`}
+                    >
+                      <Button variant="outline" className="flex items-center gap-2 h-12 rounded-xl border-gray-200 px-6">
+                        <Download className="h-4 w-4" /> Exportar
+                      </Button>
+                    </ExportDataDialog>
                   </div>
                 </CardContent>
               </Card>
-              {/* Tabela */}
+              
               {filteredRequests.length === 0 ? (
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg">
-                    <CardContent className="p-12">
+                  <CardContent className="p-12">
                     <div className="text-center text-muted-foreground">
-                        <ShoppingCart className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                        <p className="text-lg">Nenhuma solicitação de compra encontrada</p>
-                        <p className="text-sm">Tente ajustar os filtros para ver mais resultados</p>
+                      <ShoppingCart className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                      <p className="text-lg">Nenhuma solicitação de compra encontrada</p>
+                      <p className="text-sm">Tente ajustar os filtros para ver mais resultados</p>
                     </div>
-                    </CardContent>
+                  </CardContent>
                 </Card>
               ) : (
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg overflow-hidden">
@@ -538,12 +568,11 @@ const ComprasInfraestrutura = () => {
               )}
             </>
           )}
-          {/* Dialog de detalhes */}
+          
           <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
             <DialogContent className="max-w-3xl bg-white border border-gray-100 rounded-2xl overflow-hidden">
               {selectedRequest && (
                 <div className="flex flex-col h-[80vh]">
-                  {/* Cabeçalho fixo */}
                   <DialogHeader className="p-6 pb-2 border-b border-gray-100 bg-white sticky top-0 z-10">
                     <DialogTitle className="flex items-center gap-2">
                       <HardHat className="h-5 w-5 text-eccos-purple" />
@@ -585,9 +614,7 @@ const ComprasInfraestrutura = () => {
                       </div>
                     </DialogDescription>
                   </DialogHeader>
-                  {/* Conteúdo rolável */}
                   <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                    {/* Conteúdo específico para infraestrutura */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm font-medium text-gray-500">Tipo</p>
@@ -649,7 +676,6 @@ const ComprasInfraestrutura = () => {
                       </div>
                     )}
                   </div>
-                  {/* Rodapé fixo */}
                   <DialogFooter className="p-6 border-t border-gray-100 gap-2 bg-white sticky bottom-0 z-10">
                     <Button
                       variant="outline"
@@ -663,14 +689,14 @@ const ComprasInfraestrutura = () => {
               )}
             </DialogContent>
           </Dialog>
-          {/* Chat Admin */}
+          
           <ChatAdmin 
             request={chatRequest} 
             isOpen={isChatOpen} 
             onOpenChange={setIsChatOpen}
             onMessageSent={() => queryClient.invalidateQueries({ queryKey: ['allRequests'] })}
           />
-          {/* Dialog de confirmação de exclusão */}
+          
           <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
             <AlertDialogContent className="rounded-2xl">
               <AlertDialogHeader>
@@ -691,7 +717,6 @@ const ComprasInfraestrutura = () => {
             </AlertDialogContent>
           </AlertDialog>
           
-          {/* Diálogo de justificativa para rejeição */}
           <Dialog open={isRejectionDialogOpen} onOpenChange={setIsRejectionDialogOpen}>
             <DialogContent className="rounded-2xl">
               <DialogHeader>
@@ -723,7 +748,6 @@ const ComprasInfraestrutura = () => {
             </DialogContent>
           </Dialog>
         </div>
-        {/* Footer */}
         <footer className="relative z-10 bg-gray-50 py-10 px-4 md:px-12">
           <div className="max-w-6xl mx-auto text-center">
             <p className="text-gray-500 text-sm">
@@ -735,4 +759,5 @@ const ComprasInfraestrutura = () => {
     </AppLayout>
   );
 };
+
 export default ComprasInfraestrutura;
