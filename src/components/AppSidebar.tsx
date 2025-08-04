@@ -243,12 +243,6 @@ export const AppSidebar = () => {
           label: "Estoque", 
           href: "/estoque", 
           permission: "estoque" 
-        },
-        { 
-          icon: Laptop, 
-          label: "Equipamentos", 
-          href: "/equipamentos", 
-          permission: "equipamentos" 
         }
       ]
     },
@@ -291,6 +285,12 @@ export const AppSidebar = () => {
           label: "Disponibilidade", 
           href: "/disponibilidade", 
           permission: "disponibilidade" 
+        },
+                { 
+          icon: Laptop, 
+          label: "Equipamentos", 
+          href: "/equipamentos", 
+          permission: "equipamentos" 
         }
       ]
     },
@@ -300,7 +300,7 @@ export const AppSidebar = () => {
       items: [
         { 
           icon: Users, 
-          label: "Cadastro", 
+          label: "Gerenciamento", 
           href: "/usuarios", 
           permission: "usuarios" 
         },
