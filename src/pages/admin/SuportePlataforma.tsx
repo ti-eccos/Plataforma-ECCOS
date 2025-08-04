@@ -118,13 +118,28 @@ const SuportePlataforma = () => {
     fetchBugReports();
   }, [toast]);
 
-  // Carregar manuais existentes
+  // Carregar manuais existentes com tratamento para pasta vazia/inexistente
   useEffect(() => {
     const fetchManuais = async () => {
       try {
         const storageRef = ref(storage, 'manuais/');
-        const listResult = await listAll(storageRef);
         
+        // Tentar listar o conteúdo da pasta
+        const listResult = await listAll(storageRef).catch(error => {
+          // Se a pasta não existir (erro 404), tratamos como pasta vazia
+          if (error.code === 'storage/object-not-found') {
+            return { items: [] };
+          }
+          throw error;
+        });
+        
+        // Se não houver itens na pasta
+        if (listResult.items.length === 0) {
+          setManuais([]);
+          return;
+        }
+        
+        // Processar os arquivos encontrados
         const files = await Promise.all(
           listResult.items.map(async (item) => {
             try {
@@ -138,14 +153,29 @@ const SuportePlataforma = () => {
         );
         
         setManuais(files.filter(Boolean) as { name: string; url: string }[]);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Erro ao carregar manuais:", error);
-        toast({
-          title: "Erro",
-          description: "Não foi possível carregar os manuais. Verifique sua conexão.",
-          variant: "destructive",
+        
+        // Mensagens de erro específicas
+        let errorMessage = "Não foi possível carregar os manuais.";
+        if (error.code === 'storage/unauthorized') {
+          errorMessage = "Permissão negada. Verifique as regras do Firebase.";
+        } else if (error.code === 'storage/object-not-found') {
+          errorMessage = "Pasta de manuais não encontrada. Faça o primeiro upload.";
+        } else {
+          errorMessage = "Não foi possível carregar os manuais. Verifique sua conexão.";
+        }
+
+        toast({ 
+          title: "Erro", 
+          description: errorMessage, 
+          variant: "destructive" 
         });
-        setTimeout(fetchManuais, 5000);
+        
+        // Tentar recarregar apenas para erros de rede
+        if (error.code !== 'storage/unauthorized' && error.code !== 'storage/object-not-found') {
+          setTimeout(fetchManuais, 5000);
+        }
       }
     };
     fetchManuais();
@@ -610,11 +640,9 @@ const SuportePlataforma = () => {
                   <h3 className="font-semibold text-lg mb-4 text-gray-800">Adicionar Novo Manual</h3>
                   
                   <div 
-                    className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-                      isDragActive 
+                    className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${isDragActive 
                         ? 'border-eccos-purple bg-purple-50' 
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
+                        : 'border-gray-300 hover:border-gray-400'}`}
                     onDragEnter={handleDrag}
                     onDragOver={handleDrag}
                     onDragLeave={handleDrag}
