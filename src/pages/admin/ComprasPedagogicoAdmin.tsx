@@ -14,7 +14,8 @@ import {
   ChevronDown,
   Book,
   ClipboardList,
-  Filter
+  Filter,
+  Download
 } from "lucide-react";
 import { toast } from "sonner";
 import { 
@@ -33,6 +34,7 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
+import ExportDataDialog from "@/components/ExportDataDialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -175,6 +177,20 @@ const ComprasPedagogicoAdmin = () => {
       console.error("Error:", error);
     }
   };
+
+  const exportColumns = [
+  { id: "tipo", label: "Tipo", defaultSelected: true },
+  { id: "userName", label: "Solicitante", defaultSelected: true },
+  { id: "userEmail", label: "Email", defaultSelected: true },
+  { id: "itemName", label: "Item", defaultSelected: true },
+  { id: "quantity", label: "Quantidade", defaultSelected: true },
+  { id: "unitPrice", label: "Valor Unitário", defaultSelected: true },
+  { id: "status", label: "Status", defaultSelected: true },
+  { id: "justification", label: "Justificativa", defaultSelected: true },
+  { id: "additionalInfo", label: "Informações Adicionais", defaultSelected: true },
+  { id: "createdAt", label: "Data de Criação", defaultSelected: true },
+  { id: "rejectionReason", label: "Motivo da Rejeição", defaultSelected: true },
+];
   const handleStatusChange = async (newStatus: RequestStatus) => {
     if (!selectedRequest) return;
     
@@ -366,47 +382,64 @@ const ComprasPedagogicoAdmin = () => {
               </div>
               {/* Filtros */}
               <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg">
-                <CardContent className="p-6">
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <div className="relative flex-1 max-w-md">
-                      <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Pesquisar por nome, email ou item..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 h-12 rounded-xl border-gray-200 focus:border-eccos-purple"
-                      />
-                    </div>
-                    {/* Dropdown de status */}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="flex items-center gap-2 h-12 rounded-xl border-gray-200 px-6">
-                          <Filter className="h-4 w-4" /> Status ({selectedStatuses.length})
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-background rounded-xl">
-                        {allStatuses.map((status) => (
-                          <DropdownMenuCheckboxItem
-                            key={status}
-                            checked={selectedStatuses.includes(status)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSelectedStatuses([...selectedStatuses, status]);
-                              } else {
-                                setSelectedStatuses(selectedStatuses.filter(s => s !== status));
-                              }
-                            }}
-                          >
-                            <div className="flex items-center gap-2">
-                              {getStatusBadge(status)}
-                            </div>
-                          </DropdownMenuCheckboxItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </CardContent>
-              </Card>
+  <CardContent className="p-6">
+    <div className="flex flex-col sm:flex-row gap-4">
+      <div className="relative flex-1 max-w-md">
+        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Pesquisar por nome, email ou item..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10 h-12 rounded-xl border-gray-200 focus:border-eccos-purple"
+        />
+      </div>
+      {/* Dropdown de status */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" className="flex items-center gap-2 h-12 rounded-xl border-gray-200 px-6">
+            <Filter className="h-4 w-4" /> Status ({selectedStatuses.length})
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="bg-background rounded-xl">
+          {allStatuses.map((status) => (
+            <DropdownMenuCheckboxItem
+              key={status}
+              checked={selectedStatuses.includes(status)}
+              onCheckedChange={(checked) => {
+                if (checked) {
+                  setSelectedStatuses([...selectedStatuses, status]);
+                } else {
+                  setSelectedStatuses(selectedStatuses.filter(s => s !== status));
+                }
+              }}
+            >
+              <div className="flex items-center gap-2">
+                {getStatusBadge(status)}
+              </div>
+            </DropdownMenuCheckboxItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <ExportDataDialog
+        data={filteredRequests.map(request => ({
+          ...request,
+          createdAt: request.createdAt.toDate().toLocaleString('pt-BR'),
+          unitPrice: new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+          }).format(request.unitPrice || 0),
+        }))}
+        columns={exportColumns}
+        filename={`compras-pedagogico-admin-${new Date().toISOString().slice(0,10)}`}
+      >
+        <Button variant="outline" className="flex items-center gap-2 h-12 rounded-xl border-gray-200 px-6">
+          <Download className="h-4 w-4" /> Exportar
+        </Button>
+      </ExportDataDialog>
+    </div>
+  </CardContent>
+</Card>
               {/* Tabela */}
               {filteredRequests.length === 0 ? (
                 <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg">
