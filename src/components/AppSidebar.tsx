@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Home,
@@ -188,6 +188,11 @@ export const AppSidebar = () => {
   const location = useLocation();
   const { signOut, currentUser, userPermissions, isSuperAdmin } = useAuth();
   
+  // Reset sidebar state when user changes
+  useEffect(() => {
+    setExpanded(true);
+  }, [currentUser?.role]);
+
   const userMenuItems = [
     { icon: Home, label: "Página Inicial", href: "/" },
     { icon: FileText, label: "Minhas Solicitações", href: "/minhas-solicitacoes" },
@@ -202,8 +207,7 @@ export const AppSidebar = () => {
     },
   ];
 
-  // Organize admin items by category
-  const adminMenuItems = [
+  const adminMenuItems = useMemo(() => [
     {
       category: "Compras",
       icon: ShoppingCart,
@@ -286,7 +290,7 @@ export const AppSidebar = () => {
           href: "/disponibilidade", 
           permission: "disponibilidade" 
         },
-                { 
+        { 
           icon: Laptop, 
           label: "Equipamentos", 
           href: "/equipamentos", 
@@ -312,20 +316,7 @@ export const AppSidebar = () => {
         }
       ]
     }
-  ];
-
-  if (isSuperAdmin) {
-    adminMenuItems.push({
-      category: "Configurações",
-      icon: Settings,
-      items: [{
-        icon: Shield,
-        label: "Permissões",
-        href: "/roles",
-        permission: "roles-management"
-      }]
-    });
-  }
+  ], []);
 
   const filteredAdminItems = useMemo(() => {
     return adminMenuItems.map(category => ({
@@ -333,7 +324,8 @@ export const AppSidebar = () => {
       items: category.items.filter(item => 
         isSuperAdmin || 
         (item.permission && userPermissions[item.permission])
-  )})).filter(category => category.items.length > 0);
+      )
+    })).filter(category => category.items.length > 0);
   }, [adminMenuItems, isSuperAdmin, userPermissions]);
 
   return (

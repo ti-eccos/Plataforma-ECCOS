@@ -15,7 +15,8 @@ import {
   ChevronDown,
   Calendar,
   Save,
-  X
+  X,
+  Download
 } from "lucide-react";
 import { toast } from "sonner";
 import { 
@@ -26,6 +27,7 @@ import {
 import { RequestStatus, RequestData } from '@/services/types'
 import { useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/components/AppLayout";
+import ExportDataDialog from "@/components/ExportDataDialog";
 import { 
   Table, 
   TableBody, 
@@ -226,6 +228,20 @@ const ComprasFinanceiro = () => {
       console.error("Error:", error);
     }
   };
+
+  const exportColumns = [
+  { id: "userName", label: "Solicitante", defaultSelected: true },
+  { id: "userEmail", label: "Email", defaultSelected: true },
+  { id: "tipo", label: "Tipo", defaultSelected: true },
+  { id: "itemName", label: "Item", defaultSelected: true },
+  { id: "quantity", label: "Quantidade", defaultSelected: true },
+  { id: "unitPrice", label: "Valor Unitário", defaultSelected: true },
+  { id: "status", label: "Status", defaultSelected: true },
+  { id: "justification", label: "Justificativa", defaultSelected: true },
+  { id: "createdAt", label: "Data de Criação", defaultSelected: true },
+  { id: "deliveryDate", label: "Data de Entrega", defaultSelected: true },
+  { id: "rejectionReason", label: "Motivo da Rejeição", defaultSelected: true },
+];
 
   // Função para confirmar rejeição com justificativa
   const confirmRejection = async () => {
@@ -491,6 +507,26 @@ const ComprasFinanceiro = () => {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
+                    <ExportDataDialog
+  data={filteredRequests.map(request => ({
+    ...request,
+    createdAt: request.createdAt.toDate().toLocaleString('pt-BR'),
+    deliveryDate: request.deliveryDate 
+      ? request.deliveryDate.toDate().toLocaleString('pt-BR') 
+      : 'Não definida',
+    unitPrice: new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(request.unitPrice || 0),
+    // Adicione outros campos formatados conforme necessário
+  }))}
+  columns={exportColumns}
+  filename={`compras-financeiro-${new Date().toISOString().slice(0,10)}`}
+>
+  <Button variant="outline" className="flex items-center gap-2 h-12 rounded-xl border-gray-200 px-6">
+    <Download className="h-4 w-4" /> Exportar
+  </Button>
+</ExportDataDialog>
                   </div>
                 </CardContent>
               </Card>
