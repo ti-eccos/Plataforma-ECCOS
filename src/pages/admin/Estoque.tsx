@@ -14,8 +14,9 @@ import {
   Eye,
   ListPlus,
   Copy,
+  Download
 } from 'lucide-react';
-
+import ExportDataDialog from "@/components/ExportDataDialog";
 import {
   Table,
   TableBody,
@@ -162,7 +163,20 @@ const Estoque = () => {
 
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
   const [duplicateItem, setDuplicateItem] = useState<ItemEstoque | null>(null);
-
+  const exportColumns = [
+  { id: "nome", label: "Nome", defaultSelected: true },
+  { id: "quantidade", label: "Quantidade", defaultSelected: true },
+  { id: "valorUnitario", label: "Valor Unitário", defaultSelected: true },
+  { id: "categoria", label: "Categoria", defaultSelected: true },
+  { id: "unidade", label: "Unidade", defaultSelected: true },
+  { id: "localizacao", label: "Localização", defaultSelected: true },
+  { id: "estado", label: "Estado", defaultSelected: true },
+  { id: "descricao", label: "Descrição", defaultSelected: true },
+  { id: "responsavel", label: "Responsável", defaultSelected: true },
+  { id: "dataRecebimento", label: "Data de Recebimento", defaultSelected: true },
+  { id: "notaFiscal", label: "Nota Fiscal", defaultSelected: true },
+  { id: "numeroPedido", label: "Número do Pedido", defaultSelected: true },
+];
   const [bulkFormState, setBulkFormState] = useState({
     nomeBase: '',
     quantidadeItens: 1,
@@ -450,27 +464,46 @@ const Estoque = () => {
 
         <div className="relative z-10 space-y-8 p-6 md:p-12 fade-up">
           <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
-              <Warehouse className="text-eccos-purple" size={36} />
-              Controle de Estoque
-            </h1>
-            <div className="flex gap-2">
-              <Button
-                onClick={() => setIsDialogOpen(true)}
-                className="bg-eccos-purple hover:bg-sidebar text-white transition-all duration-300"
-              >
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Novo Item
-              </Button>
-              <Button
-                onClick={() => setIsBulkModalOpen(true)}
-                className="bg-green-600 hover:bg-green-700 text-white transition-all duration-300"
-              >
-                <ListPlus className="mr-2 h-4 w-4" />
-                Múltiplos Itens
-              </Button>
-            </div>
-          </div>
+  <h1 className="text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-sidebar to-eccos-purple bg-clip-text text-transparent">
+    <Warehouse className="text-eccos-purple" size={36} />
+    Controle de Estoque
+  </h1>
+  <div className="flex gap-2">
+    <ExportDataDialog
+      data={itensFiltrados.map(item => ({
+        ...item,
+        valorUnitario: item.valorUnitario 
+          ? new Intl.NumberFormat('pt-BR', {
+              style: 'currency',
+              currency: 'BRL'
+            }).format(item.valorUnitario)
+          : 'Não informado',
+        dataRecebimento: item.dataRecebimento || 'Não informada',
+      }))}
+      columns={exportColumns}
+      filename={`estoque-${new Date().toISOString().slice(0,10)}`}
+    >
+      <Button variant="outline" className="flex items-center gap-2">
+        <Download className="h-4 w-4" />
+        Exportar
+      </Button>
+    </ExportDataDialog>
+    <Button
+      onClick={() => setIsDialogOpen(true)}
+      className="bg-eccos-purple hover:bg-sidebar text-white transition-all duration-300"
+    >
+      <PlusCircle className="mr-2 h-4 w-4" />
+      Novo Item
+    </Button>
+    <Button
+      onClick={() => setIsBulkModalOpen(true)}
+      className="bg-green-600 hover:bg-green-700 text-white transition-all duration-300"
+    >
+      <ListPlus className="mr-2 h-4 w-4" />
+      Múltiplos Itens
+    </Button>
+  </div>
+</div>
 
           <div className="bg-white border border-gray-100 rounded-2xl shadow-lg p-6 fade-up">
             <h2 className="text-lg font-semibold mb-4 text-gray-700">Filtros</h2>

@@ -15,8 +15,10 @@ import {
   AlertTriangle,
   ChevronDown,
   Calendar,
-  Package
+  Package,
+  Download
 } from "lucide-react";
+import ExportDataDialog from "@/components/ExportDataDialog";
 import { toast } from "sonner";
 import {
   getAllRequests,
@@ -252,6 +254,20 @@ const SuporteOperacional = () => {
     setIsDeleteDialogOpen(true);
   };
 
+  const exportColumns = [
+  { id: "userName", label: "Solicitante", defaultSelected: true },
+  { id: "userEmail", label: "Email", defaultSelected: true },
+  { id: "tipo", label: "Tipo", defaultSelected: true },
+  { id: "status", label: "Status", defaultSelected: true },
+  { id: "priority", label: "Prioridade", defaultSelected: true },
+  { id: "unit", label: "Unidade", defaultSelected: true },
+  { id: "location", label: "Localização", defaultSelected: true },
+  { id: "category", label: "Categoria", defaultSelected: true },
+  { id: "deviceInfo", label: "Equipamento", defaultSelected: true },
+  { id: "description", label: "Descrição", defaultSelected: true },
+  { id: "createdAt", label: "Data de Criação", defaultSelected: true },
+];
+
   const handleDeleteConfirm = async () => {
     if (!requestToDelete) return;
     try {
@@ -375,45 +391,61 @@ const SuporteOperacional = () => {
 
               {/* Filtros */}
               <Card className="bg-white border border-gray-100 rounded-2xl shadow-lg">
-                <CardContent className="p-6">
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <div className="relative flex-1 max-w-md">
-                      <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Pesquisar por nome, email ou descrição..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 h-12 rounded-xl border-gray-200 focus:border-eccos-purple"
-                      />
-                    </div>
+  <CardContent className="p-6">
+    <div className="flex flex-col sm:flex-row gap-4">
+      <div className="relative flex-1 max-w-md">
+        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Pesquisar por nome, email ou descrição..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10 h-12 rounded-xl border-gray-200 focus:border-eccos-purple"
+        />
+      </div>
 
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="flex items-center gap-2 h-12 rounded-xl border-gray-200 px-6">
-                          <Filter className="h-4 w-4" /> Tipo ({selectedTypes.length})
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-background rounded-xl">
-                        {supportTypes.map((type) => (
-                          <DropdownMenuCheckboxItem
-                            key={type}
-                            checked={selectedTypes.includes(type)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSelectedTypes([...selectedTypes, type]);
-                              } else {
-                                setSelectedTypes(selectedTypes.filter(t => t !== type));
-                              }
-                            }}
-                          >
-                            {type}
-                          </DropdownMenuCheckboxItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </CardContent>
-              </Card>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" className="flex items-center gap-2 h-12 rounded-xl border-gray-200 px-6">
+            <Filter className="h-4 w-4" /> Tipo ({selectedTypes.length})
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="bg-background rounded-xl">
+          {supportTypes.map((type) => (
+            <DropdownMenuCheckboxItem
+              key={type}
+              checked={selectedTypes.includes(type)}
+              onCheckedChange={(checked) => {
+                if (checked) {
+                  setSelectedTypes([...selectedTypes, type]);
+                } else {
+                  setSelectedTypes(selectedTypes.filter(t => t !== type));
+                }
+              }}
+            >
+              {type}
+            </DropdownMenuCheckboxItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <ExportDataDialog
+        data={filteredRequests.map(request => ({
+          ...request,
+          createdAt: request.createdAt.toDate().toLocaleString('pt-BR'),
+          priority: request.priority ? 
+            getPriorityLevelBadge(request.priority).props.children : 
+            'Não especificada'
+        }))}
+        columns={exportColumns}
+        filename={`suporte-operacional-${new Date().toISOString().slice(0,10)}`}
+      >
+        <Button variant="outline" className="flex items-center gap-2 h-12 rounded-xl border-gray-200 px-6">
+          <Download className="h-4 w-4" /> Exportar
+        </Button>
+      </ExportDataDialog>
+    </div>
+  </CardContent>
+</Card>
 
               {/* Tabela */}
               {filteredRequests.length === 0 ? (

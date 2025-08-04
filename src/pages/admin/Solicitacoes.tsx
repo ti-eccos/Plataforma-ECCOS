@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   XCircle,
   RefreshCw,
+  Download
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -27,6 +28,7 @@ import {
   getRequestById,
   deleteRequest,
 } from "@/services/sharedService";
+import ExportDataDialog from "@/components/ExportDataDialog";
 import { RequestStatus, RequestData } from "@/services/types";
 import { useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/components/AppLayout";
@@ -186,6 +188,18 @@ const Solicitacoes = () => {
       setIsDetailsLoading(false);
     }
   };
+
+  const exportColumns = [
+  { id: "userName", label: "Solicitante", defaultSelected: true },
+  { id: "userEmail", label: "Email", defaultSelected: true },
+  { id: "location", label: "Local", defaultSelected: true },
+  { id: "purpose", label: "Finalidade", defaultSelected: true },
+  { id: "date", label: "Data", defaultSelected: true },
+  { id: "startTime", label: "Hora Início", defaultSelected: true },
+  { id: "endTime", label: "Hora Fim", defaultSelected: true },
+  { id: "status", label: "Status", defaultSelected: true },
+  { id: "createdAt", label: "Data de Criação", defaultSelected: true },
+];
 
   const handleOpenChat = async (request: RequestData) => {
     try {
@@ -469,6 +483,19 @@ const Solicitacoes = () => {
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
+                    <ExportDataDialog
+  data={filteredRequests.map(request => ({
+    ...request,
+    date: request.date?.toDate().toLocaleString('pt-BR') || "Não informado",
+    createdAt: request.createdAt.toDate().toLocaleString('pt-BR'),
+  }))}
+  columns={exportColumns}
+  filename={`reservas-${new Date().toISOString().slice(0,10)}`}
+>
+  <Button variant="outline" className="flex items-center gap-2 h-12 rounded-xl border-gray-200 px-6">
+    <Download className="h-4 w-4" /> Exportar
+  </Button>
+</ExportDataDialog>
                   </div>
                 </CardContent>
               </Card>
