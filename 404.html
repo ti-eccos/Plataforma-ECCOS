@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Redirecionando...</title>
+    <script>
+        // Captura o caminho completo atual
+        const fullPath = window.location.pathname + window.location.search;
+        
+        // Remove o base path se estiver presente
+        const basePath = "/Tecnologia-ECCOS";
+        const cleanPath = fullPath.startsWith(basePath) 
+            ? fullPath.slice(basePath.length) 
+            : fullPath;
+        
+        // Armazena para uso no app React
+        sessionStorage.setItem("redirectPath", cleanPath || "/");
+        
+        // Redireciona para a raiz do app
+        window.location.replace(basePath + "/");
+    </script>
+</head>
+<body>
+    <p>Redirecionando para a aplicação...</p>
+</body>
+</html>
