@@ -4,20 +4,19 @@
     <meta charset="UTF-8">
     <title>Redirecionando...</title>
     <script>
-        // Captura o caminho completo atual
-        const fullPath = window.location.pathname + window.location.search;
+        // Armazena a URL original antes do redirecionamento
+        const path = window.location.pathname + window.location.search;
+        const basePath = "/Plataforma-ECCOS";
         
-        // Remove o base path se estiver presente
-        const basePath = "/Tecnologia-ECCOS";
-        const cleanPath = fullPath.startsWith(basePath) 
-            ? fullPath.slice(basePath.length) 
-            : fullPath;
-        
-        // Armazena para uso no app React
+        // Remove o basePath se estiver presente
+        const cleanPath = path.startsWith(basePath) 
+            ? path.slice(basePath.length)
+            : path;
+            
         sessionStorage.setItem("redirectPath", cleanPath || "/");
         
-        // Redireciona para a raiz do app
-        window.location.replace(basePath + "/");
+        // Redireciona para a raiz mantendo o basePath
+        window.location.href = basePath + "/";
     </script>
 </head>
 <body>

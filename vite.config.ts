@@ -4,10 +4,11 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 
-const repoName = "Tecnologia-ECCOS";
+// Defina o nome do repositório corretamente
+const repoName = "Plataforma-ECCOS"; // Corrigido para match com seu repositório
 
 export default defineConfig(({ mode }) => ({
-  base: process.env.VITE_BASE_URL || '/Tecnologia-ECCOS/',
+  base: "/Plataforma-ECCOS/",
   
   server: {
     host: "::",
@@ -32,12 +33,14 @@ export default defineConfig(({ mode }) => ({
   },
   
   build: {
-    outDir: 'build',
+    outDir: 'dist',
+    emptyOutDir: true, // Adicionado para limpar o diretório de build
     rollupOptions: {
       output: {
-        assetFileNames: 'assets/[name]-[hash][extname]',
-        entryFileNames: 'assets/[name]-[hash].js'
+        assetFileNames: 'assets/[name].[hash][extname]', // Formato simplificado
+        entryFileNames: 'assets/[name].[hash].js'
       }
     }
-  }
+  },
+publicDir: 'public',
 }));

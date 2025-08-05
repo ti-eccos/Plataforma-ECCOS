@@ -6,7 +6,7 @@
     <title>ECCOS - Plataforma de Tecnologia</title>
     <meta name="description" content="Plataforma de Tecnologia para o Colégio ECCOS" />
     <meta name="author" content="ECCOS" />
-    <base href="%VITE_BASE_URL%" />
+    <base href="/Plataforma-ECCOS/" />
     <meta property="og:title" content="ECCOS - Plataforma de Tecnologia" />
     <meta property="og:description" content="Gestão de recursos tecnológicos para o Colégio ECCOS" />
     <meta property="og:type" content="website" />
@@ -21,8 +21,17 @@
 
   <body>
     <div id="root"></div>
-    <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
-    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Recupera o caminho de redirecionamento
+      (function() {
+        const redirectPath = sessionStorage.getItem("redirectPath");
+        if (redirectPath) {
+          sessionStorage.removeItem("redirectPath");
+          // Armazena temporariamente para o React acessar
+          window.__REDIRECT_PATH__ = redirectPath;
+        }
+      })();
+    </script>
   </body>
 </html>
