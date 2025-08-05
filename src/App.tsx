@@ -39,7 +39,6 @@ import HomeRedirect from "@/components/HomeRedirect";
 import ComprasPedagogicoAdmin from "./pages/admin/ComprasPedagogicoAdmin";
 import React from "react";
 
-
 const queryClient = new QueryClient();
 
 interface AppProps {
@@ -233,7 +232,7 @@ const App = ({ basename = "" }: AppProps) => {
               </ProtectedRoute>
             ),
           },
-          {
+           {
             path: "*",
             element: <Navigate to="/404" replace />,
           },
@@ -248,17 +247,19 @@ const App = ({ basename = "" }: AppProps) => {
       basename,
     }
   );
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <App basename="/Plataforma-ECCOS/" /> // Adicione esta linha
-  </React.StrictMode>
-);
-  // Aplicar redirecionamento se necessário
+
+  // Efeito para redirecionamento
   React.useEffect(() => {
     if (window.__REDIRECT_PATH__) {
       const redirectPath = window.__REDIRECT_PATH__;
       delete window.__REDIRECT_PATH__;
-      window.history.replaceState(null, "", redirectPath);
+      
+      const basePath = "/Plataforma-ECCOS";
+      const normalizedPath = redirectPath.startsWith(basePath)
+        ? redirectPath
+        : basePath + (redirectPath.startsWith("/") ? redirectPath : `/${redirectPath}`);
+      
+      window.history.replaceState(null, "", normalizedPath);
     }
   }, []);
 

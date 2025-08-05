@@ -23,12 +23,10 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      // Recupera o caminho de redirecionamento
       (function() {
         const redirectPath = sessionStorage.getItem("redirectPath");
         if (redirectPath) {
           sessionStorage.removeItem("redirectPath");
-          // Armazena temporariamente para o React acessar
           window.__REDIRECT_PATH__ = redirectPath;
         }
       })();
