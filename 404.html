@@ -23,3 +23,15 @@
     <p>Redirecionando para a aplicação...</p>
 </body>
 </html>
+export default defineConfig({
+  base: "/Plataforma-ECCOS/",
+  build: {
+    outDir: "dist",
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, "index.html"),
+        404: path.resolve(__dirname, "public/404.html"), // Adicione esta linha
+      },
+    },
+  },
+});
