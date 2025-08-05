@@ -4,17 +4,22 @@
     <meta charset="utf-8">
     <title>Redirecionando...</title>
     <script>
-        const repository = "Plataforma-ECCOS";
+        const basePath = "/Plataforma-ECCOS";
         const path = window.location.pathname;
         const search = window.location.search;
         const hash = window.location.hash;
         
-        if (!path.includes(repository)) {
-            window.location.href = `/${repository}${path}${search}${hash}`;
+        // Se não está no caminho correto, redireciona
+        if (!path.startsWith(basePath)) {
+            window.location.href = basePath + path + search + hash;
         } else {
-            const appPath = path.split(repository)[1] || '/';
-            sessionStorage.setItem("redirectPath", appPath + search + hash);
-            window.location.href = `/${repository}/`;
+            // Se já está no caminho correto, armazena para o React
+            const relativePath = path.substring(basePath.length) || '/';
+            const fullPath = relativePath + search + hash;
+            
+            // Armazena na sessão e redireciona para raiz
+            sessionStorage.setItem("redirectPath", fullPath);
+            window.location.href = basePath + "/";
         }
     </script>
 </head>

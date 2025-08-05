@@ -4,36 +4,24 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ECCOS - Plataforma de Tecnologia</title>
-    <meta name="description" content="Plataforma de Tecnologia para o Colégio ECCOS" />
-    <meta name="author" content="ECCOS" />
-    <base href="/Tecnologia-ECCOS/" />
-    <meta property="og:title" content="ECCOS - Plataforma de Tecnologia" />
-    <meta property="og:description" content="Gestão de recursos tecnológicos para o Colégio ECCOS" />
-    <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@colegioeccos" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-
+    <base href="/Plataforma-ECCOS/" />
     <link rel="icon" href="favicon.ico" type="image/png">
-    <script type="module" crossorigin src="/Plataforma-ECCOS/assets/index.YNyP2L8v.js"></script>
-    <link rel="stylesheet" crossorigin href="/Plataforma-ECCOS/assets/index.HLJsBb9H.css">
+    <script type="module" crossorigin src="/Plataforma-ECCOS/assets/index-CNJxbvYy.js"></script>
   </head>
 
   <body>
-    <div id="root"></div>
-    <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
-    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
+    <div id="root"></div>
     <script>
-  // Verifica se há um redirecionamento pendente
-  (function() {
-    const redirectPath = sessionStorage.getItem("redirectPath");
-    if (redirectPath) {
-      sessionStorage.removeItem("redirectPath");
-      window.history.replaceState(null, null, redirectPath);
-    }
-  })();
-</script>
+      (function() {
+        // Recupera o caminho de redirecionamento
+        const redirectPath = sessionStorage.getItem("redirectPath");
+        if (redirectPath) {
+          sessionStorage.removeItem("redirectPath");
+          
+          // Armazena para o React usar
+          window.__REDIRECT_PATH__ = redirectPath;
+        }
+      })();
+    </script>
   </body>
 </html>
