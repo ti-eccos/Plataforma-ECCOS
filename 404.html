@@ -1,37 +1,24 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html>
 <head>
-    <meta charset="UTF-8">
+    <meta charset="utf-8">
     <title>Redirecionando...</title>
     <script>
-        // Armazena a URL original antes do redirecionamento
-        const path = window.location.pathname + window.location.search;
-        const basePath = "/Plataforma-ECCOS";
+        const repository = "Plataforma-ECCOS";
+        const path = window.location.pathname;
+        const search = window.location.search;
+        const hash = window.location.hash;
         
-        // Remove o basePath se estiver presente
-        const cleanPath = path.startsWith(basePath) 
-            ? path.slice(basePath.length)
-            : path;
-            
-        sessionStorage.setItem("redirectPath", cleanPath || "/");
-        
-        // Redireciona para a raiz mantendo o basePath
-        window.location.href = basePath + "/";
+        if (!path.includes(repository)) {
+            window.location.href = `/${repository}${path}${search}${hash}`;
+        } else {
+            const appPath = path.split(repository)[1] || '/';
+            sessionStorage.setItem("redirectPath", appPath + search + hash);
+            window.location.href = `/${repository}/`;
+        }
     </script>
 </head>
 <body>
     <p>Redirecionando para a aplicação...</p>
 </body>
 </html>
-export default defineConfig({
-  base: "/Plataforma-ECCOS/",
-  build: {
-    outDir: "dist",
-    rollupOptions: {
-      input: {
-        main: path.resolve(__dirname, "index.html"),
-        404: path.resolve(__dirname, "public/404.html"), // Adicione esta linha
-      },
-    },
-  },
-});
