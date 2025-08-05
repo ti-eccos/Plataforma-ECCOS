@@ -7,7 +7,7 @@ import {
   RouterProvider,
   Navigate,
 } from "react-router-dom";
-
+import ReactDOM from "react-dom/client";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -38,6 +38,7 @@ import RolesManagement from "@/pages/admin/RolesManagement";
 import HomeRedirect from "@/components/HomeRedirect";
 import ComprasPedagogicoAdmin from "./pages/admin/ComprasPedagogicoAdmin";
 import React from "react";
+
 
 const queryClient = new QueryClient();
 
@@ -247,7 +248,11 @@ const App = ({ basename = "" }: AppProps) => {
       basename,
     }
   );
-
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <App basename="/Plataforma-ECCOS/" /> // Adicione esta linha
+  </React.StrictMode>
+);
   // Aplicar redirecionamento se necessário
   React.useEffect(() => {
     if (window.__REDIRECT_PATH__) {
